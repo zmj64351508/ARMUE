@@ -1,0 +1,100 @@
+
+========================================================================
+
+** ELF Header Information
+
+    File Name: ./cortex_m3_test.axf
+
+    Machine class: ELFCLASS32 (32-bit)
+    Data encoding: ELFDATA2LSB (Little endian)
+    Header version: EV_CURRENT (Current version)
+    Operating System ABI: none
+    ABI Version: 0
+    File Type: ET_EXEC (Executable) (2)
+    Machine: EM_ARM (ARM)
+
+    Image Entry point: Not specified
+    Flags: None (0x05000000)
+
+    ARM ELF revision: 5 (ABI version 2)
+
+    Built with
+    ARM Assembler, 4.1 [Build 894]
+    ARM Linker, 4.1 [Build 894] 
+
+    Header size: 52 bytes (0x34)
+    Program header entry size: 32 bytes (0x20)
+    Section header entry size: 40 bytes (0x28)
+
+    Program header entries: 1
+    Section header entries: 10
+
+    Program header offset: 1116 (0x0000045c)
+    Section header offset: 1148 (0x0000047c)
+
+    Section header string table index: 9
+
+========================================================================
+
+** Program header #0 (PT_LOAD) [PF_X + PF_R]
+    Size : 28 bytes
+    Virtual address: 0x00000000 (Alignment 4)
+
+
+========================================================================
+
+** Section #1 'ER_ROM1' (SHT_PROGBITS) [SHF_ALLOC + SHF_EXECINSTR]
+    Size   : 28 bytes (alignment 4)
+    Address: 0x00000000
+
+    $d
+    RESET
+        0x00000000:    000f4240    @B..    DCD    1000000
+        0x00000004:    00000009    ....    DCD    9
+    $t
+    START
+        0x00000008:    4672        rF      MOV      r2,lr
+        0x0000000a:    2302        .#      MOVS     r3,#2
+        0x0000000c:    1edc        ..      SUBS     r4,r3,#3
+        0x0000000e:    0053        S.      LSLS     r3,r2,#1
+        0x00000010:    0851        Q.      LSRS     r1,r2,#1
+        0x00000012:    0852        R.      LSRS     r2,r2,#1
+        0x00000014:    1093        ..      ASRS     r3,r2,#2
+        0x00000016:    1889        ..      ADDS     r1,r1,r2
+        0x00000018:    1c11        ..      ADDS     r1,r2,#0
+        0x0000001a:    0000        ..      MOVS     r0,r0
+
+** Section #2 '.debug_abbrev' (SHT_PROGBITS)
+    Size   : 32 bytes
+
+
+** Section #3 '.debug_info' (SHT_PROGBITS)
+    Size   : 92 bytes
+
+
+** Section #4 '.debug_line' (SHT_PROGBITS)
+    Size   : 64 bytes
+
+
+** Section #5 '.symtab' (SHT_SYMTAB)
+    Size   : 112 bytes (alignment 4)
+    String table #6 '.strtab'
+    Last local symbol no. 5
+
+
+** Section #6 '.strtab' (SHT_STRTAB)
+    Size   : 172 bytes
+
+
+** Section #7 '.note' (SHT_NOTE)
+    Size   : 20 bytes (alignment 4)
+
+
+** Section #8 '.comment' (SHT_PROGBITS)
+    Size   : 448 bytes
+
+
+** Section #9 '.shstrtab' (SHT_STRTAB)
+    Size   : 96 bytes
+
+

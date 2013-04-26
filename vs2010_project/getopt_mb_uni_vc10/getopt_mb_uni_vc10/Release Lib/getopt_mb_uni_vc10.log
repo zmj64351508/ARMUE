@@ -1,0 +1,24 @@
+﻿生成启动时间为 2013/4/23 12:19:50。
+     1>项目“C:\Users\zmj\Desktop\getopt_mb_uni_vc10\getopt_mb_uni_vc10\getopt_mb_uni_vc10.vcxproj”在节点 2 上(build 个目标)。
+     1>InitializeBuildStatus:
+         正在创建“Release Lib\getopt_mb_uni_vc10.unsuccessfulbuild”，因为已指定“AlwaysCreate”。
+       ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /Zi /nologo /W3 /WX- /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _CONSOLE /D STATIC_GETOPT /D _UNICODE /D UNICODE /Gm- /EHsc /MD /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Release Lib\\" /Fd"Release Lib\vc100.pdb" /Gd /TC /analyze- /errorReport:prompt main.c
+         main.c
+         Warning static builds of getopt violate the Lesser GNU Public License
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"..\bin\release\lib\\getopt_mb_uni_vc10.exe" /INCREMENTAL:NO /NOLOGO /LIBPATH:..\bin\release\lib\ kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib getopt.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"Release Lib\getopt_mb_uni_vc10.exe.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"C:\Users\zmj\Desktop\getopt_mb_uni_vc10\bin\release\lib\getopt_mb_uni_vc10.pdb" /SUBSYSTEM:CONSOLE /OPT:REF /OPT:ICF /LTCG /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"..\bin\release\lib\getopt_mb_uni_vc10.lib" /MACHINE:X86 "Release Lib\main.obj"
+            正在创建库 ..\bin\release\lib\getopt_mb_uni_vc10.lib 和对象 ..\bin\release\lib\getopt_mb_uni_vc10.exp
+         正在生成代码
+         已完成代码的生成
+         getopt_mb_uni_vc10.vcxproj -> C:\Users\zmj\Desktop\getopt_mb_uni_vc10\getopt_mb_uni_vc10\..\bin\release\lib\getopt_mb_uni_vc10.exe
+       Manifest:
+         C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\mt.exe /nologo /verbose /outputresource:"..\bin\release\lib\\getopt_mb_uni_vc10.exe;#1" /manifest "Release Lib\getopt_mb_uni_vc10.exe.intermediate.manifest"
+       FinalizeBuildStatus:
+         正在删除文件“Release Lib\getopt_mb_uni_vc10.unsuccessfulbuild”。
+         正在对“Release Lib\getopt_mb_uni_vc10.lastbuildstate”执行 Touch 任务。
+     1>已完成生成项目“C:\Users\zmj\Desktop\getopt_mb_uni_vc10\getopt_mb_uni_vc10\getopt_mb_uni_vc10.vcxproj”(build 个目标)的操作。
+
+生成成功。
+
+已用时间 00:00:00.68

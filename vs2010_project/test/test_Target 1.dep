@@ -1,0 +1,2 @@
+Dependencies for Project 'test', Target 'Target 1': (DO NOT MODIFY !)
+F (.\startup_LPC177x_8x.s)(0x517926BA)(--cpu Cortex-M3 -g --16 --apcs=interwork -I C:\Keil\ARM\RV31\Inc -I C:\Keil\ARM\CMSIS\Include -I C:\Keil\ARM\Inc\NXP\LPC177x_8x --list "startup_LPC177x_8x.lst" --xref -o "startup_LPC177x_8x.o" --depend "startup_LPC177x_8x.d")

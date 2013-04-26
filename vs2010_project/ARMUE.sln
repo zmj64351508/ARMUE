@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ARMUE", "ARMUE\ARMUE.vcxproj", "{319B717C-CBD9-42D7-9BBB-CE839C8E506D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{319B717C-CBD9-42D7-9BBB-CE839C8E506D}.Debug|Win32.ActiveCfg = Debug|Win32
+		{319B717C-CBD9-42D7-9BBB-CE839C8E506D}.Debug|Win32.Build.0 = Debug|Win32
+		{319B717C-CBD9-42D7-9BBB-CE839C8E506D}.Release|Win32.ActiveCfg = Release|Win32
+		{319B717C-CBD9-42D7-9BBB-CE839C8E506D}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

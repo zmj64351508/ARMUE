@@ -1,0 +1,36 @@
+<html>
+<body>
+<pre>
+<h1>µVision Build Log</h1>
+<h2>Project:</h2>
+E:\ARMUE\test\test.uvproj
+Project File Date:  04/25/2013
+
+<h2>Output:</h2>
+Build target 'Target 1'
+assembling startup_LPC177x_8x.s...
+linking...
+test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
+Program Size: Code=540 RO-data=228 RW-data=0 ZI-data=1636  
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./test.axf
+"test.axf" - 0 Error(s), 2 Warning(s).
+Build target 'Target 1'
+assembling startup_LPC177x_8x.s...
+linking...
+test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
+Program Size: Code=540 RO-data=228 RW-data=0 ZI-data=1536  
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./test.axf
+"test.axf" - 0 Error(s), 2 Warning(s).
+Build target 'Target 1'
+assembling startup_LPC177x_8x.s...
+linking...
+test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
+Program Size: Code=540 RO-data=228 RW-data=0 ZI-data=1536  
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./test.axf
+"test.axf" - 0 Error(s), 2 Warning(s).

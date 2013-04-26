@@ -1,0 +1,26 @@
+﻿生成启动时间为 2013/4/23 12:17:34。
+     1>项目“C:\Users\zmj\Desktop\getopt_mb_uni_vc10\getopt_mb_uni_vc10_dll\getopt_mb_uni_vc10_dll.vcxproj”在节点 2 上(build 个目标)。
+     1>PrepareForBuild:
+         正在创建目录“..\bin\release\dll\”。
+       InitializeBuildStatus:
+         正在创建“Release Dll\getopt_mb_uni_vc10_dll.unsuccessfulbuild”，因为已指定“AlwaysCreate”。
+       ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /Zi /nologo /W3 /WX- /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _CONSOLE /D EXPORTS_GETOPT /D _WINDLL /D _UNICODE /D UNICODE /Gm- /EHsc /MD /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Release Dll\\" /Fd"Release Dll\vc100.pdb" /Gd /TC /analyze- /errorReport:prompt getopt.c
+         getopt.c
+         Exporting getopt library
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"..\bin\release\dll\\getopt.dll" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"Release Dll\getopt.dll.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"C:\Users\zmj\Desktop\getopt_mb_uni_vc10\bin\release\dll\getopt.pdb" /SUBSYSTEM:CONSOLE /OPT:REF /OPT:ICF /LTCG /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"..\bin\release\dll\getopt.lib" /MACHINE:X86 /DLL "Release Dll\getopt.obj"
+            正在创建库 ..\bin\release\dll\getopt.lib 和对象 ..\bin\release\dll\getopt.exp
+         正在生成代码
+         已完成代码的生成
+         getopt_mb_uni_vc10_dll.vcxproj -> C:\Users\zmj\Desktop\getopt_mb_uni_vc10\getopt_mb_uni_vc10_dll\..\bin\release\dll\getopt.dll
+       Manifest:
+         C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\mt.exe /nologo /verbose /outputresource:"..\bin\release\dll\\getopt.dll;#2" /manifest "Release Dll\getopt.dll.intermediate.manifest"
+       FinalizeBuildStatus:
+         正在删除文件“Release Dll\getopt_mb_uni_vc10_dll.unsuccessfulbuild”。
+         正在对“Release Dll\getopt_mb_uni_vc10_dll.lastbuildstate”执行 Touch 任务。
+     1>已完成生成项目“C:\Users\zmj\Desktop\getopt_mb_uni_vc10\getopt_mb_uni_vc10_dll\getopt_mb_uni_vc10_dll.vcxproj”(build 个目标)的操作。
+
+生成成功。
+
+已用时间 00:00:00.90

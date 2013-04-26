@@ -1,0 +1,21 @@
+﻿生成启动时间为 2013/4/23 12:18:08。
+     1>项目“C:\Users\zmj\Desktop\getopt_mb_uni_vc10\getopt_mb_uni_vc10_dll\getopt_mb_uni_vc10_dll.vcxproj”在节点 2 上(build 个目标)。
+     1>PrepareForBuild:
+         正在创建目录“..\bin\release\lib\”。
+       InitializeBuildStatus:
+         正在创建“Release Lib\getopt_mb_uni_vc10_dll.unsuccessfulbuild”，因为已指定“AlwaysCreate”。
+       ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /Zi /nologo /W3 /WX- /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _CONSOLE /D EXPORTS_GETOPT /D _UNICODE /D UNICODE /Gm- /EHsc /MD /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Release Lib\\" /Fd"Release Lib\vc100.pdb" /Gd /TC /analyze- /errorReport:prompt getopt.c
+         getopt.c
+         Exporting getopt library
+       Lib:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\Lib.exe /OUT:"..\bin\release\lib\\getopt.lib" /NOLOGO /LTCG "Release Lib\getopt.obj"
+         getopt_mb_uni_vc10_dll.vcxproj -> C:\Users\zmj\Desktop\getopt_mb_uni_vc10\getopt_mb_uni_vc10_dll\..\bin\release\lib\getopt.lib
+       FinalizeBuildStatus:
+         正在删除文件“Release Lib\getopt_mb_uni_vc10_dll.unsuccessfulbuild”。
+         正在对“Release Lib\getopt_mb_uni_vc10_dll.lastbuildstate”执行 Touch 任务。
+     1>已完成生成项目“C:\Users\zmj\Desktop\getopt_mb_uni_vc10\getopt_mb_uni_vc10_dll\getopt_mb_uni_vc10_dll.vcxproj”(build 个目标)的操作。
+
+生成成功。
+
+已用时间 00:00:00.29
