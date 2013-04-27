@@ -10,7 +10,7 @@
 ### ADS-LD Output File: 'cortex_m3_test.axf'
 ### ADS-LD Command File: 'cortex_m3_test.lnp'
 ### Checking for dirty Components...
-### Creating CmdFile 'cortex_m3_test.lnp', Handle=0x00000A80
+### Creating CmdFile 'cortex_m3_test.lnp', Handle=0x00000F0C
 ### Writing '.lnp' file
 ### ADS-LD Command file 'cortex_m3_test.lnp' is ready.
 ### ADS-LD: About to start ADS-LD Thread.

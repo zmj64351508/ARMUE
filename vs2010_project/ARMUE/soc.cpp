@@ -17,10 +17,11 @@ error_code_t startup_soc(soc_t* soc)
 	return retval;
 }
 
-void run_soc(soc_t* soc)
+uint32_t run_soc(soc_t* soc)
 {
 	uint32_t instruction = soc->cpu[0]->fetch32(soc->cpu[0]);
 	soc->cpu[0]->excute(soc->cpu[0], &instruction);
+	return instruction;
 }
 
 soc_t* create_soc(cpu_t* cpu, memory_map_t* memory_map)

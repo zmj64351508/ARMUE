@@ -14,6 +14,6 @@ typedef struct {
 soc_t* create_soc(cpu_t* cpu, memory_map_t* memory_map);
 error_code_t destory_soc(soc_t **soc);
 error_code_t startup_soc(soc_t* soc);
-void run_soc(soc_t* soc);
+uint32_t run_soc(soc_t* soc);
 
 #endif

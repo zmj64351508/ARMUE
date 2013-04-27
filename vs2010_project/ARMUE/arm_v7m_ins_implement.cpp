@@ -67,7 +67,7 @@ inline void Shift(uint32_t val, SRType type, int amount, int carry_in, _O uint32
 	Shift_C(val, type, amount, carry_in, result, &carry_out);
 }
 
-inline int check_overflow(uint32_t op1, uint32_t op2, uint32_t result)
+inline int check_add_overflow(uint32_t op1, uint32_t op2, uint32_t result)
 {
 	if((op1 & BIT_31) == (op2 & BIT_31) && 
 		(op2 & BIT_31) != (result & BIT_31)){
@@ -77,15 +77,56 @@ inline int check_overflow(uint32_t op1, uint32_t op2, uint32_t result)
 	}
 }
 
+// add result = op1 + op2
 inline int check_add_carry(uint32_t op1, uint32_t op2, uint32_t result)
 {
-	if(result < op1 && result < op2){
+	if(result <= op1 && result <= op2){
 		return 1;
 	}else{
 		return 0;
 	}
 }
 
+// minus result = op1 + ~minuend + 1 , so the carry should be calculated by these 3 numbers
+inline int check_minus_carry(uint32_t op1, uint32_t minuend, uint32_t result){
+	int carry;
+	/*carry = check_add_carry(op1, -(int32_t)minuend, result);
+	if(carry == 1){
+		return carry;
+	}
+	carry = check_add_carry(1, ~minuend, ~minuend+1);
+	if(carry == 1){
+		return carry;
+	}	
+	carry = check_add_carry(op1, ~minuend, ~minuend+op1);
+	if(carry == 1){
+		return carry;
+	}
+	carry = check_add_carry(op1, 1, 1+op1);*/
+
+	// check op1 + ~minuend
+	carry = check_add_carry(op1, ~minuend, op1+~minuend);
+	if(carry == 1){
+		return carry;
+	}
+	// check op1 + ~minuend + 1
+	carry = check_add_carry(op1, -(int32_t)minuend, result);
+	return carry;
+	
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-334>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+(result, carry) = Shift_C(R[m], SRType_LSL, shift_n, APSR.C);
+R[d] = result;
+if setflags then
+	APSR.N = result<31>;
+	APSR.Z = IsZeroBit(result);
+	APSR.C = carry;
+	// APSR.V unchanged
+*************************************/
 void _lsl_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
 {
 	int carry = 0;
@@ -101,6 +142,18 @@ void _lsl_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_
 	}
 }
 
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-338>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+(result, carry) = Shift_C(R[m], SRType_LSR, shift_n, APSR.C);
+R[d] = result;
+if setflags then
+	APSR.N = result<31>;
+	APSR.Z = IsZeroBit(result);
+	APSR.C = carry;
+	// APSR.V unchanged
+*************************************/
 void _lsr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
 {
 	int carry = 0;
@@ -116,6 +169,18 @@ void _lsr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_
 	}
 }
 
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-236>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+(result, carry) = Shift_C(R[m], SRType_ASR, shift_n, APSR.C);
+R[d] = result;
+if setflags then
+	APSR.N = result<31>;
+	APSR.Z = IsZeroBit(result);
+	APSR.C = carry;
+	// APSR.V unchanged
+*************************************/
 void _asr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
 {
 
@@ -132,6 +197,22 @@ void _asr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_
 	}
 }
 
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-224>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+shifted = Shift(R[m], shift_t, shift_n, APSR.C);
+(result, carry, overflow) = AddWithCarry(R[n], shifted, '0');
+if d == 15 then
+	ALUWritePC(result); // setflags is always FALSE here
+else
+	R[d] = result;
+if setflags then
+	APSR.N = result<31>;
+	APSR.Z = IsZeroBit(result);
+	APSR.C = carry;
+	APSR.V = overflow;
+*************************************/
 void _add_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
 {
 	int carry = GET_APSR_C(regs);;
@@ -143,22 +224,40 @@ void _add_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t sh
 	
 	uint32_t Rn_val = *(&regs->R[0]+Rn);
 	*(&regs->R[0]+Rd) =  Rn_val + shifted;
-	uint32_t Rd_val = *(&regs->R[0]+Rd);
+	
+	// software won't distinguish PC and other registers like hardware did. Just disable setflags.
+	if(Rd == 15){
+		setflags = 0;
+	}
+	uint32_t result = *(&regs->R[0]+Rd);
 	
 	// if Rn and shifed have the same sign, and Rd haven't..then overflow = 1
-	overflow = check_overflow(Rn_val, shifted, Rd_val);
+	overflow = check_add_overflow(Rn_val, shifted, result);
 
 	// if Rd < Rn and shifted then carry = 1	
-	carry = check_add_carry(Rn_val, shifted, Rd_val);
+	carry = check_add_carry(Rn_val, shifted, result);
 	
 	if(setflags != 0){
-		SET_APSR_N(*(&regs->R[0]+Rd));
-		SET_APSR_Z(*(&regs->R[0]+Rd));
+		SET_APSR_N(result);
+		SET_APSR_Z(result);
 		SET_APSR_C(carry);
 		SET_APSR_V(overflow);
 	}
 }
 
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-498>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+shifted = Shift(R[m], shift_t, shift_n, APSR.C);
+(result, carry, overflow) = AddWithCarry(R[n], NOT(shifted), '1');
+R[d] = result;
+if setflags then
+	APSR.N = result<31>;
+	APSR.Z = IsZeroBit(result);
+	APSR.C = carry;
+	APSR.V = overflow;
+*************************************/
 void _sub_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
 {
 	int carry = GET_APSR_C(regs);;
@@ -174,10 +273,10 @@ void _sub_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t sh
 	uint32_t Rd_val = *(&regs->R[0]+Rd);
 
 	// if Rn and shifed have the same sign, and Rd haven't..then overflow = 1
-	overflow = check_overflow(Rn_val, (uint32_t)-(int32_t)shifted, Rd_val);
+	overflow = check_add_overflow(Rn_val, (uint32_t)-(int32_t)shifted, Rd_val);
 
 	// if Rd < Rn and shifted then carry = 1	
-	carry = check_add_carry(Rn_val, (uint32_t)-(int32_t)shifted, Rd_val);
+	carry = check_minus_carry(Rn_val, shifted, Rd_val);
 
 	if(setflags != 0){
 		SET_APSR_N(*(&regs->R[0]+Rd));
@@ -187,6 +286,18 @@ void _sub_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t sh
 	}
 }
 
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-222>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+(result, carry, overflow) = AddWithCarry(R[n], imm32, ¡®0¡¯);
+R[d] = result;
+if setflags then
+	APSR.N = result<31>;
+	APSR.Z = IsZeroBit(result);
+	APSR.C = carry;
+	APSR.V = overflow;
+*************************************/
 void _add_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
 {
 	int carry = GET_APSR_C(regs);
@@ -197,7 +308,7 @@ void _add_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7
 	uint32_t Rd_val = *(&regs->R[0]+Rd);
 
 	// if Rn and shifed have the same sign, and Rd haven't..then overflow = 1
-	overflow = check_overflow(Rn_val, imm32, Rd_val);
+	overflow = check_add_overflow(Rn_val, imm32, Rd_val);
 
 	// if Rd < Rn and shifted then carry = 1	
 	carry = check_add_carry(Rn_val, imm32, Rd_val);
@@ -210,6 +321,18 @@ void _add_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7
 	}
 }
 
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-496>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+(result, carry, overflow) = AddWithCarry(R[n], NOT(imm32), ¡®1¡¯);
+R[d] = result;
+if setflags then
+	APSR.N = result<31>;
+	APSR.Z = IsZeroBit(result);
+	APSR.C = carry;
+	APSR.V = overflow;
+*************************************/
 void _sub_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
 {
 	int carry = GET_APSR_C(regs);
@@ -220,10 +343,10 @@ void _sub_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7
 	uint32_t Rd_val = *(&regs->R[0]+Rd);
 
 	// if Rn and shifed have the same sign, and Rd haven't..then overflow = 1
-	overflow = check_overflow(Rn_val, (uint32_t)-(int32_t)imm32, Rd_val);
+	overflow = check_add_overflow(Rn_val, (uint32_t)-(int32_t)imm32, Rd_val);
 
 	// if Rd < Rn and shifted then carry = 1	
-	carry = check_add_carry(Rn_val, (uint32_t)-(int32_t)imm32, Rd_val);
+	carry = check_minus_carry(Rn_val, imm32, Rd_val);
 
 	if(setflags != 0){
 		SET_APSR_N(*(&regs->R[0]+Rd));
@@ -233,6 +356,18 @@ void _sub_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7
 	}
 }
 
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-348>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+result = imm32;
+R[d] = result;
+if setflags then
+	APSR.N = result<31>;
+	APSR.Z = IsZeroBit(result);
+	APSR.C = carry;
+	// APSR.V unchanged
+*************************************/
 void _mov_imm(uint32_t Rd, uint32_t imm32, uint32_t setflag, int carry, armv7m_reg_t* regs)
 {
 	uint32_t result = imm32;
@@ -242,4 +377,35 @@ void _mov_imm(uint32_t Rd, uint32_t imm32, uint32_t setflag, int carry, armv7m_r
 		SET_APSR_Z(result);
 		SET_APSR_C(carry);
 	}
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-262>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+(result, carry, overflow) = AddWithCarry(R[n], NOT(imm32), ¡®1¡¯);
+	APSR.N = result<31>;
+	APSR.Z = IsZeroBit(result);
+	APSR.C = carry;
+	APSR.V = overflow;
+*************************************/
+void _cmp_imm(uint32_t imm32, uint32_t Rn, armv7m_reg_t* regs)
+{
+	int carry = GET_APSR_C(regs);
+	int overflow = 0;
+	uint32_t result;
+
+	uint32_t Rn_val = *(&regs->R[0]+Rn);
+	result =  Rn_val - imm32;
+
+	// if Rn and imm have the same sign, and Rd haven't..then overflow = 1
+	overflow = check_add_overflow(Rn_val, (uint32_t)-(int32_t)imm32, result);
+
+	// if Rd < Rn and imm then carry = 1			
+	carry = check_minus_carry(Rn_val, imm32, result);
+
+	SET_APSR_N(result);
+	SET_APSR_Z(result);
+	SET_APSR_C(carry);
+	SET_APSR_V(overflow);
 }

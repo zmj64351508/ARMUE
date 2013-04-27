@@ -21,8 +21,10 @@ int _tmain(int argc, _TCHAR* argv[])
 		rom_t* rom = alloc_rom();
 		set_rom_size(rom, 2000);
 		set_rom_base_addr(rom, 0x00);
-		open_rom(_T("E:\\ARMUE\\test.rom"), rom);
-		fill_rom_with_bin(rom, _T("E:\\ARMUE\\cortex_m3_test\\test.bin"));
+		if(SUCCESS != open_rom(_T("E:\\GitHub\\ARMUE\\vs2010_project\\test.rom"), rom)){
+			return -1;
+		}
+		fill_rom_with_bin(rom, _T("E:\\GitHub\\ARMUE\\vs2010_project\\cortex_m3_test\\test.bin"));
 		memory_map_t *memory_map = create_memory_map();		
 		set_memory_map_rom(memory_map, rom, 0);
 	
@@ -32,11 +34,14 @@ int _tmain(int argc, _TCHAR* argv[])
 		module_t* xxx_module = find_module(_T("xxx"));
 		
 		// soc
+		uint32_t ins;
 		if(cpu_module != NULL){
 			soc_t* soc = create_soc(cpu_module->create_cpu(), memory_map);
 			startup_soc(soc);
-			for(int j = 0;j < 4; j++){
-				run_soc(soc);
+			for(;;){
+				ins = run_soc(soc);
+				if(ins == 0)
+					break;
 			}
 			destory_soc(&soc);
 		}

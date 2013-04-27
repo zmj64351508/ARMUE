@@ -47,10 +47,6 @@ typedef struct{
 
 #define GET_APSR_C(regs) get_bit(&(regs)->xPSR, C)
 
-inline int32_t not(int32_t val){
-	return !(val & 0x1L) & 0x1L;
-}
-
 inline uint8_t get_bit(uint32_t* reg, uint32_t bit_pos)
 {
 	return (*reg & bit_pos) == 0 ? 0: 1;
@@ -66,7 +62,6 @@ inline void set_bit(uint32_t* reg, uint32_t bit_pos,int bit_val)
 	}
 }
 
-
 void _lsl_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs);
 void _lsr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs);
 void _asr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs);
@@ -75,5 +70,6 @@ void _sub_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t sh
 void _add_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs);
 void _sub_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs);
 void _mov_imm(uint32_t d, uint32_t imm32, uint32_t setflag, int carry, armv7m_reg_t* regs);
+void _cmp_imm(uint32_t imm32, uint32_t Rn, armv7m_reg_t* regs);
 
 #endif
