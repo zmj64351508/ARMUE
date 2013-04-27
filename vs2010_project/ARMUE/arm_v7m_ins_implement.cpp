@@ -26,6 +26,7 @@ void ASR_C(uint32_t val, int shift, _O uint32_t* result, _O int *carry_out)
 	if(shift > 0){
 		*carry_out = val >> (shift - 1) & BIT_0;
 	}
+// MS VC will ASR signed int
 #ifdef _MSC_VER	
 	*result = (int32_t)val >> shift;
 #else
@@ -80,7 +81,7 @@ inline int check_add_overflow(uint32_t op1, uint32_t op2, uint32_t result)
 // add result = op1 + op2
 inline int check_add_carry(uint32_t op1, uint32_t op2, uint32_t result)
 {
-	if(result <= op1 && result <= op2){
+	if(result < op1 && result < op2){
 		return 1;
 	}else{
 		return 0;
@@ -90,27 +91,13 @@ inline int check_add_carry(uint32_t op1, uint32_t op2, uint32_t result)
 // minus result = op1 + ~minuend + 1 , so the carry should be calculated by these 3 numbers
 inline int check_minus_carry(uint32_t op1, uint32_t minuend, uint32_t result){
 	int carry;
-	/*carry = check_add_carry(op1, -(int32_t)minuend, result);
-	if(carry == 1){
-		return carry;
-	}
-	carry = check_add_carry(1, ~minuend, ~minuend+1);
-	if(carry == 1){
-		return carry;
-	}	
-	carry = check_add_carry(op1, ~minuend, ~minuend+op1);
-	if(carry == 1){
-		return carry;
-	}
-	carry = check_add_carry(op1, 1, 1+op1);*/
-
 	// check op1 + ~minuend
 	carry = check_add_carry(op1, ~minuend, op1+~minuend);
 	if(carry == 1){
 		return carry;
 	}
 	// check op1 + ~minuend + 1
-	carry = check_add_carry(op1, -(int32_t)minuend, result);
+	carry = check_add_carry(op1+~minuend, 1, result);
 	return carry;
 	
 }

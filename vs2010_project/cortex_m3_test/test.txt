@@ -29,22 +29,22 @@
     Program header entries: 1
     Section header entries: 10
 
-    Program header offset: 1156 (0x00000484)
-    Section header offset: 1188 (0x000004a4)
+    Program header offset: 1168 (0x00000490)
+    Section header offset: 1200 (0x000004b0)
 
     Section header string table index: 9
 
 ========================================================================
 
 ** Program header #0 (PT_LOAD) [PF_X + PF_R]
-    Size : 40 bytes
+    Size : 48 bytes
     Virtual address: 0x00000000 (Alignment 4)
 
 
 ========================================================================
 
 ** Section #1 'ER_ROM1' (SHT_PROGBITS) [SHF_ALLOC + SHF_EXECINSTR]
-    Size   : 40 bytes (alignment 4)
+    Size   : 48 bytes (alignment 4)
     Address: 0x00000000
 
     $d
@@ -53,22 +53,26 @@
         0x00000004:    00000009    ....    DCD    9
     $t
     START
-        0x00000008:    4672        rF      MOV      r2,lr
-        0x0000000a:    2301        .#      MOVS     r3,#1
-        0x0000000c:    2b01        .+      CMP      r3,#1
-        0x0000000e:    2b00        .+      CMP      r3,#0
-        0x00000010:    2b02        .+      CMP      r3,#2
-        0x00000012:    2d00        .-      CMP      r5,#0
-        0x00000014:    1051        Q.      ASRS     r1,r2,#1
-        0x00000016:    0053        S.      LSLS     r3,r2,#1
-        0x00000018:    0851        Q.      LSRS     r1,r2,#1
-        0x0000001a:    0852        R.      LSRS     r2,r2,#1
-        0x0000001c:    4351        QC      MULS     r1,r2,r1
-        0x0000001e:    1093        ..      ASRS     r3,r2,#2
-        0x00000020:    1889        ..      ADDS     r1,r1,r2
-        0x00000022:    4708        .G      BX       r1
-        0x00000024:    1c11        ..      ADDS     r1,r2,#0
-        0x00000026:    0000        ..      MOVS     r0,r0
+        0x00000008:    1c00        ..      ADDS     r0,r0,#0
+        0x0000000a:    4672        rF      MOV      r2,lr
+        0x0000000c:    2301        .#      MOVS     r3,#1
+        0x0000000e:    3b14        .;      SUBS     r3,r3,#0x14
+        0x00000010:    3214        .2      ADDS     r2,r2,#0x14
+        0x00000012:    3400        .4      ADDS     r4,#0
+        0x00000014:    2c01        .,      CMP      r4,#1
+        0x00000016:    2b01        .+      CMP      r3,#1
+        0x00000018:    2b00        .+      CMP      r3,#0
+        0x0000001a:    2b15        .+      CMP      r3,#0x15
+        0x0000001c:    2d00        .-      CMP      r5,#0
+        0x0000001e:    1051        Q.      ASRS     r1,r2,#1
+        0x00000020:    0053        S.      LSLS     r3,r2,#1
+        0x00000022:    0851        Q.      LSRS     r1,r2,#1
+        0x00000024:    0852        R.      LSRS     r2,r2,#1
+        0x00000026:    4351        QC      MULS     r1,r2,r1
+        0x00000028:    1093        ..      ASRS     r3,r2,#2
+        0x0000002a:    1889        ..      ADDS     r1,r1,r2
+        0x0000002c:    4708        .G      BX       r1
+        0x0000002e:    1c11        ..      ADDS     r1,r2,#0
 
 ** Section #2 '.debug_abbrev' (SHT_PROGBITS)
     Size   : 32 bytes
@@ -79,7 +83,7 @@
 
 
 ** Section #4 '.debug_line' (SHT_PROGBITS)
-    Size   : 72 bytes
+    Size   : 76 bytes
 
 
 ** Section #5 '.symtab' (SHT_SYMTAB)

@@ -4,259 +4,9 @@
 <h1>µVision Build Log</h1>
 <h2>Project:</h2>
 E:\GitHub\ARMUE\vs2010_project\cortex_m3_test\cortex_m3_test.uvproj
-Project File Date:  04/26/2013
+Project File Date:  04/27/2013
 
 <h2>Output:</h2>
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=36 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=28 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=28 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=28 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=28 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=28 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=28 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=28 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=28 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=28 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=28 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=28 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=28 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=28 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=28 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=28 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=28 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=28 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=28 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=28 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=32 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=32 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=36 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=36 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
-Build target 'Target 1'
-assembling start.s...
-linking...
-cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
-cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
-Program Size: Code=36 RO-data=0 RW-data=0 ZI-data=0  
-FromELF: creating hex file...
-User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
-User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
-"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
 Build target 'Target 1'
 assembling start.s...
 linking...
@@ -267,3 +17,51 @@ FromELF: creating hex file...
 User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
 User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
 "cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
+Build target 'Target 1'
+assembling start.s...
+linking...
+cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
+Program Size: Code=32 RO-data=0 RW-data=0 ZI-data=0  
+FromELF: creating hex file...
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
+"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
+Build target 'Target 1'
+assembling start.s...
+linking...
+cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
+Program Size: Code=44 RO-data=0 RW-data=0 ZI-data=0  
+FromELF: creating hex file...
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
+"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
+Build target 'Target 1'
+assembling start.s...
+start.s(13): error: A1163E: Unknown opcode CMO , expecting opcode or Macro
+Target not created
+Build target 'Target 1'
+assembling start.s...
+linking...
+cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
+Program Size: Code=48 RO-data=0 RW-data=0 ZI-data=0  
+FromELF: creating hex file...
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
+"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
+Clean started: Project: 'cortex_m3_test'
+   deleting intermediate output files for target 'Target 1'
+Build target 'Target 1'
+assembling start.s...
+linking...
+cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+cortex_m3_test.sct(8): warning: L6314W: No section matches pattern *(InRoot$$Sections).
+Program Size: Code=48 RO-data=0 RW-data=0 ZI-data=0  
+FromELF: creating hex file...
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
+"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
+Clean started: Project: 'cortex_m3_test'
+   deleting intermediate output files for target 'Target 1'
