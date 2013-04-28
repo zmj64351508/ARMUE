@@ -74,7 +74,7 @@ void _lsl_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
 	uint32_t setflag = !inITblock(regs);
 
 	_lsl_imm(imm, Rm, Rd, setflag, regs);
-	LOG(LOG_INSTRUCTION, "_lsl_imm_16, R%d,R%d,#%d\n", Rd, Rm, imm);
+	LOG_INSTRUCTION("_lsl_imm_16, R%d,R%d,#%d\n", Rd, Rm, imm);
 }
 
 void _lsr_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
@@ -85,7 +85,7 @@ void _lsr_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
 	uint32_t setflag = !inITblock(regs);
 	
 	_lsr_imm(imm, Rm, Rd, setflag, regs);		
-	LOG(LOG_INSTRUCTION, "_lsr_imm_16, R%d,R%d,#%d\n", Rd, Rm, imm);
+	LOG_INSTRUCTION("_lsr_imm_16, R%d,R%d,#%d\n", Rd, Rm, imm);
 }
 
 void _asr_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
@@ -96,7 +96,7 @@ void _asr_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
 	uint32_t setflag = !inITblock(regs);
 
 	_asr_imm(imm, Rm, Rd, setflag, regs);	
-	LOG(LOG_INSTRUCTION, "_asr_imm_16, R%d,R%d,#%d\n", Rd, Rm, imm);
+	LOG_INSTRUCTION("_asr_imm_16, R%d,R%d,#%d\n", Rd, Rm, imm);
 }
 
 void _add_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
@@ -107,7 +107,7 @@ void _add_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	uint32_t setflag = !inITblock(regs);
 
 	_add_reg(Rm, Rn, Rd, SRType_LSL, 0, setflag, regs);
-	LOG(LOG_INSTRUCTION, "_add_reg_16, R%d,R%d,R%d\n", Rd, Rn, Rm);	
+	LOG_INSTRUCTION("_add_reg_16, R%d,R%d,R%d\n", Rd, Rn, Rm);	
 }
 
 void _sub_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
@@ -118,7 +118,7 @@ void _sub_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	uint32_t setflag = !inITblock(regs);
 
 	_sub_reg(Rm, Rn, Rd, SRType_LSL, 0, setflag, regs);
-	LOG(LOG_INSTRUCTION, "_sub_reg_16, R%d,R%d,R%d\n", Rd, Rn, Rm);	
+	LOG_INSTRUCTION("_sub_reg_16, R%d,R%d,R%d\n", Rd, Rn, Rm);	
 }
 
 void _add_imm3_16(uint16_t ins_code, armv7m_reg_t* regs)
@@ -129,7 +129,7 @@ void _add_imm3_16(uint16_t ins_code, armv7m_reg_t* regs)
 	uint32_t setflag = !inITblock(regs);
 
 	_add_imm(imm32, Rn, Rd, setflag, regs);	
-	LOG(LOG_INSTRUCTION, "_add_imm3_16, R%d,R%d,#%d\n", Rd, Rn, imm32);	
+	LOG_INSTRUCTION("_add_imm3_16, R%d,R%d,#%d\n", Rd, Rn, imm32);	
 }
 
 void _sub_imm3_16(uint16_t ins_code, armv7m_reg_t* regs)
@@ -140,7 +140,7 @@ void _sub_imm3_16(uint16_t ins_code, armv7m_reg_t* regs)
 	uint32_t setflag = !inITblock(regs);
 
 	_sub_imm(imm32, Rn, Rd, setflag, regs);	
-	LOG(LOG_INSTRUCTION, "_add_imm3_16, R%d,R%d,#%d\n", Rd, Rn, imm32);		
+	LOG_INSTRUCTION("_add_imm3_16, R%d,R%d,#%d\n", Rd, Rn, imm32);		
 }
 
 void _mov_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
@@ -151,7 +151,7 @@ void _mov_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
 	uint32_t carry = GET_APSR_C(regs);
 
 	_mov_imm(Rd, imm, setflag, carry, regs);
-	LOG(LOG_INSTRUCTION, "_mov_imm_16, R%d,#%d\n", Rd, imm);
+	LOG_INSTRUCTION("_mov_imm_16, R%d,#%d\n", Rd, imm);
 }
 
 void _cmp_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
@@ -160,7 +160,7 @@ void _cmp_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
 	uint32_t imm8 = ins_code & 0xFF;
 
 	_cmp_imm(imm8, Rn, regs);
-	LOG(LOG_INSTRUCTION, "_cmp_imm_16, R%d,#%d\n", Rn, imm8);
+	LOG_INSTRUCTION("_cmp_imm_16, R%d,#%d\n", Rn, imm8);
 }
 
 void _add_imm8_16(uint16_t ins_code, armv7m_reg_t* regs)
@@ -171,7 +171,7 @@ void _add_imm8_16(uint16_t ins_code, armv7m_reg_t* regs)
 	int setflag = !inITblock(regs);
 
 	_add_imm(imm8, Rn, Rd, setflag, regs);
-	LOG(LOG_INSTRUCTION, "_add_imm8_16, R%d,#%d\n", Rn, imm8);
+	LOG_INSTRUCTION("_add_imm8_16, R%d,#%d\n", Rn, imm8);
 }
 
 void _sub_imm8_16(uint16_t ins_code, armv7m_reg_t* regs)
@@ -182,7 +182,7 @@ void _sub_imm8_16(uint16_t ins_code, armv7m_reg_t* regs)
 	int setflag = !inITblock(regs);	
 	
 	_sub_imm(imm8, Rn, Rd, setflag, regs);
-	LOG(LOG_INSTRUCTION, "_sub_imm8_16, R%d,#%d\n", Rn, imm8);
+	LOG_INSTRUCTION("_sub_imm8_16, R%d,#%d\n", Rn, imm8);
 }
 
 /************************/
@@ -287,7 +287,7 @@ void _mov_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	}
 
 	// FIXME: UNPREDICTABLE
-	LOG(LOG_INSTRUCTION, "_mov_reg_16, R%d,R%d\n", Rd, Rm);
+	LOG_INSTRUCTION("_mov_reg_16, R%d,R%d\n", Rd, Rm);
 }
 
 void _bx_16(uint16_t ins_code, armv7m_reg_t* regs)

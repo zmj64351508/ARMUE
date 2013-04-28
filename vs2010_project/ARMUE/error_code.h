@@ -18,15 +18,28 @@ typedef enum
 	ERROR_SOC_STARTUP,
 }error_code_t;
 
-#define LOG_ERROR			4
-#define LOG_WARN			3
-#define LOG_DEBUG			2
-#define LOG_INSTRUCTION		1
+#define LOG_ERROR			3
+#define LOG_WARN			2
+#define LOG_DEBUG			1
 #define LOG_ALL				0
 #define LOG_CURRENT_LEVEL	LOG_ALL
 
 #include <stdio.h>
-#define LOG(debug_level, message, ...) if(debug_level >= LOG_CURRENT_LEVEL){printf("[%s] "##message, #debug_level+4, __VA_ARGS__);}
-#define LOG_REG(debug_level, regs) if(debug_level >= LOG_CURRENT_LEVEL){print_reg_val(regs);}
 
+
+#define LOG(debug_level, message, ...) \
+	if(debug_level >= LOG_CURRENT_LEVEL){\
+		printf("[%s] "##message, #debug_level+4, __VA_ARGS__);\
+	}
+
+#ifdef _DEBUG
+#define LOG_INSTRUCTION(message, ...)\
+	printf("[INSTRUCTION] "##message, __VA_ARGS__);
+
+#define LOG_REG(regs)\
+		print_reg_val(regs);
+#else
+#define LOG_INSTRUCTION(message, ...)
+#define LOG_REG(regs)
+#endif
 #endif

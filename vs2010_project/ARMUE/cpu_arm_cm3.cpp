@@ -102,14 +102,14 @@ void excute_armcm3_cpu(cpu_t* cpu, void* opcode){
 		/****** But, when 16 bit coded instruction visit PC, it should return PC+2	*/
 		regs->PC += 2;
 		parse_opcode16(opcode32, (armv7m_instruct_t*)cpu->ins_set);
-		LOG_REG(LOG_INSTRUCTION, regs);
+		LOG_REG(regs);
 		getchar();
 
 		// if the second bit is 16 bit coded
 		if(is_16bit_code(opcode32 >> 16) == TRUE){
 			regs->PC += 2;
 			parse_opcode16(opcode32 >> 16, (armv7m_instruct_t*)cpu->ins_set);
-			LOG_REG(LOG_INSTRUCTION, regs);
+			LOG_REG(regs);
 			getchar();
 		// if the second bit is 32 bit coded
 		}else{
