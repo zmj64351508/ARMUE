@@ -26,12 +26,21 @@ int _tmain(int argc, _TCHAR* argv[])
 	fill_rom_with_bin(rom, _T("E:\\GitHub\\ARMUE\\vs2010_project\\cortex_m3_test\\test.bin"));
 	memory_map_t *memory_map = create_memory_map();		
 	set_memory_map_rom(memory_map, rom, 0);
-	
+
+	/*
+	module_t* uart_module = find_module(_T("uart"));
+	peripheral_t* uart = uart_module->create_peripheral();
+	uart->reg_num;
+	uart->regs;
+	uart->mem_base;
+	uart->set_operation(0x10, "out,send_message,[31:0]");
+	set_memory_map_peripheral(memory_map, uart);
+	*/
+
 
 	// find the module that we need
 	module_t* cpu_module = find_module(_T("arm_cm3"));
-	module_t* xxx_module = find_module(_T("xxx"));
-		
+
 	// soc
 	uint32_t ins;
 	if(cpu_module != NULL){

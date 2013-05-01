@@ -1,0 +1,40 @@
+#介绍 
+本项目是一个由C写成的ARM模拟器，名字的含义是**"ARM Utility Emulator"**的缩写. 本项目的意图是提供一个完整的ARM CPU的模拟器，模拟包括ARM V7M/V7A/V5指令集在内的芯片。
+
+
+模拟的内容包括：指令集，内存映射，ROM，RAM，外设等。
+
+#当前进程
+
+正在完成以上提到的核心部分，特别是ARM v7m的指令集和内存映射部分。
+
+###ARM v7m 指令集进展
+16位Thumb指令集完成进度
+
+- LSL(imm)
+- LSR(imm)
+- ASR(imm)
+- ADD(reg)
+- SUB(reg)
+- ADD(imm 3bit)
+- SUB(imm 3bit)
+- MOV(imm)
+- MOV(reg)
+- CMP(imm)
+- ADD(imm 8bit)
+- SUB(imm 8bit)
+
+#开发环境 
+源代码目前在Winodws 7 64位系统和Visual Stdio 2010下开发并测试。目前的源代码后缀为cpp，是由于VC的C编译器对C99不支持，而我希望使用一些C99的特性，比如for循环体定义变量，随处定义变量等。未来将移植到Linux并用GCC进行编译。
+
+#主要结构介绍
+###module
+其实现为一个链表。用它对所有可供使用的模块抽象，主要功能为提供索引、创建和销毁的接口。一个模块可以用来创建多个CPU或片内外设的实例。
+
+如果没有module抽象，使用某个cpu或外设时必须知道对应的cpu和外设的构造函数和销毁函数的准确名字，不利于使用和配置。
+
+###cpu
+对所有CPU的抽象，提供统一的接口，如startup，fetch，excute等。
+
+###peripheral
+对所有片内外设的抽象，提供统一的接口。

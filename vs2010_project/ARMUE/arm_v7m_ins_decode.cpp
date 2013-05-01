@@ -29,13 +29,13 @@ error_code_t set_sub_table_value(instruction16_t* table, int start, int end, ins
 void print_reg_val(armv7m_reg_t* regs)
 {
 	for(int i = 0; i < 13; i++){
-		printf("R%-3d=0x%x\n", i, regs->R[i]);
+		printf("R%-3d=0x%08x\n", i, regs->R[i]);
 	}
 
-	printf("MSP =0x%x\n", regs->MSP);
-	printf("LR  =0x%x\n", regs->LR);
-	printf("PC  =0x%x\n", regs->PC);
-	printf("xPSR=0x%x\n\n", regs->xPSR);
+	printf("MSP =0x%08x\n", regs->MSP);
+	printf("LR  =0x%08x\n", regs->LR);
+	printf("PC  =0x%08x\n", regs->PC);
+	printf("xPSR=0x%08x\n\n", regs->xPSR);
 }
 
 /****** Here are some sub-parsing functions *******/

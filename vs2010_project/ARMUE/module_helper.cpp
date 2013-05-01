@@ -201,6 +201,7 @@ error_code_t register_prepare()
 }
 
 /****** Help other modules to register themselves to the system ******/
+// TODO: check the parameter of module
 error_code_t register_module_helper(module_t* module)
 {
 	LOG(LOG_DEBUG, "register_module_helper\n");
