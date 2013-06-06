@@ -57,6 +57,7 @@ error_code_t armcm3_startup(cpu_t* cpu)
 	armv7m_reg_t *regs = ((armv7m_instruct_t*)cpu->ins_set)->regs;
 	memory_map_t* memory_map = cpu->memory_map;
 	
+	// set register initial value
 	regs->MSP = memory_map->interrupt_table[0];
 	regs->PC = align_address(memory_map->interrupt_table[1]);
 	regs->xPSR = 0x01000000;
@@ -70,20 +71,10 @@ error_code_t armcm3_startup(cpu_t* cpu)
 /****** fetch the instruction. It will set to cpu->fetch32 ******/
 uint32_t fetch_armcm3_cpu(cpu_t* cpu)
 {
-	int storer_index;
 	memory_map_t* memory_map = cpu->memory_map;
 	uint32_t addr = ((armv7m_instruct_t*)cpu->ins_set)->regs->PC;
 
-	// check the address is in rom or ram
-	if((storer_index = addr_in_rom(addr, memory_map)) >= 0){
-		return fetch_rom_data32(addr, memory_map->ROM[storer_index]);
-	}else if((storer_index = addr_in_ram(addr, memory_map)) >= 0){
-		LOG(LOG_DEBUG, "fetch from ram\n");
-	}else{
-		LOG(LOG_ERROR, "fetch_armcm3_cpu: Can't fetch address %u\n", addr);
-		return -1;
-	}
-	return SUCCESS;
+	return get_from_memory32(addr, memory_map);
 }
 
 
@@ -124,7 +115,7 @@ void excute_armcm3_cpu(cpu_t* cpu, void* opcode){
 }
 
 
-/****** Create a instance of the cpu. It will set to module->create ******/
+/****** Create an instance of the cpu. It will set to module->create ******/
 cpu_t* create_armcm3_cpu()
 {	
 	LOG(LOG_DEBUG, "create_armcm3_cpu: create arm cortex m3 cpu.\n");
@@ -133,7 +124,7 @@ cpu_t* create_armcm3_cpu()
 	cpu_t* cpu = alloc_cpu();
 
 	// set cpu attributes
-	set_cpu_type(cpu, CPU_ARM_CM3);
+	//set_cpu_type(cpu, CPU_ARM_CM3);
 	set_cpu_ins(cpu, create_armv7m_instruction());
 	set_cpu_startup_func(cpu, armcm3_startup);
 	set_cpu_fetch32_func(cpu, fetch_armcm3_cpu);
@@ -180,6 +171,8 @@ error_code_t unregister_armcm3_module()
 /****** This is the register entrence used by main system ******/
 error_code_t register_armcm3_module()
 {
+	error_code_t error_code;
+	
 	// Important the module can only be registered once
 	if(registered == 1){
 		return ERROR_REGISTERED;
@@ -204,10 +197,13 @@ error_code_t register_armcm3_module()
 	
 
 	// register this module
-	register_module_helper(this_module);
+	error_code = register_module_helper(this_module);
+	if(error_code != SUCCESS){
+		LOG(LOG_ERROR, "register_armcm3_module: can't regist module.\n");
+	}
 	
 	registered++;
 
-	return SUCCESS;
+	return error_code;
 }
 

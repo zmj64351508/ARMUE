@@ -4,14 +4,16 @@
 
 
 error_code_t startup_soc(soc_t* soc)
-{
+{	
 	if(soc == NULL || soc->cpu == NULL || soc->cpu[0]->memory_map == NULL){
 		return ERROR_NULL_POINTER;
 	}
 	error_code_t retval = ERROR_SOC_STARTUP;
 
-	if(soc->cpu[0]->startup != NULL){	
-		retval = soc->cpu[0]->startup(soc->cpu[0]);
+	cpu_t *cpu = soc->cpu[0];
+
+	if(cpu->startup != NULL){	
+		retval = cpu->startup(cpu);
 	}
 
 	return retval;
@@ -19,8 +21,9 @@ error_code_t startup_soc(soc_t* soc)
 
 uint32_t run_soc(soc_t* soc)
 {
-	uint32_t instruction = soc->cpu[0]->fetch32(soc->cpu[0]);
-	soc->cpu[0]->excute(soc->cpu[0], &instruction);
+	cpu_t *cpu = soc->cpu[0];
+	uint32_t instruction = cpu->fetch32(cpu);
+	cpu->excute(cpu, &instruction);
 	return instruction;
 }
 

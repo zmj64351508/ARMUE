@@ -83,6 +83,20 @@ int addr_in_ram(uint32_t addr, memory_map_t* map)
 	return -1;
 }
 
+uint32_t get_from_memory32(uint32_t addr, memory_map_t* memory_map)
+{
+	int storer_index;
+	
+	if((storer_index = addr_in_rom(addr, memory_map)) >= 0){
+		return fetch_rom_data32(addr, memory_map->ROM[storer_index]);
+	}else if((storer_index = addr_in_ram(addr, memory_map)) >= 0){
+		LOG(LOG_DEBUG, "fetch from ram\n");
+	}else{
+		LOG(LOG_ERROR, "get_from_memory32: Can't fetch address %u\n", addr);
+		return -1;
+	}
+}
+
 // set the interrupt table
 // NOTE: it doesn't check the array index
 error_code_t set_interrput_table(uint32_t* table, uint32_t intrpt_value, int intrpt_num)

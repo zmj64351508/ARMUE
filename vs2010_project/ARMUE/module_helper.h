@@ -11,7 +11,7 @@
 
 typedef enum
 {
-	MODULE_INVALID,
+	MODULE_INVALID = 0,
 	MODULE_CPU,
 	MODULE_PERIPHERAL,
 }module_type_t;

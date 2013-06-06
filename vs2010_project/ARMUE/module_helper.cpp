@@ -205,8 +205,17 @@ error_code_t register_prepare()
 error_code_t register_module_helper(module_t* module)
 {
 	LOG(LOG_DEBUG, "register_module_helper\n");
-	if(module == NULL)
+	if(module == NULL){
 		return ERROR_NULL_POINTER;
+	}
+	if( module->name == NULL ||
+		module->type == MODULE_INVALID ||
+		module->create_content == NULL || 
+		module->destory_content == NULL || 
+		module->unregister == NULL){
+		return ERROR_INVALID_MODULE_PARAM;
+	}
+
 
 	module->content_count = 0;
 

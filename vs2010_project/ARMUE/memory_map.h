@@ -30,7 +30,7 @@ error_code_t set_interrput_table(uint32_t* memory_map, uint32_t intrpt_value, in
 memory_map_t* create_memory_map();
 error_code_t destory_memory_map(memory_map_t** map);
 
-int addr_in_rom(uint32_t addr, memory_map_t* map);
-int addr_in_ram(uint32_t addr, memory_map_t* map);
-
+//int addr_in_rom(uint32_t addr, memory_map_t* map);
+//int addr_in_ram(uint32_t addr, memory_map_t* map);
+uint32_t get_from_memory32(uint32_t addr, memory_map_t* memory_map);
 #endif
