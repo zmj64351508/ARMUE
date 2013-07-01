@@ -40,10 +40,10 @@ typedef struct{
 #define BIT_1	(0x1L << 1)
 #define BIT_0	(0x1L)
 
-#define SET_APSR_N(result_reg) set_bit(&regs->xPSR, N, (result_reg) & BIT_31)
-#define SET_APSR_Z(result_reg) set_bit(&regs->xPSR, Z, (result_reg) == 0 ? 1 : 0)
-#define SET_APSR_C(carry) set_bit(&regs->xPSR, C, (carry))
-#define SET_APSR_V(overflow) set_bit(&regs->xPSR, V, (overflow))
+#define SET_APSR_N(regs, result_reg) set_bit(&regs->xPSR, N, (result_reg) & BIT_31)
+#define SET_APSR_Z(regs, result_reg) set_bit(&regs->xPSR, Z, (result_reg) == 0 ? 1 : 0)
+#define SET_APSR_C(regs, carry) set_bit(&regs->xPSR, C, (carry))
+#define SET_APSR_V(regs, overflow) set_bit(&regs->xPSR, V, (overflow))
 
 #define GET_APSR_C(regs) get_bit(&(regs)->xPSR, C)
 
@@ -71,5 +71,8 @@ void _add_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7
 void _sub_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs);
 void _mov_imm(uint32_t d, uint32_t imm32, uint32_t setflag, int carry, armv7m_reg_t* regs);
 void _cmp_imm(uint32_t imm32, uint32_t Rn, armv7m_reg_t* regs);
+void _and_reg(uint32_t Rm, uint32_t Rdn, uint32_t setflag, armv7m_reg_t* regs);
+void _eor_reg(uint32_t Rm, uint32_t Rdn, uint32_t setflag, armv7m_reg_t* regs);
+void _lsl_reg(uint32_t Rm, uint32_t Rdn, uint32_t setflag, armv7m_reg_t* regs);
 
 #endif

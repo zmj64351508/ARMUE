@@ -146,7 +146,7 @@ void _sub_imm3_16(uint16_t ins_code, armv7m_reg_t* regs)
 void _mov_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
 {
 	uint32_t Rd = ins_code >> 8 & 0x7;
-	uint32_t imm = ins_code & 0x7;
+	uint32_t imm = ins_code & 0x1F;
 	uint32_t setflag = !inITblock(regs);
 	uint32_t carry = GET_APSR_C(regs);
 
@@ -188,17 +188,32 @@ void _sub_imm8_16(uint16_t ins_code, armv7m_reg_t* regs)
 /************************/
 void _and_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 {
-	printf("_and_reg_16\n");
+	uint32_t Rdn = ins_code & 0x7;
+	uint32_t Rm = ins_code >> 3 & 0x7;
+	int setflag = !inITblock(regs);
+
+	_and_reg(Rm, Rdn,setflag, regs);
+	LOG_INSTRUCTION("_and_reg_16, R%d,R%d\n", Rdn, Rm);
 }
 
 void _eor_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 {
-	printf("_eor_reg_16\n");
+	uint32_t Rdn = ins_code & 0x7;
+	uint32_t Rm = ins_code >> 3 & 0x7;
+	int setflag = !inITblock(regs);
+
+	_eor_reg(Rm, Rdn, setflag, regs);
+	LOG_INSTRUCTION("_eor_reg_16, R%d,R%d\n", Rdn, Rm);
 }
 
 void _lsl_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 {
-	printf("_lsl_reg_16\n");
+	uint32_t Rdn = ins_code & 0x7;
+	uint32_t Rm = ins_code >> 3 & 0x7;
+	int setflag = !inITblock(regs);
+
+	_lsl_reg(Rm, Rdn, setflag, regs);
+	LOG_INSTRUCTION("_lsl_reg_16, R%d,R%d\n", Rdn, Rm);
 }
 
 void _lsr_reg_16(uint16_t ins_code, armv7m_reg_t* regs)

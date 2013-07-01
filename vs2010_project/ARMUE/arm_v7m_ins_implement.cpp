@@ -123,9 +123,9 @@ void _lsl_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_
 	*(&regs->R[0]+Rd) = result;
 
 	if(setflags != 0){
-		SET_APSR_N(result);
-		SET_APSR_Z(result);
-		SET_APSR_C(carry);
+		SET_APSR_N(regs, result);
+		SET_APSR_Z(regs, result);
+		SET_APSR_C(regs, carry);
 	}
 }
 
@@ -150,9 +150,9 @@ void _lsr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_
 	*(&regs->R[0]+Rd) = result;
 
 	if(setflags != 0){
-		SET_APSR_N(result);
-		SET_APSR_Z(result);
-		SET_APSR_C(carry);	
+		SET_APSR_N(regs, result);
+		SET_APSR_Z(regs, result);
+		SET_APSR_C(regs, carry);	
 	}
 }
 
@@ -178,9 +178,9 @@ void _asr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_
 	*(&regs->R[0]+Rd) = result;
 
 	if(setflags != 0){
-		SET_APSR_N(result);
-		SET_APSR_Z(result);
-		SET_APSR_C(carry);
+		SET_APSR_N(regs, result);
+		SET_APSR_Z(regs, result);
+		SET_APSR_C(regs, carry);
 	}
 }
 
@@ -225,10 +225,10 @@ void _add_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t sh
 	carry = check_add_carry(Rn_val, shifted, result);
 	
 	if(setflags != 0){
-		SET_APSR_N(result);
-		SET_APSR_Z(result);
-		SET_APSR_C(carry);
-		SET_APSR_V(overflow);
+		SET_APSR_N(regs, result);
+		SET_APSR_Z(regs, result);
+		SET_APSR_C(regs, carry);
+		SET_APSR_V(regs, overflow);
 	}
 }
 
@@ -266,10 +266,10 @@ void _sub_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t sh
 	carry = check_minus_carry(Rn_val, shifted, Rd_val);
 
 	if(setflags != 0){
-		SET_APSR_N(*(&regs->R[0]+Rd));
-		SET_APSR_Z(*(&regs->R[0]+Rd));
-		SET_APSR_C(carry);
-		SET_APSR_V(overflow);
+		SET_APSR_N(regs, *(&regs->R[0]+Rd));
+		SET_APSR_Z(regs, *(&regs->R[0]+Rd));
+		SET_APSR_C(regs, carry);
+		SET_APSR_V(regs, overflow);
 	}
 }
 
@@ -301,10 +301,10 @@ void _add_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7
 	carry = check_add_carry(Rn_val, imm32, Rd_val);
 
 	if(setflags != 0){
-		SET_APSR_N(*(&regs->R[0]+Rd));
-		SET_APSR_Z(*(&regs->R[0]+Rd));
-		SET_APSR_C(carry);
-		SET_APSR_V(overflow);
+		SET_APSR_N(regs, *(&regs->R[0]+Rd));
+		SET_APSR_Z(regs, *(&regs->R[0]+Rd));
+		SET_APSR_C(regs, carry);
+		SET_APSR_V(regs, overflow);
 	}
 }
 
@@ -336,10 +336,10 @@ void _sub_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7
 	carry = check_minus_carry(Rn_val, imm32, Rd_val);
 
 	if(setflags != 0){
-		SET_APSR_N(*(&regs->R[0]+Rd));
-		SET_APSR_Z(*(&regs->R[0]+Rd));
-		SET_APSR_C(carry);
-		SET_APSR_V(overflow);
+		SET_APSR_N(regs, *(&regs->R[0]+Rd));
+		SET_APSR_Z(regs, *(&regs->R[0]+Rd));
+		SET_APSR_C(regs, carry);
+		SET_APSR_V(regs, overflow);
 	}
 }
 
@@ -360,9 +360,9 @@ void _mov_imm(uint32_t Rd, uint32_t imm32, uint32_t setflag, int carry, armv7m_r
 	uint32_t result = imm32;
 	*(&regs->R[0]+Rd) = result;
 	if(setflag != 0){
-		SET_APSR_N(result);
-		SET_APSR_Z(result);
-		SET_APSR_C(carry);
+		SET_APSR_N(regs, result);
+		SET_APSR_Z(regs, result);
+		SET_APSR_C(regs, carry);
 	}
 }
 
@@ -371,10 +371,10 @@ void _mov_imm(uint32_t Rd, uint32_t imm32, uint32_t setflag, int carry, armv7m_r
 if ConditionPassed() then
 	EncodingSpecificOperations();
 (result, carry, overflow) = AddWithCarry(R[n], NOT(imm32), ¡®1¡¯);
-	APSR.N = result<31>;
-	APSR.Z = IsZeroBit(result);
-	APSR.C = carry;
-	APSR.V = overflow;
+APSR.N = result<31>;
+APSR.Z = IsZeroBit(result);
+APSR.C = carry;
+APSR.V = overflow;
 *************************************/
 void _cmp_imm(uint32_t imm32, uint32_t Rn, armv7m_reg_t* regs)
 {
@@ -391,8 +391,94 @@ void _cmp_imm(uint32_t imm32, uint32_t Rn, armv7m_reg_t* regs)
 	// if Rd < Rn and imm then carry = 1			
 	carry = check_minus_carry(Rn_val, imm32, result);
 
-	SET_APSR_N(result);
-	SET_APSR_Z(result);
-	SET_APSR_C(carry);
-	SET_APSR_V(overflow);
+	SET_APSR_N(regs, result);
+	SET_APSR_Z(regs, result);
+	SET_APSR_C(regs, carry);
+	SET_APSR_V(regs, overflow);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-233>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+(shifted, carry) = Shift_C(R[m], shift_t, shift_n, APSR.C);
+result = R[n] AND shifted;
+R[d] = result;
+if setflags then
+	APSR.N = result<31>;
+	APSR.Z = IsZeroBit(result);
+	APSR.C = carry;
+// APSR.V unchanged
+*************************************/
+void _and_reg(uint32_t Rm, uint32_t Rdn, uint32_t setflag, armv7m_reg_t* regs)
+{
+	int carry = GET_APSR_C(regs);
+
+	uint32_t shifted;
+	Shift_C(*(&regs->R[0]+Rm), SRType_LSL, 0, carry, &shifted, &carry);
+
+	uint32_t Rn_val = *(&regs->R[0]+Rdn);
+	uint32_t result = Rn_val & shifted;
+	*(&regs->R[0]+Rdn) = result;
+	if(setflag){
+		SET_APSR_N(regs, result);
+		SET_APSR_Z(regs, result);
+		SET_APSR_C(regs, carry);
+	}
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-273>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+(shifted, carry) = Shift_C(R[m], shift_t, shift_n, APSR.C);
+result = R[n] EOR shifted;
+R[d] = result;
+if setflags then
+	APSR.N = result<31>;
+	APSR.Z = IsZeroBit(result);
+	APSR.C = carry;
+	// APSR.V unchanged
+*********o****************************/
+void _eor_reg(uint32_t Rm, uint32_t Rdn, uint32_t setflag, armv7m_reg_t* regs)
+{
+	int carry = GET_APSR_C(regs);
+	uint32_t shifted;
+	Shift_C(*(&regs->R[0]+Rm), SRType_LSL, 0, carry, &shifted, &carry);
+	uint32_t Rn_val = *(&regs->R[0]+Rdn);
+	uint32_t result = Rn_val^shifted;
+	*(&regs->R[0]+Rdn) = result;
+	if(setflag){
+		SET_APSR_N(regs, result);
+		SET_APSR_Z(regs, result);
+		SET_APSR_C(regs, carry);
+	}
+}
+
+/***********************************
+if ConditionPassed() then
+	EncodingSpecificOperations();
+shift_n = UInt(R[m]<7:0>);
+(result, carry) = Shift_C(R[n], SRType_LSL, shift_n, APSR.C);
+R[d] = result;
+if setflags then
+	APSR.N = result<31>;
+	APSR.Z = IsZeroBit(result);
+	APSR.C = carry;
+// APSR.V unchanged
+*********o****************************/
+void _lsl_reg(uint32_t Rm, uint32_t Rdn, uint32_t setflag, armv7m_reg_t* regs)
+{
+	uint32_t shift_n = *(&regs->R[0]+Rm) & 0x1F;
+	uint32_t result;
+	uint32_t Rn_val = *(&regs->R[0]+Rdn);
+	int carry = GET_APSR_C(regs);
+	Shift_C(Rn_val, SRType_LSL, shift_n, carry, &result, &carry);
+	*(&regs->R[0]+Rdn) = result;
+
+	if(setflag){
+		SET_APSR_N(regs, result);
+		SET_APSR_Z(regs, result);
+		SET_APSR_C(regs, carry);
+	}
 }
