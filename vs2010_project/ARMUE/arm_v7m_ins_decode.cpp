@@ -71,9 +71,9 @@ void _lsl_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
 	uint32_t imm = ins_code >> 6 & 0x1F;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
-	uint32_t setflag = !inITblock(regs);
+	uint32_t setflags = !inITblock(regs);
 
-	_lsl_imm(imm, Rm, Rd, setflag, regs);
+	_lsl_imm(imm, Rm, Rd, setflags, regs);
 	LOG_INSTRUCTION("_lsl_imm_16, R%d,R%d,#%d\n", Rd, Rm, imm);
 }
 
@@ -82,9 +82,9 @@ void _lsr_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
 	uint32_t imm = ins_code >> 6 & 0x1F;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
-	uint32_t setflag = !inITblock(regs);
+	uint32_t setflags = !inITblock(regs);
 	
-	_lsr_imm(imm, Rm, Rd, setflag, regs);		
+	_lsr_imm(imm, Rm, Rd, setflags, regs);		
 	LOG_INSTRUCTION("_lsr_imm_16, R%d,R%d,#%d\n", Rd, Rm, imm);
 }
 
@@ -93,9 +93,9 @@ void _asr_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
 	uint32_t imm = ins_code >> 6 & 0x1F;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
-	uint32_t setflag = !inITblock(regs);
+	uint32_t setflags = !inITblock(regs);
 
-	_asr_imm(imm, Rm, Rd, setflag, regs);	
+	_asr_imm(imm, Rm, Rd, setflags, regs);	
 	LOG_INSTRUCTION("_asr_imm_16, R%d,R%d,#%d\n", Rd, Rm, imm);
 }
 
@@ -104,9 +104,9 @@ void _add_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	uint32_t Rm = ins_code >> 6 & 0x7;
 	uint32_t Rn = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
-	uint32_t setflag = !inITblock(regs);
+	uint32_t setflags = !inITblock(regs);
 
-	_add_reg(Rm, Rn, Rd, SRType_LSL, 0, setflag, regs);
+	_add_reg(Rm, Rn, Rd, SRType_LSL, 0, setflags, regs);
 	LOG_INSTRUCTION("_add_reg_16, R%d,R%d,R%d\n", Rd, Rn, Rm);	
 }
 
@@ -115,9 +115,9 @@ void _sub_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	uint32_t Rm = ins_code >> 6 & 0x7;
 	uint32_t Rn = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
-	uint32_t setflag = !inITblock(regs);
+	uint32_t setflags = !inITblock(regs);
 
-	_sub_reg(Rm, Rn, Rd, SRType_LSL, 0, setflag, regs);
+	_sub_reg(Rm, Rn, Rd, SRType_LSL, 0, setflags, regs);
 	LOG_INSTRUCTION("_sub_reg_16, R%d,R%d,R%d\n", Rd, Rn, Rm);	
 }
 
@@ -126,9 +126,9 @@ void _add_imm3_16(uint16_t ins_code, armv7m_reg_t* regs)
 	uint32_t imm32 = ins_code >> 6 & 0x7;
 	uint32_t Rn = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
-	uint32_t setflag = !inITblock(regs);
+	uint32_t setflags = !inITblock(regs);
 
-	_add_imm(imm32, Rn, Rd, setflag, regs);	
+	_add_imm(imm32, Rn, Rd, setflags, regs);	
 	LOG_INSTRUCTION("_add_imm3_16, R%d,R%d,#%d\n", Rd, Rn, imm32);	
 }
 
@@ -137,9 +137,9 @@ void _sub_imm3_16(uint16_t ins_code, armv7m_reg_t* regs)
 	uint32_t imm32 = ins_code >> 6 & 0x7;
 	uint32_t Rn = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
-	uint32_t setflag = !inITblock(regs);
+	uint32_t setflags = !inITblock(regs);
 
-	_sub_imm(imm32, Rn, Rd, setflag, regs);	
+	_sub_imm(imm32, Rn, Rd, setflags, regs);	
 	LOG_INSTRUCTION("_add_imm3_16, R%d,R%d,#%d\n", Rd, Rn, imm32);		
 }
 
@@ -147,10 +147,10 @@ void _mov_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
 {
 	uint32_t Rd = ins_code >> 8 & 0x7;
 	uint32_t imm = ins_code & 0x1F;
-	uint32_t setflag = !inITblock(regs);
+	uint32_t setflags = !inITblock(regs);
 	uint32_t carry = GET_APSR_C(regs);
 
-	_mov_imm(Rd, imm, setflag, carry, regs);
+	_mov_imm(Rd, imm, setflags, carry, regs);
 	LOG_INSTRUCTION("_mov_imm_16, R%d,#%d\n", Rd, imm);
 }
 
@@ -168,9 +168,9 @@ void _add_imm8_16(uint16_t ins_code, armv7m_reg_t* regs)
 	uint32_t Rn = ins_code >> 8 & 0x7;
 	uint32_t Rd = Rn;
 	uint32_t imm8 = ins_code & 0xFF;
-	int setflag = !inITblock(regs);
+	int setflags = !inITblock(regs);
 
-	_add_imm(imm8, Rn, Rd, setflag, regs);
+	_add_imm(imm8, Rn, Rd, setflags, regs);
 	LOG_INSTRUCTION("_add_imm8_16, R%d,#%d\n", Rn, imm8);
 }
 
@@ -179,9 +179,9 @@ void _sub_imm8_16(uint16_t ins_code, armv7m_reg_t* regs)
 	uint32_t Rn = ins_code >> 8 & 0x7;
 	uint32_t Rd = Rn;
 	uint32_t imm8 = ins_code & 0xFF;
-	int setflag = !inITblock(regs);	
+	int setflags = !inITblock(regs);	
 	
-	_sub_imm(imm8, Rn, Rd, setflag, regs);
+	_sub_imm(imm8, Rn, Rd, setflags, regs);
 	LOG_INSTRUCTION("_sub_imm8_16, R%d,#%d\n", Rn, imm8);
 }
 
@@ -190,9 +190,9 @@ void _and_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 {
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
-	int setflag = !inITblock(regs);
+	int setflags = !inITblock(regs);
 
-	_and_reg(Rm, Rdn,setflag, regs);
+	_and_reg(Rm, Rdn, Rdn, SRType_LSL, 0, setflags, regs);
 	LOG_INSTRUCTION("_and_reg_16, R%d,R%d\n", Rdn, Rm);
 }
 
@@ -200,9 +200,9 @@ void _eor_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 {
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
-	int setflag = !inITblock(regs);
+	int setflags = !inITblock(regs);
 
-	_eor_reg(Rm, Rdn, setflag, regs);
+	_eor_reg(Rm, Rdn, Rdn, SRType_LSL, 0, setflags, regs);
 	LOG_INSTRUCTION("_eor_reg_16, R%d,R%d\n", Rdn, Rm);
 }
 
@@ -210,30 +210,49 @@ void _lsl_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 {
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
-	int setflag = !inITblock(regs);
+	int setflags = !inITblock(regs);
 
-	_lsl_reg(Rm, Rdn, setflag, regs);
+	_lsl_reg(Rm, Rdn, Rdn, setflags, regs);
 	LOG_INSTRUCTION("_lsl_reg_16, R%d,R%d\n", Rdn, Rm);
 }
 
 void _lsr_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 {
-	printf("_lsr_reg_16\n");
+	uint32_t Rdn = ins_code & 0x7;
+	uint32_t Rm = ins_code >> 3 & 0x7;
+	int setflags = !inITblock(regs);
+
+	_lsr_reg(Rm, Rdn, Rdn, setflags, regs);
+	LOG_INSTRUCTION("_lsr_reg_16 R%d,R%d\n", Rdn, Rm);
 }
 
 void _asr_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 {
-	printf("_asr_reg_16\n");
+	uint32_t Rdn = ins_code & 0x7;
+	uint32_t Rm = ins_code >> 3 & 0x7;
+	int setflags = !inITblock(regs);
+
+	_asr_reg(Rm, Rdn, Rdn, setflags, regs);
+	LOG_INSTRUCTION("_asr_reg_16 R%d,R%d\n", Rdn, Rm);
 }
 
 void _adc_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
-{
-	printf("_adc_reg_16\n");
+{	uint32_t Rdn = ins_code & 0x7;
+	uint32_t Rm = ins_code >> 3 & 0x7;
+	int setflags = !inITblock(regs);
+
+	_adc_reg(Rm, Rdn, Rdn, SRType_LSL, 0, setflags, regs);
+	LOG_INSTRUCTION("_adc_reg_16 R%d,R%d\n", Rdn, Rm);
 }
 
 void _sbc_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 {
-	printf("_sbc_reg_16\n");
+	uint32_t Rdn = ins_code & 0x7;
+	uint32_t Rm = ins_code >> 3 & 0x7;
+	int setflags = !inITblock(regs);
+
+	_sbc_reg(Rm, Rdn, Rdn, SRType_LSL, 0, setflags, regs);
+	LOG_INSTRUCTION("_sbc_reg_16 R%d,R%d\n", Rdn, Rm);
 }
 
 void _ror_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
@@ -297,11 +316,11 @@ void _mov_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 
 	if(Rd == 0x0D){
 		// FIXME: SEE ADD SP PLUS REGISTER
+		// FIXME: UNPREDICTABLE
 	}else{
-		_add_reg(Rm, Rn, Rd, SRType_LSL, 0, setflag, regs);
+		_mov_reg(Rm, Rn, Rd, setflag, regs);
 	}
 
-	// FIXME: UNPREDICTABLE
 	LOG_INSTRUCTION("_mov_reg_16, R%d,R%d\n", Rd, Rm);
 }
 
