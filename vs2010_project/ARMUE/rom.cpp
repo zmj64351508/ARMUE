@@ -162,12 +162,14 @@ static error_code_t parse_rom_file_head(_IO rom_t *rom)
 }
 
 
-/* if rom file exsists, open the rom. Else use the parameter "rom" to create the rom file	*/
-/* parameter:	path - the path of rom file													*/
-/*				rom - if the rom file exisits, this is an output value. Else, we use this	*/
-/*					  to create the rom file. In other word, this value didn't work at all	*/
-/*					  when the file exsists.												*/
-/* return:		SUCCESS, ERROR_INVALID_PARAM, ERROR_INVALID_ROM_FILE, ERROR_CREATE			*/
+/*
+ * @brief: if rom file exsists, open the rom. Else use the parameter "rom" to create the rom file
+ * @parameter:	path - the path of rom file													
+ *				rom - if the rom file exisits, this is an output value. Else, we use this
+ *					  to create the rom file. In other word, this value didn't work at all
+ *					  when the file exsists.
+ * @return:		SUCCESS, ERROR_INVALID_PARAM, ERROR_INVALID_ROM_FILE, ERROR_CREATE			
+ */
 error_code_t open_rom(_I _TCHAR* path, _IO rom_t* rom)
 {
 	LOG(LOG_DEBUG, "open_rom: %ws\n", path);

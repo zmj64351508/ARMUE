@@ -91,6 +91,7 @@ uint32_t get_from_memory32(uint32_t addr, memory_map_t* memory_map)
 		return fetch_rom_data32(addr, memory_map->ROM[storer_index]);
 	}else if((storer_index = addr_in_ram(addr, memory_map)) >= 0){
 		LOG(LOG_DEBUG, "fetch from ram\n");
+		return 0;// TODO: fetch from ram
 	}else{
 		LOG(LOG_ERROR, "get_from_memory32: Can't fetch address %u\n", addr);
 		return -1;

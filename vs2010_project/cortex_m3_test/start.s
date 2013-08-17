@@ -2,11 +2,71 @@
 	DCD 	1000000
 	DCD		START 
 START	
-	;MOV R1,#0X8
-	;MOV R2,#0X3
-	MOVS R0,R0
+	;test for SBC
+	;THUMB
+	MOV R1,#14
+	MVN R2,R1
+	BIC R1,R2
+	
+	MUL R1,R2
+	
+	ADD R1,R2
+	ORR R2,R1
+	
+	MOV R2,LR
+	LSR R2,#1
+	MOV R3,R2
+	CMN R2,R3
+	
+	MOV R2,LR
+	LSR R2,#1
+	MOV R3,LR
+	ASR R3,#1
+	CMP R2,R3
+	
+	TST R2,R3
+	
+	LSL R3,#5
+	ROR R3,R2
+	
+	SUB R3,#2
+	SBC R2,R3
+	
+	MOV R2,#1
+	MOV R3,#2
+	SBC R2,R3
+
+	;test for ADC
+	MOV R2,#1
+	MOV R3,#1
+	ADC R2,R3
+	
 	MOV R2,LR
 	MOV R3,#1
+	LSR R2,#1
+	ADC R2,R3
+	
+	MOV R2,#1
+	LSL R2,#31
+	MOV R3,#1
+	ADC R2,R3
+	
+	MOV R2,LR
+	MOV R3,#1
+	ADC R2,R3
+	
+	MOV R2,LR
+	MOV R3,LR
+	ADC R2,R3
+	
+	MOV R2,#1
+	LSL R2,#31
+	ADD R2,#1
+	MOV R3,R2
+	ADC R2,R3
+	
+	EOR R2,R3
+	
 	
 	SUB R3,#20
 	ADD R2,#20
