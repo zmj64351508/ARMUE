@@ -118,6 +118,44 @@ inline void AddWithCarry(uint32_t op1, uint32_t op2, uint32_t carry_in, uint32_t
 	}
 }
 
+/* <<ARMv7-M Architecture Reference Manual 630>> */
+inline void BranchTo(uint32_t address, armv7m_reg_t* regs)
+{
+	SET_REG_VAL(regs, PC_index, address);
+}
+
+/* <<ARMv7-M Architecture Reference Manual 47>> */
+inline void BranchWritePC(uint32_t address, armv7m_reg_t* regs)
+{
+	BranchTo(DOWN_ALIGN(address, 1), regs);
+}
+
+/* <<ARMv7-M Architecture Reference Manual 48>> */
+inline void ALUWritePC(uint32_t address, armv7m_reg_t* regs)
+{
+	BranchWritePC(address, regs);
+}
+
+
+/* <<ARMv7-M Architecture Reference Manual 47>> */
+void BXWritePC(uint32_t address, armv7m_reg_t* regs)
+{
+	uint32_t Tflag;
+	int CurrentMode = regs->mode;
+	if(CurrentMode == MODE_HANDLER &&
+		((address >> 28) & 0xFul) == 0xFul){
+			//TODO: ExceptionReturn();
+	}else{
+		Tflag = address & 0x1ul;
+		SET_EPSR_T(regs, Tflag);
+		if(Tflag == 0){
+			//TODO: UsageFault(Invalid_State);
+		}
+
+		BranchTo(DOWN_ALIGN(address, 1), regs);
+	}
+}
+
 /***********************************
 <<ARMv7-M Architecture Reference Manual A7-334>>
 if ConditionPassed() then
@@ -229,7 +267,7 @@ void _add_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t sh
 	
 	// software won't distinguish PC and other registers like hardware did. Just disable setflags.
 	if(Rd == 15){
-
+		ALUWritePC(result, regs);
 	}else{
 		SET_REG_VAL(regs, Rd, result);
 		if(setflags != 0){
@@ -241,6 +279,47 @@ void _add_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t sh
 	}
 }
 	
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-227>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+	shifted = Shift(R[m], shift_t, shift_n, APSR.C);
+	(result, carry, overflow) = AddWithCarry(SP, shifted, ¡®0¡¯);
+	if d == 15 then
+		ALUWritePC(result); // setflags is always FALSE here
+	else
+		R[d] = result;
+		if setflags then
+			APSR.N = result<31>;
+			APSR.Z = IsZeroBit(result);
+			APSR.C = carry;
+			APSR.V = overflow;
+*************************************/
+void _add_sp_reg(uint32_t Rm, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
+{
+	uint32_t carry = GET_APSR_C(regs);
+	uint32_t overflow;
+	uint32_t shifted;
+	Shift(GET_REG_VAL(regs, Rm), shift_t, shift_n, carry, &shifted);
+	
+	uint32_t SP_val = GET_REG_VAL(regs, SP_index);
+	uint32_t result;
+	AddWithCarry(SP_val, shifted, 0, &result, &carry, &overflow);
+	
+	// software won't distinguish PC and other registers like hardware did. Just disable setflags.
+	if(Rd == 15){
+		ALUWritePC(result, regs);
+	}else{
+		SET_REG_VAL(regs, Rd, result);
+		if(setflags != 0){
+			SET_APSR_N(regs, result);
+			SET_APSR_Z(regs, result);
+			SET_APSR_C(regs, carry);
+			SET_APSR_V(regs, overflow);
+		}
+	}
+}
+
 
 /***********************************
 <<ARMv7-M Architecture Reference Manual A7-498>>
@@ -869,7 +948,7 @@ void _mov_reg(uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
 	uint32_t result = Rm_val;
 	if(Rd == 15){
-
+		ALUWritePC(result, regs);
 	}else{
 		SET_REG_VAL(regs, Rd, result);
 		if(setflags){
@@ -877,4 +956,36 @@ void _mov_reg(uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
 			SET_APSR_Z(regs, result);
 		}
 	}
+}
+
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-250>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+	BXWritePC(R[m]);
+*********o****************************/
+void _bx(uint32_t Rm, armv7m_reg_t* regs)
+{
+	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+	BXWritePC(Rm_val, regs);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-249>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+	target = R[m];
+	next_instr_addr = PC - 2;
+	LR = next_instr_addr<31:1> : ¡®1¡¯;
+	BLXWritePC(target);
+*********o****************************/
+void _blx(uint32_t Rm, armv7m_reg_t* regs)
+{
+	uint32_t target = GET_REG_VAL(regs, Rm);
+	uint32_t PC_val = GET_REG_VAL(regs, PC_index);
+	uint32_t next_instr_addr = PC_val - 2;
+	uint32_t LR_val = next_instr_addr | 0x1ul;
+	SET_REG_VAL(regs, LR_index, LR_val);
+	BXWritePC(target, regs);
 }

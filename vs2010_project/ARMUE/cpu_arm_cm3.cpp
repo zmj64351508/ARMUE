@@ -62,6 +62,7 @@ error_code_t armcm3_startup(cpu_t* cpu)
 	regs->PC = align_address(memory_map->interrupt_table[1]);
 	regs->xPSR = 0x01000000;
 	regs->LR = 0xFFFFFFFF;
+	regs->mode = MODE_THREAD;
 
 	return SUCCESS;
 }
@@ -83,35 +84,40 @@ void excute_armcm3_cpu(cpu_t* cpu, void* opcode){
 	
 	uint32_t opcode32 = *(uint32_t*)opcode;; 
 	armv7m_reg_t *regs = ((armv7m_instruct_t*)cpu->ins_set)->regs;
+	uint32_t PC_banked;
 
-	// Decode and Excute
-	// if the code is encoded by 16 bit coding then parse the fist 16 bit and second 16 bit seperately 
-	if(is_16bit_code(opcode32) == TRUE){
-		/******							IMPROTANT									*/
-		/****** PC always pointers to the address of next instruction.				*/
-		/****** when 16bit coded, PC += 2. when 32bit coded, PC += 4.				*/		
-		/****** But, when 16 bit coded instruction visit PC, it should return PC+2	*/
-		regs->PC += 2;
-		parse_opcode16(opcode32, (armv7m_instruct_t*)cpu->ins_set);
-		LOG_REG(regs);
-		getchar();
-
-		// if the second bit is 16 bit coded
-		if(is_16bit_code(opcode32 >> 16) == TRUE){
+	/******							IMPROTANT									*/
+	/****** PC always points to the address of next instruction.				*/
+	/****** when 16bit coded, PC += 2. when 32bit coded, PC += 4.				*/		
+	/****** But if instruction visits PC, it always returns PC+4				*/
+	int i = 0;
+	do{
+		// if the code is encoded by 16 bit coding then parse the fist 16 bit and second 16 bit seperately 
+		if(is_16bit_code(opcode32) == TRUE){
 			regs->PC += 2;
-			parse_opcode16(opcode32 >> 16, (armv7m_instruct_t*)cpu->ins_set);
+			regs->PC_return = regs->PC + 2;
+			PC_banked = regs->PC;
+			parse_opcode16(opcode32, (armv7m_instruct_t*)cpu->ins_set);
 			LOG_REG(regs);
 			getchar();
-		// if the second bit is 32 bit coded
+			/* PC is modified by instruction */
+			if(regs->PC != PC_banked){
+				break;
+			}
+			opcode32 >>= 16;
+			i++;
+
+		// if the code is encoded by 32 bit coding then parse the 32 bit together 
 		}else{
-			
+			/* the opcode is the low 16 bit but it seems to be a 32-bit instruction */
+			if(i == 1){
+				break;
+			}
+			regs->PC += 4;
+			regs->PC_return = regs->PC;
+			//parse_opcode32(opcode32, (armv7m_instruct_t*)cpu->ins_set);
 		}
-	
-	// if the code is encoded by 32 bit coding then parse the 32 bit together 
-	}else{
-		regs->PC += 4;
-		//parse_opcode32(opcode32, (armv7m_instruct_t*)cpu->ins_set);
-	}
+	}while(opcode32 != 0);
 }
 
 
