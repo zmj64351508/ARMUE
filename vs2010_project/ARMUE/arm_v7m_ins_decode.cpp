@@ -58,6 +58,18 @@ void spdata_branch_exchange(uint16_t opcode, armv7m_instruct_t* ins)
 	ins->ins_table->spdata_branch_exchange_table16[opcode >> 6 & 0x0F](opcode, ins->regs);
 }
 
+void load_literal_pool(uint16_t opcode, armv7m_instruct_t* ins)
+{
+	/* load fron literal pool set has only 1 instruction */
+	ins->ins_table->load_literal_table16[0](opcode, ins->regs);
+}
+
+void load_store_single(uint16_t opcode, armv7m_instruct_t* ins)
+{
+	// call appropriate instruction implement function by inquiring 15~9bit
+	ins->ins_table->load_store_single_table16[opcode >> 9 & 0x7F](opcode, ins->regs);
+}
+
 #define GET_ITSTATE(regs) ((regs->xPSR >> 8 & 0xFC) | (regs->xPSR >> 25 & 0x3))
 
 uint32_t InITBlock(armv7m_reg_t* regs)
@@ -153,7 +165,7 @@ void _sub_imm3_16(uint16_t ins_code, armv7m_reg_t* regs)
 void _mov_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
 {
 	uint32_t Rd = ins_code >> 8 & 0x7;
-	uint32_t imm = ins_code & 0x1F;
+	uint32_t imm = ins_code & 0xFF;
 	uint32_t setflags = !InITBlock(regs);
 	uint32_t carry = GET_APSR_C(regs);
 
@@ -367,7 +379,7 @@ void _add_sp_reg_T1(uint16_t ins_code, armv7m_reg_t* regs)
 void _add_sp_reg_T2(uint16_t ins_code, armv7m_reg_t* regs)
 {
 	uint32_t Rm = ins_code >> 3 & 0xFul;
-	uint32_t Rd = SP_index;
+	uint32_t Rd = SP_INDEX;
 	assert(Rm != 13);
 
 	_add_sp_reg(Rm, Rd, SRType_LSL, 0, 0, regs);
@@ -447,8 +459,61 @@ void _blx_spec_16(uint16_t ins_code, armv7m_reg_t* regs)
 		LOG_INSTRUCTION("_blx_spec_16 R%d as UNPREDICTABLE\n", Rm);
 	}else{
 		_blx(Rm, regs);
-		LOG_INSTRUCTION("_bx_spec_16 R%d\n", Rm);
+		LOG_INSTRUCTION("_blx_spec_16 R%d\n", Rm);
 	}
+}
+
+void _ldr_literal_16(uint16_t ins_code, armv7m_reg_t* regs)
+{
+	uint32_t imm8 = (ins_code & 0xFFul) << 2;
+	uint32_t Rt = ins_code >> 8 & 0x7ul;
+	bool_t add = TRUE;
+
+	_ldr_literal(imm8, Rt, add, regs, regs->memory);
+	LOG_INSTRUCTION("_ldr_literal_16 R%d,[PC,#%d]\n", Rt, imm8);
+}
+
+
+void _str_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+{
+	uint32_t Rt = LOW_BIT16(ins_code, 3);
+	uint32_t Rn = LOW_BIT16(ins_code>>3, 3);
+	uint32_t Rm = LOW_BIT16(ins_code>>6, 3);
+
+	_str_reg(Rm, Rn, Rt, SRType_LSL, 0, regs, regs->memory);
+	LOG_INSTRUCTION("_str_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
+}
+
+void _strh_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+{
+	uint32_t Rt = LOW_BIT16(ins_code, 3);
+	uint32_t Rn = LOW_BIT16(ins_code>>3, 3);
+	uint32_t Rm = LOW_BIT16(ins_code>>6, 3);
+
+	_strh_reg(Rm, Rn, Rt, SRType_LSL, 0, regs, regs->memory);
+	LOG_INSTRUCTION("_strh_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
+}
+
+void _strb_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+{
+	uint32_t Rt = LOW_BIT16(ins_code, 3);
+	uint32_t Rn = LOW_BIT16(ins_code>>3, 3);
+	uint32_t Rm = LOW_BIT16(ins_code>>6, 3);
+
+	_strb_reg(Rm, Rn, Rt, SRType_LSL, 0, regs, regs->memory);
+	LOG_INSTRUCTION("_strb_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
+}
+
+void _ldrsb_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+{
+	uint32_t Rt = LOW_BIT16(ins_code, 3);
+	uint32_t Rn = LOW_BIT16(ins_code>>3, 3);
+	uint32_t Rm = LOW_BIT16(ins_code>>6, 3);
+
+	bool_t add = TRUE;
+	bool_t index = TRUE;
+	_ldrsb_reg(Rm, Rn, Rt, add, index, SRType_LSL, 0, regs, regs->memory);
+	LOG_INSTRUCTION("_ldrsb_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
 }
 
 void _unpredictable_16(uint16_t ins_code, armv7m_reg_t* regs)
@@ -463,7 +528,8 @@ void init_instruction_table(instruct_table_t* table)
 	set_base_table_value(table->base_table16, 0x00, 0x0F, shift_add_sub_mov);		// 00xxxx		
 	set_base_table_value(table->base_table16, 0x10, 0x10, data_process);			// 010000				
 	set_base_table_value(table->base_table16, 0x11, 0x11, spdata_branch_exchange);	// 010001
-	//base_table[0x12~0x13] = load_literal			// 01001x
+	set_base_table_value(table->base_table16, 0x12, 0x13, load_literal_pool);		// 01001x
+	set_base_table_value(table->base_table16, 0x14, 0x27, load_store_single);		// 0101xx 011xxx 100xxx
 	//base_table[0x14~0x17] = load_store_single		// 0101xx
 	//base_table[0x18~0x1F] = load_store_single		// 011xxx
 	//base_table[0x20~0x27] = load_store_single		// 100xxx
@@ -508,11 +574,21 @@ void init_instruction_table(instruct_table_t* table)
 
 	// special data instructions and branch and exchange A5-159
 	set_sub_table_value(table->spdata_branch_exchange_table16, 0x00, 0x03, _add_reg_spec_16);	// 00xx
-	set_sub_table_value(table->spdata_branch_exchange_table16, 0x04, 0x04, _unpredictable_16);
+	set_sub_table_value(table->spdata_branch_exchange_table16, 0x04, 0x04, _unpredictable_16);	// 0100(*)
 	set_sub_table_value(table->spdata_branch_exchange_table16, 0x05, 0x07, _cmp_reg_spec_16);	// 0101,011x
 	set_sub_table_value(table->spdata_branch_exchange_table16, 0x08, 0x0B, _mov_reg_spec_16);	// 10xx
 	set_sub_table_value(table->spdata_branch_exchange_table16, 0x0C, 0x0D, _bx_spec_16);		// 110x
 	set_sub_table_value(table->spdata_branch_exchange_table16, 0x0E, 0x0F, _blx_spec_16);		// 111x
+
+	// load from literal pool A7-289
+	set_sub_table_value(table->load_literal_table16, 0x00, 0x00, _ldr_literal_16);
+
+	// load store single data item A5-160
+	set_sub_table_value(table->load_store_single_table16, 0x00, 0x27, _unpredictable_16);		// 0000 000 ~ 0010 011
+	set_sub_table_value(table->load_store_single_table16, 0x28, 0x28, _str_reg_16);				// 0101 000
+	set_sub_table_value(table->load_store_single_table16, 0x29, 0x29, _strh_reg_16);			// 0100 001
+	set_sub_table_value(table->load_store_single_table16, 0x2A, 0x2A, _strb_reg_16);			// 0100 001
+	set_sub_table_value(table->load_store_single_table16, 0x2B, 0x2B, _ldrsb_reg_16);			// 0100 001
 }
 
 

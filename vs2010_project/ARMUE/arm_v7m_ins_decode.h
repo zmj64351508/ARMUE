@@ -5,6 +5,9 @@
 #include "arm_v7m_ins_implement.h"
 
 
+#define LOW_BIT32(value, bit_num) (assert(bit_num < 32 && bit_num > 0), ((value) & (0xFFFFFFFF >> (32-(bit_num)))))
+#define LOW_BIT16(value, bit_num) (assert(bit_num < 16 && bit_num > 0), ((value) & (0xFFFF >> (16-(bit_num)))))
+
 // 16bit thumb-2 instruction type
 struct armv7m_instruct_t;
 typedef void (*sub_translate16_t)(uint16_t opcode, struct armv7m_instruct_t* ins);
@@ -15,7 +18,8 @@ typedef void (*instruction16_t)(uint16_t opcode, armv7m_reg_t* regs);
 #define SHIFT_ADD_SUB_MOV_SIZE_16		64
 #define DATA_PROCESS_SIZE_16			32	
 #define SPDATA_BRANCH_EXCHANGE_SIZE_16	16
-#define LOAD_LITERAL_SIZE_16			16
+#define LOAD_LITERAL_SIZE_16			1
+#define LOAD_STORE_SINGLE_SIZE_16		128
 
 // all the classifictions are followed by the definition of "ARMv7-m Architecture Reference manual A5-156"
 typedef struct {
@@ -27,6 +31,7 @@ typedef struct {
 	instruction16_t		data_process_table16[DATA_PROCESS_SIZE_16];
 	instruction16_t		spdata_branch_exchange_table16[SPDATA_BRANCH_EXCHANGE_SIZE_16];
 	instruction16_t		load_literal_table16[LOAD_LITERAL_SIZE_16];
+	instruction16_t		load_store_single_table16[LOAD_STORE_SINGLE_SIZE_16];
 }instruct_table_t;
 
 typedef struct armv7m_instruct_t{

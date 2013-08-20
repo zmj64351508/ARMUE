@@ -58,11 +58,16 @@ error_code_t armcm3_startup(cpu_t* cpu)
 	memory_map_t* memory_map = cpu->memory_map;
 	
 	// set register initial value
+	// TODO: Following statements need to be pack in another function which should be in armv7m module
 	regs->MSP = memory_map->interrupt_table[0];
 	regs->PC = align_address(memory_map->interrupt_table[1]);
-	regs->xPSR = 0x01000000;
+	regs->xPSR = 0x0;
+	SET_EPSR_T(regs, memory_map->interrupt_table[1] & BIT_0);
+	/* if ESPR T is not zero, refer to B1-625 */
+
 	regs->LR = 0xFFFFFFFF;
 	regs->mode = MODE_THREAD;
+	regs->memory = memory_map;
 
 	return SUCCESS;
 }

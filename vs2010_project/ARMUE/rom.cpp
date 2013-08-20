@@ -247,6 +247,37 @@ error_code_t set_rom_base_addr(rom_t* rom, uint32_t base_addr)
 	return SUCCESS;
 }
 
+int send_rom_data8(uint32_t addr, uint8_t char_to_send, rom_t* rom)
+{
+	int retval;
+	int cur_offset = addr - rom->base_address + rom->content_start;
+	if(cur_offset == rom->last_offset + 1){
+		retval = fputc(char_to_send, rom->rom_file);
+		rom->last_offset++;
+	}else{
+		fseek(rom->rom_file, cur_offset, SEEK_SET);
+		retval = fputc(char_to_send, rom->rom_file);
+		rom->last_offset = cur_offset;
+	}
+	fflush(rom->rom_file);
+	return retval;
+}
+
+uint8_t fetch_rom_data8(uint32_t addr, rom_t* rom)
+{
+	int cur_offset = addr - rom->base_address + rom->content_start;
+	int8_t buf = 0;
+	if(cur_offset == rom->last_offset + 1){
+		buf = fgetc(rom->rom_file);
+		rom->last_offset++;
+	}else{
+		fseek(rom->rom_file, cur_offset, SEEK_SET);
+		buf = fgetc(rom->rom_file);
+		rom->last_offset = cur_offset;
+	}
+	return buf;
+}
+
 // get the 32bit data in rom specifical address
 uint32_t fetch_rom_data32(uint32_t addr, rom_t* rom)
 {
@@ -291,5 +322,5 @@ uint16_t fetch_rom_data16(uint32_t addr, rom_t* rom)
 		rom->last_offset = cur_offset+1;
 	}
 
-	return *(uint32_t*)buf;
+	return *(uint16_t*)buf;
 }

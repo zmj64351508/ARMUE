@@ -1,5 +1,6 @@
 #include "arm_v7m_ins_implement.h"
 #include "error_code.h"
+#include "memory_map.h"
 #include <assert.h>
 
 void LSL_C(uint32_t val, int shift, _O uint32_t* result, _O int *carry_out)
@@ -121,7 +122,7 @@ inline void AddWithCarry(uint32_t op1, uint32_t op2, uint32_t carry_in, uint32_t
 /* <<ARMv7-M Architecture Reference Manual 630>> */
 inline void BranchTo(uint32_t address, armv7m_reg_t* regs)
 {
-	SET_REG_VAL(regs, PC_index, address);
+	SET_REG_VAL(regs, PC_INDEX, address);
 }
 
 /* <<ARMv7-M Architecture Reference Manual 47>> */
@@ -135,7 +136,6 @@ inline void ALUWritePC(uint32_t address, armv7m_reg_t* regs)
 {
 	BranchWritePC(address, regs);
 }
-
 
 /* <<ARMv7-M Architecture Reference Manual 47>> */
 void BXWritePC(uint32_t address, armv7m_reg_t* regs)
@@ -154,6 +154,50 @@ void BXWritePC(uint32_t address, armv7m_reg_t* regs)
 
 		BranchTo(DOWN_ALIGN(address, 1), regs);
 	}
+}
+
+/* <<ARMv7-M Architecture Reference Manual 47>> */
+inline void LoadWritePC(uint32_t address, armv7m_reg_t* regs)
+{
+	BXWritePC(address, regs);
+}
+
+/* <<ARMv7-M Architecture Reference Manual B2-694>> */
+bool_t FindPriv(armv7m_reg_t* regs)
+{
+	bool_t ispriv;
+	if(regs->mode == MODE_HANDLER ||
+		(regs->mode == MODE_THREAD && GET_CONTROL_PRIV(regs) == 0)){
+			ispriv = TRUE;
+	}else{
+		ispriv = FALSE;
+	}
+	return ispriv;
+}
+
+/* <<ARMv7-M Architecture Reference Manual B2-696>> */
+int MemU_with_priv(uint32_t address, int size, uint8_t* buffer, bool_t priv, int type, armv7m_reg_t* regs, memory_map_t* memory)
+{
+	int retval = 0;
+	if(0){
+		/* TODO: here is the condition of CCR.UNALIGN_TRP == 1*/
+		// ExceptionTaken(UsageFault);
+	}else{
+		/* Since unaligned visit is not different from aligned one in emulation, we just do the samething. */
+		if(type == MEM_READ){
+			retval = get_from_memory(address, size, buffer, memory);
+		}else if(type == MEM_WRITE){
+			retval = set_to_memory(address, size, buffer, memory);
+		}
+	}
+
+	return retval;
+}
+
+/* <<ARMv7-M Architecture Reference Manual B2-696>> */
+int MemU(uint32_t address, int size, uint8_t* buffer, int type, armv7m_reg_t* regs, memory_map_t* memory)
+{
+	return MemU_with_priv(address, size, buffer, FindPriv(regs), type, regs, memory);
 }
 
 /***********************************
@@ -302,7 +346,7 @@ void _add_sp_reg(uint32_t Rm, uint32_t Rd, SRType shift_t, uint32_t shift_n, uin
 	uint32_t shifted;
 	Shift(GET_REG_VAL(regs, Rm), shift_t, shift_n, carry, &shifted);
 	
-	uint32_t SP_val = GET_REG_VAL(regs, SP_index);
+	uint32_t SP_val = GET_REG_VAL(regs, SP_INDEX);
 	uint32_t result;
 	AddWithCarry(SP_val, shifted, 0, &result, &carry, &overflow);
 	
@@ -983,9 +1027,127 @@ if ConditionPassed() then
 void _blx(uint32_t Rm, armv7m_reg_t* regs)
 {
 	uint32_t target = GET_REG_VAL(regs, Rm);
-	uint32_t PC_val = GET_REG_VAL(regs, PC_index);
+	uint32_t PC_val = GET_REG_VAL(regs, PC_INDEX);
 	uint32_t next_instr_addr = PC_val - 2;
 	uint32_t LR_val = next_instr_addr | 0x1ul;
-	SET_REG_VAL(regs, LR_index, LR_val);
+	SET_REG_VAL(regs, LR_INDEX, LR_val);
 	BXWritePC(target, regs);
+}
+
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-289>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+	base = Align(PC,4);
+	address = if add then (base + imm32) else (base - imm32);
+	data = MemU[address,4];
+	if t == 15 then
+		if address<1:0> == ¡®00¡¯ then LoadWritePC(data); else UNPREDICTABLE;
+	else
+		R[t] = data;
+*********o****************************/
+void _ldr_literal(uint32_t imm32, uint32_t Rt, bool_t add, armv7m_reg_t* regs, memory_map_t* memory_map)
+{
+	uint32_t base = GET_REG_VAL(regs, PC_INDEX);
+	base = DOWN_ALIGN(base, 2);
+	uint32_t address = add ? base+imm32 : base-imm32;
+
+	uint32_t data;
+	MemU(address, 4, (uint8_t *)&data, MEM_READ, regs, memory_map);
+	if(Rt == 15){
+		if((address & 0x3ul) == 0){
+			LoadWritePC(data, regs);
+		}else{
+			LOG(LOG_WARN, "_ldr_literal UNPREDICTABLE\n");
+			return;
+		}
+	}else{
+		SET_REG_VAL(regs, Rt, data);
+	}
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-475>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+	offset = Shift(R[m], shift_t, shift_n, APSR.C);
+	address = R[n] + offset;
+	data = R[t];
+	MemU[address,4] = data;
+*********o****************************/
+void _str_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, memory_map_t* memory_map)
+{
+	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+	int32_t carry = GET_APSR_C(regs);
+	uint32_t offset;
+	Shift(Rm_val, shift_t, shift_n, carry, &offset);
+	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+	uint32_t address = Rn_val + offset; 
+	uint32_t data = GET_REG_VAL(regs, Rt);
+	MemU(address, 4, (uint8_t*)&data, MEM_WRITE, regs, memory_map);
+}
+
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-491>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+	offset = Shift(R[m], shift_t, shift_n, APSR.C);
+	address = R[n] + offset;
+	MemU[address,2] = R[t]<15:0>;
+*********o****************************/
+void _strh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, memory_map_t* memory_map)
+{
+	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+	int32_t carry = GET_APSR_C(regs);
+	uint32_t offset;
+	Shift(Rm_val, shift_t, shift_n, carry, &offset);
+	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+	uint32_t address = Rn_val + offset; 
+	uint32_t data = GET_REG_VAL(regs, Rt);
+	MemU(address, 2, (uint8_t*)&data, MEM_WRITE, regs, memory_map);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-479>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+	offset = Shift(R[m], shift_t, shift_n, APSR.C);
+	address = R[n] + offset;
+	MemU[address,1] = R[t]<7:0>;
+*********o****************************/
+void _strb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, memory_map_t* memory_map)
+{
+	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+	int32_t carry = GET_APSR_C(regs);
+	uint32_t offset;
+	Shift(Rm_val, shift_t, shift_n, carry, &offset);
+	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+	uint32_t address = Rn_val + offset; 
+	uint32_t data = GET_REG_VAL(regs, Rt);
+	MemU(address, 1, (uint8_t*)&data, MEM_WRITE, regs, memory_map);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-321>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+	offset = Shift(R[m], shift_t, shift_n, APSR.C);
+	offset_addr = if add then (R[n] + offset) else (R[n] - offset);
+	address = if index then offset_addr else R[n];
+	R[t] = SignExtend(MemU[address,1], 32);
+*********o****************************/
+void _ldrsb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, memory_map_t* memory_map)
+{
+	uint32_t offset;
+	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+	int32_t carry = GET_APSR_C(regs);
+	Shift(Rm_val, shift_t, shift_n, carry, &offset);
+	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+	uint32_t offset_addr = add ? Rn_val+offset : Rn_val-offset;
+	uint32_t address = index ? offset_addr : Rn_val;
+	int8_t data;
+	MemU(address, 1, (uint8_t*)&data, MEM_READ, regs, memory_map);
+	SET_REG_VAL(regs, Rt, (int32_t)data);
 }

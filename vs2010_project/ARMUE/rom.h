@@ -26,6 +26,8 @@ error_code_t fill_rom_with_bin(rom_t *rom, _TCHAR* bin_path);
 error_code_t set_rom_size(rom_t *rom, uint32_t size);
 error_code_t set_rom_base_addr(rom_t* rom, uint32_t base_addr);
 
+int send_rom_data8(uint32_t addr, uint8_t char_to_send, rom_t* rom);
+uint8_t fetch_rom_data8(uint32_t addr, rom_t* rom);
 uint32_t fetch_rom_data32(uint32_t addr, rom_t* rom);
 uint16_t fetch_rom_data16(uint32_t addr, rom_t* rom);
 error_code_t fill_rom_with_zero(rom_t *rom);

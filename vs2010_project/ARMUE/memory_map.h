@@ -32,5 +32,7 @@ error_code_t destory_memory_map(memory_map_t** map);
 
 //int addr_in_rom(uint32_t addr, memory_map_t* map);
 //int addr_in_ram(uint32_t addr, memory_map_t* map);
+int get_from_memory(uint32_t addr, int size, uint8_t* buffer, memory_map_t* memory_map);
 uint32_t get_from_memory32(uint32_t addr, memory_map_t* memory_map);
+int set_to_memory(uint32_t addr, int size, uint8_t* buffer, memory_map_t* memory_map);
 #endif
