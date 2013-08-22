@@ -473,22 +473,25 @@ void _ldr_literal_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_ldr_literal_16 R%d,[PC,#%d]\n", Rt, imm8);
 }
 
+inline void decode_ldr_str_reg_16(uint16_t ins_code, _O uint32_t* Rm, _O uint32_t* Rt, _O uint32_t* Rn)
+{
+	*Rt = LOW_BIT16(ins_code, 3);
+	*Rn = LOW_BIT16(ins_code>>3, 3);
+	*Rm = LOW_BIT16(ins_code>>6, 3);
+}
 
 void _str_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 {
-	uint32_t Rt = LOW_BIT16(ins_code, 3);
-	uint32_t Rn = LOW_BIT16(ins_code>>3, 3);
-	uint32_t Rm = LOW_BIT16(ins_code>>6, 3);
-
+	uint32_t Rt, Rn, Rm;
+	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 	_str_reg(Rm, Rn, Rt, SRType_LSL, 0, regs, regs->memory);
 	LOG_INSTRUCTION("_str_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
 }
 
 void _strh_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 {
-	uint32_t Rt = LOW_BIT16(ins_code, 3);
-	uint32_t Rn = LOW_BIT16(ins_code>>3, 3);
-	uint32_t Rm = LOW_BIT16(ins_code>>6, 3);
+	uint32_t Rt, Rn, Rm;
+	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 
 	_strh_reg(Rm, Rn, Rt, SRType_LSL, 0, regs, regs->memory);
 	LOG_INSTRUCTION("_strh_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
@@ -496,9 +499,8 @@ void _strh_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 
 void _strb_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 {
-	uint32_t Rt = LOW_BIT16(ins_code, 3);
-	uint32_t Rn = LOW_BIT16(ins_code>>3, 3);
-	uint32_t Rm = LOW_BIT16(ins_code>>6, 3);
+	uint32_t Rt, Rn, Rm;
+	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 
 	_strb_reg(Rm, Rn, Rt, SRType_LSL, 0, regs, regs->memory);
 	LOG_INSTRUCTION("_strb_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
@@ -506,14 +508,173 @@ void _strb_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 
 void _ldrsb_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 {
-	uint32_t Rt = LOW_BIT16(ins_code, 3);
-	uint32_t Rn = LOW_BIT16(ins_code>>3, 3);
-	uint32_t Rm = LOW_BIT16(ins_code>>6, 3);
+	uint32_t Rt, Rn, Rm;
+	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 
 	bool_t add = TRUE;
 	bool_t index = TRUE;
 	_ldrsb_reg(Rm, Rn, Rt, add, index, SRType_LSL, 0, regs, regs->memory);
 	LOG_INSTRUCTION("_ldrsb_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
+}
+
+void _ldr_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+{
+	uint32_t Rt, Rn, Rm;
+	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
+	bool_t index = TRUE;
+	bool_t add = TRUE;
+	bool_t wback = FALSE;
+
+	_ldr_reg(Rm, Rn, Rt, add, index, wback, SRType_LSL, 0, regs, regs->memory);
+	LOG_INSTRUCTION("_ldr_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
+}
+
+void _ldrh_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+{
+	uint32_t Rt, Rn, Rm;
+	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
+	bool_t index = TRUE;
+	bool_t add = TRUE;
+	bool_t wback = FALSE;
+
+	_ldrh_reg(Rm, Rn, Rt, add, index, wback, SRType_LSL, 0, regs, regs->memory);
+	LOG_INSTRUCTION("_ldrh_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
+}
+
+void _ldrb_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+{
+	uint32_t Rt, Rn, Rm;
+	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
+	bool_t index = TRUE;
+	bool_t add = TRUE;
+
+	_ldrb_reg(Rm, Rn, Rt, add, index, SRType_LSL, 0, regs, regs->memory);
+	LOG_INSTRUCTION("_ldrb_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
+}
+
+void _ldrsh_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+{
+	uint32_t Rt, Rn, Rm;
+	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
+	bool_t index = TRUE;
+	bool_t add = TRUE;
+	bool_t wback = FALSE;
+
+	_ldrsh_reg(Rm, Rn, Rt, add, index, wback, SRType_LSL, 0, regs, regs->memory);
+	LOG_INSTRUCTION("_ldrb_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
+}
+
+inline void decode_ldr_str_imm_16(uint16_t ins_code, _O uint32_t* imm, _O uint32_t* Rt, _O uint32_t* Rn)
+{
+	*Rt = LOW_BIT16(ins_code, 3);
+	*Rn = LOW_BIT16(ins_code>>3, 3);
+	*imm = LOW_BIT16(ins_code>>6, 5);
+}
+
+void _str_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+{
+	uint32_t imm5, Rt, Rn;
+	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
+	bool_t add = TRUE;
+	bool_t index = TRUE;
+	bool_t wback = FALSE;
+
+	_str_imm(imm5, Rn, Rt, add, index, wback, regs, regs->memory);
+	LOG_INSTRUCTION("_str_imm_16 R%d,[R%d,#0x%d]\n", Rt, Rn, imm5);
+}
+
+void _ldr_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+{
+	uint32_t imm5, Rt, Rn;
+	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
+	bool_t add = TRUE;
+	bool_t index = TRUE;
+	bool_t wback = FALSE;
+
+	_ldr_imm(imm5, Rn, Rt, add, index, wback, regs, regs->memory);
+	LOG_INSTRUCTION("_ldr_imm_16 R%d,[R%d,#0x%d]\n", Rt, Rn, imm5);
+}
+
+void _strb_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+{
+	uint32_t imm5, Rt, Rn;
+	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
+	bool_t add = TRUE;
+	bool_t index = TRUE;
+	bool_t wback = FALSE;
+
+	_strb_imm(imm5, Rn, Rt, add, index, wback, regs, regs->memory);
+	LOG_INSTRUCTION("_strb_imm_16 R%d,[R%d,#0x%d]\n", Rt, Rn, imm5);
+}
+
+void _ldrb_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+{
+	uint32_t imm5, Rt, Rn;
+	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
+	bool_t add = TRUE;
+	bool_t index = TRUE;
+	bool_t wback = FALSE;
+
+	_ldrb_imm(imm5, Rn, Rt, add, index, wback, regs, regs->memory);
+	LOG_INSTRUCTION("_ldrb_imm_16 R%d,[R%d,#0x%d]\n", Rt, Rn, imm5);
+}
+
+void _strh_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+{
+	uint32_t imm5, Rt, Rn;
+	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
+	bool_t add = TRUE;
+	bool_t index = TRUE;
+	bool_t wback = FALSE;
+
+	_strh_imm(imm5, Rn, Rt, add, index, wback, regs, regs->memory);
+	LOG_INSTRUCTION("_strh_imm_16 R%d,[R%d,#0x%d]\n", Rt, Rn, imm5);
+}
+
+void _ldrh_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+{
+	uint32_t imm5, Rt, Rn;
+	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
+	bool_t add = TRUE;
+	bool_t index = TRUE;
+	bool_t wback = FALSE;
+
+	_ldrh_imm(imm5, Rn, Rt, add, index, wback, regs, regs->memory);
+	LOG_INSTRUCTION("_ldrh_imm_16 R%d,[R%d,#0x%d]\n", Rt, Rn, imm5);
+}
+
+inline void decode_ldr_str_sp_imm_16(uint16_t ins_code, _O uint32_t* imm, _O uint32_t* Rt)
+{
+	*imm = LOW_BIT16(ins_code, 8);
+	*Rt = LOW_BIT16(ins_code>>8, 3);
+}
+
+void _str_sp_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+{
+	uint32_t imm8, Rt;
+	uint32_t Rn = 13;
+	decode_ldr_str_sp_imm_16(ins_code, &imm8, &Rt);
+
+	bool_t index = TRUE;
+	bool_t add = TRUE;
+	bool_t wback = FALSE;
+
+	_str_imm(imm8, Rn, Rt, add, index, wback, regs, regs->memory);
+	LOG_INSTRUCTION("_str_sp_imm_16 R%d,[SP,#0x%d]\n", Rt, imm8);
+}
+
+void _ldr_sp_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+{
+	uint32_t imm8, Rt;
+	uint32_t Rn = 13;
+	decode_ldr_str_sp_imm_16(ins_code, &imm8, &Rt);
+
+	bool_t index = TRUE;
+	bool_t add = TRUE;
+	bool_t wback = FALSE;
+
+	_ldr_imm(imm8, Rn, Rt, add, index, wback, regs, regs->memory);
+	LOG_INSTRUCTION("_ldr_sp_imm_16 R%d,[SP,#0x%d]\n", Rt, imm8);
 }
 
 void _unpredictable_16(uint16_t ins_code, armv7m_reg_t* regs)
@@ -530,9 +691,6 @@ void init_instruction_table(instruct_table_t* table)
 	set_base_table_value(table->base_table16, 0x11, 0x11, spdata_branch_exchange);	// 010001
 	set_base_table_value(table->base_table16, 0x12, 0x13, load_literal_pool);		// 01001x
 	set_base_table_value(table->base_table16, 0x14, 0x27, load_store_single);		// 0101xx 011xxx 100xxx
-	//base_table[0x14~0x17] = load_store_single		// 0101xx
-	//base_table[0x18~0x1F] = load_store_single		// 011xxx
-	//base_table[0x20~0x27] = load_store_single		// 100xxx
 	//base_table[0x28~0x29] = general_PC_address		// 10100x
 	//base_table[0x2A~0x2B] = general_SP_address		// 10101x
 	//base_table[0x2C~0x2F] = misc_16bit_ins			// 1011xx
@@ -586,9 +744,22 @@ void init_instruction_table(instruct_table_t* table)
 	// load store single data item A5-160
 	set_sub_table_value(table->load_store_single_table16, 0x00, 0x27, _unpredictable_16);		// 0000 000 ~ 0010 011
 	set_sub_table_value(table->load_store_single_table16, 0x28, 0x28, _str_reg_16);				// 0101 000
-	set_sub_table_value(table->load_store_single_table16, 0x29, 0x29, _strh_reg_16);			// 0100 001
-	set_sub_table_value(table->load_store_single_table16, 0x2A, 0x2A, _strb_reg_16);			// 0100 001
-	set_sub_table_value(table->load_store_single_table16, 0x2B, 0x2B, _ldrsb_reg_16);			// 0100 001
+	set_sub_table_value(table->load_store_single_table16, 0x29, 0x29, _strh_reg_16);			// 0101 001
+	set_sub_table_value(table->load_store_single_table16, 0x2A, 0x2A, _strb_reg_16);			// 0101 010
+	set_sub_table_value(table->load_store_single_table16, 0x2B, 0x2B, _ldrsb_reg_16);			// 0101 011
+	set_sub_table_value(table->load_store_single_table16, 0x2C, 0x2C, _ldr_reg_16);				// 0101	100
+	set_sub_table_value(table->load_store_single_table16, 0x2D, 0x2D, _ldrh_reg_16);			// 0101 101
+	set_sub_table_value(table->load_store_single_table16, 0x2E, 0x2E, _ldrb_reg_16);			// 0101 110
+	set_sub_table_value(table->load_store_single_table16, 0x2F, 0x2F, _ldrsh_reg_16);			// 0101 111
+	set_sub_table_value(table->load_store_single_table16, 0x2F, 0x2F, _ldrsh_reg_16);			// 0101 111
+	set_sub_table_value(table->load_store_single_table16, 0x30, 0x33, _str_imm_16);				// 0110 0xx
+	set_sub_table_value(table->load_store_single_table16, 0x34, 0x37, _ldr_imm_16);				// 0110 1xx
+	set_sub_table_value(table->load_store_single_table16, 0x38, 0x3B, _strb_imm_16);			// 0111 0xx
+	set_sub_table_value(table->load_store_single_table16, 0x3C, 0x3F, _ldrb_imm_16);			// 0111 1xx
+	set_sub_table_value(table->load_store_single_table16, 0x40, 0x43, _strh_imm_16);			// 1000 0xx
+	set_sub_table_value(table->load_store_single_table16, 0x44, 0x47, _ldrh_imm_16);			// 1000 1xx
+	set_sub_table_value(table->load_store_single_table16, 0x48, 0x4B, _str_sp_imm_16);			// 1001 0xx
+	set_sub_table_value(table->load_store_single_table16, 0x4C, 0x4F, _ldr_sp_imm_16);			// 1001 1xx
 }
 
 

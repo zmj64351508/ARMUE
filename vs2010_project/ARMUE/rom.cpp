@@ -247,10 +247,20 @@ error_code_t set_rom_base_addr(rom_t* rom, uint32_t base_addr)
 	return SUCCESS;
 }
 
+/* switch read and write mode for rom file */
+static inline void switch_rom_rw(rom_t* rom, int rw_flag)
+{
+	if(rom->rw_flag != rw_flag){
+		fseek(rom->rom_file, rom->last_offset, SEEK_SET);
+		rom->rw_flag = rw_flag;
+	}
+}
+
 int send_rom_data8(uint32_t addr, uint8_t char_to_send, rom_t* rom)
 {
 	int retval;
 	int cur_offset = addr - rom->base_address + rom->content_start;
+	switch_rom_rw(rom, ROM_WRITE);
 	if(cur_offset == rom->last_offset + 1){
 		retval = fputc(char_to_send, rom->rom_file);
 		rom->last_offset++;
@@ -267,6 +277,7 @@ uint8_t fetch_rom_data8(uint32_t addr, rom_t* rom)
 {
 	int cur_offset = addr - rom->base_address + rom->content_start;
 	int8_t buf = 0;
+	switch_rom_rw(rom, ROM_READ);
 	if(cur_offset == rom->last_offset + 1){
 		buf = fgetc(rom->rom_file);
 		rom->last_offset++;
@@ -278,12 +289,15 @@ uint8_t fetch_rom_data8(uint32_t addr, rom_t* rom)
 	return buf;
 }
 
+
 // get the 32bit data in rom specifical address
 uint32_t fetch_rom_data32(uint32_t addr, rom_t* rom)
 {
 	int cur_offset = addr - rom->base_address + rom->content_start;
 	int8_t buf[4] = {0};
-	
+
+	switch_rom_rw(rom, ROM_READ);
+
 	if(cur_offset == rom->last_offset + 1){
 		for(int i = 0; i < 4; i++){
 			buf[i] = fgetc(rom->rom_file);
@@ -306,6 +320,7 @@ uint16_t fetch_rom_data16(uint32_t addr, rom_t* rom)
 {
 	int cur_offset = addr - rom->base_address + rom->content_start;
 	int8_t buf[2] = {0};
+	switch_rom_rw(rom, ROM_READ);
 
 	if(cur_offset == rom->last_offset + 1){
 		for(int i = 0; i < 2; i++){

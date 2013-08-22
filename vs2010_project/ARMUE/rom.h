@@ -8,6 +8,9 @@
 #define READ_BASE_ADDRESS -1
 #define READ_ROM_SIZE -1
 
+#define ROM_READ 0
+#define ROM_WRITE 1
+
 typedef struct rom_s_t
 {
 	bool_t allocated;			// the flag whether the rom is allocated to specific rom file
@@ -16,6 +19,7 @@ typedef struct rom_s_t
 	FILE* rom_file;				
 	uint32_t base_address;		// base address of the rom in memory
 	uint32_t size;				// the size of the rom in byte
+	int rw_flag;
 }rom_t;
 
 rom_t* alloc_rom();
