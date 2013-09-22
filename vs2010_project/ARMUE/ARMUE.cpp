@@ -8,11 +8,9 @@
 
 #include "memory_map.h"
 #include "soc.h"
-
 int _tmain(int argc, _TCHAR* argv[])
 {
 //	printf("%d\n",sizeof(short int));
-
 	// register all exsisted modules
 	register_all_modules();
 
@@ -37,14 +35,16 @@ int _tmain(int argc, _TCHAR* argv[])
 	set_memory_map_peripheral(memory_map, uart);
 	*/
 
-
-	// find the module that we need
-	module_t* cpu_module = find_module(_T("arm_cm3"));
+	soc_conf_t soc_conf;
+	soc_conf.cpu_num = 1;
+	soc_conf.cpu_name = "arm_cm3";
+	soc_conf.memory_map_num = 1;
+	soc_conf.memories[0] = memory_map;
 
 	// soc
 	uint32_t ins;
-	if(cpu_module != NULL){
-		soc_t* soc = create_soc(cpu_module->create_cpu(), memory_map);
+	soc_t* soc = create_soc(&soc_conf);
+	if(soc != NULL){
 		startup_soc(soc);
 		for(;;){
 			ins = run_soc(soc);

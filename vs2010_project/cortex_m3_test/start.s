@@ -14,6 +14,10 @@ START1
 	;test for SBC
 	;THUMB
 	;LDR R1,=MYDATA
+	MOV R1,LR
+	ADD SP,SP,#20
+	;ADR R1, Label
+	
 	MOV R5,#0xC
 	MOV SP,R5
 	LDR R2,=TESTDATA
@@ -22,7 +26,7 @@ START1
 	LDR R3,[SP, #0]
 	ADD R1,PC
 	BLX R1
-Label
+Label	
 	MOV R2,R1
 	MOV R1,R2
 	CMP R2,SP

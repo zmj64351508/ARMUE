@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "module_helper.h"
 
 static module_list_t *g_cpu_module_list = NULL;
@@ -175,9 +176,9 @@ error_code_t set_module_content_destory(module_t* module, destory_func_t destory
 	return SUCCESS;
 }
 
-error_code_t set_module_name(module_t* module, _TCHAR* name)
+error_code_t set_module_name(module_t* module, char* name)
 {
-	wcscpy_s(module->name,name);
+	strcpy(module->name,name);
 	return SUCCESS;
 }
 
@@ -324,7 +325,7 @@ error_code_t unregister_all_modules()
 }
 
 
-module_t* find_module(_TCHAR* module_name)
+module_t* find_module(char* module_name)
 {
 	// find cpu_module
 	module_t* next_module;
@@ -332,7 +333,7 @@ module_t* find_module(_TCHAR* module_name)
 	if(module != NULL){
 		do{
 			next_module = get_next_module(module);
-			if(wcscmp(module_name, module->name) == 0){
+			if(strcmp(module_name, module->name) == 0){
 				return module;
 			}
 			module = next_module;
@@ -345,7 +346,7 @@ module_t* find_module(_TCHAR* module_name)
 	if(module != NULL){
 		do{
 			next_module = get_next_module(module);
-			if(wcscmp(module_name, module->name) == 0){
+			if(strcmp(module_name, module->name) == 0){
 				return module;
 			}
 			module = next_module;

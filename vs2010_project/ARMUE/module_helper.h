@@ -37,7 +37,7 @@ typedef struct module_t
 {
 	int module_id;								// module id
 	module_type_t type;							// module type: cpu or peripheral
-	_TCHAR name[MODULE_NAME_LENGTH];			// name of the module
+	char name[MODULE_NAME_LENGTH];				// name of the module
 	_TCHAR path[MODULE_PATH_LENGTH];			// where the module file stores, not use yet
 	union{
 		cpu_list_t* cpu_list;					
@@ -70,13 +70,13 @@ error_code_t set_module_type(module_t* module, module_type_t type);
 error_code_t set_module_content(module_t* module, void* content);
 error_code_t set_module_content_create(module_t* module, create_func_t create_func);
 error_code_t set_module_content_destory(module_t* module, destory_func_t destory_func);
-error_code_t set_module_name(module_t* module, _TCHAR* name);
+error_code_t set_module_name(module_t* module, char* name);
 error_code_t set_module_unregister(module_t *module, unregister_t unregister);
 
 error_code_t	register_prepare();
 void			register_all_modules();
 error_code_t	unregister_all_modules();
-module_t*		find_module(_TCHAR* module_name);
+module_t*		find_module(char* module_name);
 
 
 error_code_t register_module_helper(module_t* module);

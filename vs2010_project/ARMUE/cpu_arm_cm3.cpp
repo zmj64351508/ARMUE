@@ -48,13 +48,13 @@ error_code_t init_armcm3_interrput_table(cpu_t* cpu)
 /****** start the cpu. It will set to cpu->start ******/
 error_code_t armcm3_startup(cpu_t* cpu)
 {
-	if(cpu == NULL || cpu->memory_map == NULL || cpu->ins_set == NULL){
+	if(cpu == NULL || cpu->memory_map == NULL || cpu->run_info.ins_set == NULL){
 		return ERROR_NULL_POINTER;
 	}
 
 	init_armcm3_interrput_table(cpu);
 
-	armv7m_reg_t *regs = ((armv7m_instruct_t*)cpu->ins_set)->regs;
+	armv7m_reg_t *regs = ((armv7m_instruct_t*)cpu->run_info.ins_set)->regs;
 	memory_map_t* memory_map = cpu->memory_map;
 	
 	// set register initial value
@@ -66,8 +66,8 @@ error_code_t armcm3_startup(cpu_t* cpu)
 	/* if ESPR T is not zero, refer to B1-625 */
 
 	regs->LR = 0xFFFFFFFF;
-	regs->mode = MODE_THREAD;
-	regs->memory = memory_map;
+	armv7m_state* arm_state = (armv7m_state*)cpu->run_info.cpu_spec_info;
+	arm_state->mode = MODE_THREAD;
 
 	return SUCCESS;
 }
@@ -78,7 +78,7 @@ error_code_t armcm3_startup(cpu_t* cpu)
 uint32_t fetch_armcm3_cpu(cpu_t* cpu)
 {
 	memory_map_t* memory_map = cpu->memory_map;
-	uint32_t addr = ((armv7m_instruct_t*)cpu->ins_set)->regs->PC;
+	uint32_t addr = ((armv7m_instruct_t*)cpu->run_info.ins_set)->regs->PC;
 
 	return get_from_memory32(addr, memory_map);
 }
@@ -88,7 +88,7 @@ uint32_t fetch_armcm3_cpu(cpu_t* cpu)
 void excute_armcm3_cpu(cpu_t* cpu, void* opcode){
 	
 	uint32_t opcode32 = *(uint32_t*)opcode;; 
-	armv7m_reg_t *regs = ((armv7m_instruct_t*)cpu->ins_set)->regs;
+	armv7m_reg_t *regs = ((armv7m_instruct_t*)cpu->run_info.ins_set)->regs;
 	uint32_t PC_banked;
 
 	/******							IMPROTANT									*/
@@ -102,7 +102,7 @@ void excute_armcm3_cpu(cpu_t* cpu, void* opcode){
 			regs->PC += 2;
 			regs->PC_return = regs->PC + 2;
 			PC_banked = regs->PC;
-			parse_opcode16(opcode32, (armv7m_instruct_t*)cpu->ins_set);
+			parse_opcode16(opcode32, &cpu->run_info, cpu->memory_map);
 			LOG_REG(regs);
 			getchar();
 			/* PC is modified by instruction */
@@ -135,8 +135,7 @@ cpu_t* create_armcm3_cpu()
 	cpu_t* cpu = alloc_cpu();
 
 	// set cpu attributes
-	//set_cpu_type(cpu, CPU_ARM_CM3);
-	set_cpu_ins(cpu, create_armv7m_instruction());
+	ins_armv7m_init(cpu);
 	set_cpu_startup_func(cpu, armcm3_startup);
 	set_cpu_fetch32_func(cpu, fetch_armcm3_cpu);
 	set_cpu_exec_func(cpu, excute_armcm3_cpu);
@@ -156,7 +155,7 @@ error_code_t destory_armcm3_cpu(cpu_t** cpu)
 	delete_cpu(this_module->cpu_list, *cpu);
 
 	// destory
-	destory_armv7m_instruction( (armv7m_instruct_t **)&(*cpu)->ins_set );
+	destory_armv7m_instruction( (armv7m_instruct_t **)&(*cpu)->run_info.ins_set );
 	dealloc_cpu(cpu);
 
 	return SUCCESS;
@@ -189,7 +188,7 @@ error_code_t register_armcm3_module()
 		return ERROR_REGISTERED;
 	}
 	
-	LOG(LOG_DEBUG, "register_armcm3_module: register arm cortex m3 cpu.\n");
+	LOG(LOG_DEBUG, "register_armcm3_module: register arm cortex-m3 cpu.\n");
 	// create module
 	this_module = create_module();
 	if(this_module == NULL){
@@ -199,7 +198,7 @@ error_code_t register_armcm3_module()
 
 	// initialize module attributes
 	set_module_type(this_module, MODULE_CPU);
-	set_module_name(this_module, _T("arm_cm3"));
+	set_module_name(this_module, "arm_cm3");
 
 	// initialize module methods
 	set_module_unregister(this_module, unregister_armcm3_module);

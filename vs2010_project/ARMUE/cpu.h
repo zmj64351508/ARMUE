@@ -21,19 +21,35 @@ typedef struct cpu_list_t
 	struct cpu_t* last_cpu;
 }cpu_list_t;
 
+typedef struct run_info_t
+{
+	void* ins_set;
+	void* cpu_spec_info;
+	//interrupt_t
+}run_info_t;
+
 typedef struct cpu_t
 {
 	int cpu_id;			// cpu id not use
 	cpu_type_t type;	// cpu type
-	int pid;			// for multi-cpu soc, not use yet
+	int cid;			// for multi-cpu soc, not use yet
 	int ins_num;		// instruction number, not use yet
-	void* ins_set;		// instruction implement *important
 
-	memory_map_t* memory_map;
+	run_info_t run_info;
+
+	/* for some architecture with seperated io and memory space.
+	   If the architecture has only single io and memory space, 
+	   these 2 pointer should pointer to the same memory map*/
+	union{
+		memory_map_t* memory_space;
+		memory_map_t* memory_map;
+	};
+	memory_map_t* io_space;
+
 	void* module;		// which cpu module it belongs to
 
+	/* interfaces */
 	cpu_startup_func_t startup;
-
 	cpu_fetch32_func_t fetch32;
 	cpu_exec_func_t excute;
 
@@ -55,6 +71,7 @@ error_code_t delete_cpu(cpu_list_t* list, cpu_t* cpu);
 
 error_code_t set_cpu_type(cpu_t* cpu, cpu_type_t type);
 error_code_t set_cpu_ins(cpu_t* cpu, void* ins);
+error_code_t set_cpu_spec_info(cpu_t* cpu, void* info);
 error_code_t set_cpu_module(cpu_t* cpu, void* module);
 error_code_t set_cpu_startup_func(cpu_t* cpu, cpu_startup_func_t startup_func);
 error_code_t set_cpu_exec_func(cpu_t* cpu, cpu_exec_func_t run_func);

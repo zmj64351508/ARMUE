@@ -27,13 +27,31 @@ uint32_t run_soc(soc_t* soc)
 	return instruction;
 }
 
-soc_t* create_soc(cpu_t* cpu, memory_map_t* memory_map)
+static soc_t* create_single_mem_soc(cpu_t* cpu, memory_map_t* memory_map)
 {
 	soc_t* soc = (soc_t*)calloc(1, sizeof(soc_t));
 
 	soc->cpu[0] = cpu;
-	soc->cpu[0]->memory_map = memory_map;
+	soc->cpu[0]->memory_space = memory_map;
+	soc->cpu[0]->io_space = memory_map;
 
+	return soc;
+}
+
+soc_t* create_soc(soc_conf_t* config)
+{
+	if(config->cpu_num != 1)
+		goto out;
+
+	module_t* cpu_module = find_module(config->cpu_name);
+	cpu_t* cpu = cpu_module->create_cpu();
+	soc_t* soc = NULL;
+	if(config->memory_map_num == 1){
+		soc = create_single_mem_soc(cpu, config->memories[0]);
+	}else{
+
+	}
+out:
 	return soc;
 }
 

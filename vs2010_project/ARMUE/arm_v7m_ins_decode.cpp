@@ -1,5 +1,6 @@
 #include "_types.h"
 #include "arm_v7m_ins_decode.h"
+#include "cpu.h"
 #include <stdlib.h>
 #include <assert.h>
 
@@ -40,34 +41,57 @@ void print_reg_val(armv7m_reg_t* regs)
 }
 
 /****** Here are some sub-parsing functions *******/
-void shift_add_sub_mov(uint16_t opcode, armv7m_instruct_t* ins)
+void shift_add_sub_mov(uint16_t opcode, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_instruct_t* ins = (armv7m_instruct_t*)run_info->ins_set;
 	// call appropriate instruction implement function by inquiring 13~9bit
-	ins->ins_table->shift_add_sub_mov_table16[opcode >> 9 & 0x1F](opcode, ins->regs);
+	ins->ins_table->shift_add_sub_mov_table16[opcode >> 9 & 0x1F](opcode, run_info, memory);
 }
 
-void data_process(uint16_t opcode, armv7m_instruct_t* ins)
+void data_process(uint16_t opcode, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_instruct_t* ins = (armv7m_instruct_t*)run_info->ins_set;
 	// call appropriate instruction implement function by inquiring 9~6bit
-	ins->ins_table->data_process_table16[opcode >> 6 & 0x0F](opcode, ins->regs);	
+	ins->ins_table->data_process_table16[opcode >> 6 & 0x0F](opcode, run_info, memory);	
 }
 
-void spdata_branch_exchange(uint16_t opcode, armv7m_instruct_t* ins)
+void spdata_branch_exchange(uint16_t opcode, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_instruct_t* ins = (armv7m_instruct_t*)run_info->ins_set;
 	// call appropriate instruction implement function by inquiring 9~6bit
-	ins->ins_table->spdata_branch_exchange_table16[opcode >> 6 & 0x0F](opcode, ins->regs);
+	ins->ins_table->spdata_branch_exchange_table16[opcode >> 6 & 0x0F](opcode, run_info, memory);
 }
 
-void load_literal_pool(uint16_t opcode, armv7m_instruct_t* ins)
+void load_literal_pool(uint16_t opcode, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_instruct_t* ins = (armv7m_instruct_t*)run_info->ins_set;
 	/* load fron literal pool set has only 1 instruction */
-	ins->ins_table->load_literal_table16[0](opcode, ins->regs);
+	ins->ins_table->load_literal_table16[0](opcode, run_info, memory);
 }
 
-void load_store_single(uint16_t opcode, armv7m_instruct_t* ins)
+void load_store_single(uint16_t opcode, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_instruct_t* ins = (armv7m_instruct_t*)run_info->ins_set;
 	// call appropriate instruction implement function by inquiring 15~9bit
-	ins->ins_table->load_store_single_table16[opcode >> 9 & 0x7F](opcode, ins->regs);
+	ins->ins_table->load_store_single_table16[opcode >> 9 & 0x7F](opcode, run_info, memory);
+}
+
+void pc_related_address(uint16_t opcode, run_info_t* run_info, memory_map_t* memory)
+{
+	armv7m_instruct_t* ins = (armv7m_instruct_t*)run_info->ins_set;
+	ins->ins_table->pc_related_address_table16[0](opcode, run_info, memory);
+}
+
+void sp_related_address(uint16_t opcode, run_info_t* run_info, memory_map_t* memory)
+{
+	armv7m_instruct_t* ins = (armv7m_instruct_t*)run_info->ins_set;
+	ins->ins_table->sp_related_address_table16[0](opcode, run_info, memory);
+}
+
+void misc_16bit_ins(uint16_t opcode, run_info_t* run_info, memory_map_t* memory)
+{
+	armv7m_instruct_t* ins = (armv7m_instruct_t*)run_info->ins_set;
+	ins->ins_table->misc_16bit_ins_table[opcode >> 5 & 0x7F](opcode, run_info, memory);
 }
 
 #define GET_ITSTATE(regs) ((regs->xPSR >> 8 & 0xFC) | (regs->xPSR >> 25 & 0x3))
@@ -85,8 +109,9 @@ uint32_t LastInITBlock(armv7m_reg_t* regs)
 }
 
 /****** Here are the final decoders of 16bit instructions ******/
-void _lsl_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _lsl_imm_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t imm = ins_code >> 6 & 0x1F;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
@@ -96,8 +121,9 @@ void _lsl_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_lsl_imm_16, R%d,R%d,#%d\n", Rd, Rm, imm);
 }
 
-void _lsr_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _lsr_imm_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t imm = ins_code >> 6 & 0x1F;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
@@ -107,8 +133,9 @@ void _lsr_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_lsr_imm_16, R%d,R%d,#%d\n", Rd, Rm, imm);
 }
 
-void _asr_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _asr_imm_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t imm = ins_code >> 6 & 0x1F;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
@@ -118,8 +145,9 @@ void _asr_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_asr_imm_16, R%d,R%d,#%d\n", Rd, Rm, imm);
 }
 
-void _add_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _add_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rm = ins_code >> 6 & 0x7;
 	uint32_t Rn = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
@@ -129,8 +157,9 @@ void _add_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_add_reg_16, R%d,R%d,R%d\n", Rd, Rn, Rm);	
 }
 
-void _sub_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _sub_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rm = ins_code >> 6 & 0x7;
 	uint32_t Rn = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
@@ -140,8 +169,9 @@ void _sub_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_sub_reg_16, R%d,R%d,R%d\n", Rd, Rn, Rm);	
 }
 
-void _add_imm3_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _add_imm3_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t imm32 = ins_code >> 6 & 0x7;
 	uint32_t Rn = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
@@ -151,8 +181,9 @@ void _add_imm3_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_add_imm3_16, R%d,R%d,#%d\n", Rd, Rn, imm32);	
 }
 
-void _sub_imm3_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _sub_imm3_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t imm32 = ins_code >> 6 & 0x7;
 	uint32_t Rn = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
@@ -162,8 +193,9 @@ void _sub_imm3_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_add_imm3_16, R%d,R%d,#%d\n", Rd, Rn, imm32);		
 }
 
-void _mov_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _mov_imm_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rd = ins_code >> 8 & 0x7;
 	uint32_t imm = ins_code & 0xFF;
 	uint32_t setflags = !InITBlock(regs);
@@ -173,8 +205,9 @@ void _mov_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_mov_imm_16, R%d,#%d\n", Rd, imm);
 }
 
-void _cmp_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _cmp_imm_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rn = ins_code >> 8 & 0x7;
 	uint32_t imm8 = ins_code & 0xFF;
 
@@ -182,8 +215,9 @@ void _cmp_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_cmp_imm_16, R%d,#%d\n", Rn, imm8);
 }
 
-void _add_imm8_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _add_imm8_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rn = ins_code >> 8 & 0x7;
 	uint32_t Rd = Rn;
 	uint32_t imm8 = ins_code & 0xFF;
@@ -193,8 +227,9 @@ void _add_imm8_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_add_imm8_16, R%d,#%d\n", Rn, imm8);
 }
 
-void _sub_imm8_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _sub_imm8_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rn = ins_code >> 8 & 0x7;
 	uint32_t Rd = Rn;
 	uint32_t imm8 = ins_code & 0xFF;
@@ -205,8 +240,9 @@ void _sub_imm8_16(uint16_t ins_code, armv7m_reg_t* regs)
 }
 
 /************************/
-void _and_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _and_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -215,8 +251,9 @@ void _and_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_and_reg_16, R%d,R%d\n", Rdn, Rm);
 }
 
-void _eor_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _eor_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -225,8 +262,9 @@ void _eor_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_eor_reg_16, R%d,R%d\n", Rdn, Rm);
 }
 
-void _lsl_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _lsl_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -235,8 +273,9 @@ void _lsl_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_lsl_reg_16, R%d,R%d\n", Rdn, Rm);
 }
 
-void _lsr_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _lsr_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -245,8 +284,9 @@ void _lsr_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_lsr_reg_16 R%d,R%d\n", Rdn, Rm);
 }
 
-void _asr_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _asr_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -255,8 +295,9 @@ void _asr_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_asr_reg_16 R%d,R%d\n", Rdn, Rm);
 }
 
-void _adc_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _adc_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -265,8 +306,9 @@ void _adc_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_adc_reg_16 R%d,R%d\n", Rdn, Rm);
 }
 
-void _sbc_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _sbc_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -275,8 +317,9 @@ void _sbc_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_sbc_reg_16 R%d,R%d\n", Rdn, Rm);
 }
 
-void _ror_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _ror_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -285,8 +328,9 @@ void _ror_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_ror_reg_16 R%d,R%d\n", Rdn, Rm);
 }
 
-void _tst_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _tst_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 
@@ -294,8 +338,9 @@ void _tst_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_tst_reg_16 R%d,R%d\n", Rn, Rm);
 }
 
-void _rsb_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _rsb_imm_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rd = ins_code & 0x7;
 	uint32_t Rn = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -305,8 +350,9 @@ void _rsb_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_rsb_imm_16 R%d,R%d,#0\n", Rd, Rn);
 }
 
-void _cmp_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _cmp_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 
@@ -314,8 +360,9 @@ void _cmp_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_cmp_reg_16 R%d,R%d\n", Rn, Rm);
 }
 
-void _cmn_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _cmn_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 
@@ -323,8 +370,9 @@ void _cmn_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_cmn_reg_16 R%d,R%d\n", Rn, Rm);
 }
 
-void _orr_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _orr_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -333,8 +381,9 @@ void _orr_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_orr_reg_16 R%d,R%d\n", Rdn, Rm);
 }
 
-void _mul_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _mul_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rdm = ins_code & 0x7;
 	uint32_t Rn = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -343,8 +392,9 @@ void _mul_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_mul_reg_16 R%d,R%d,R%d\n", Rdm, Rn, Rdm);
 }
 
-void _bic_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _bic_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -353,8 +403,9 @@ void _bic_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_bic_reg_16 R%d,R%d\n", Rdn, Rm);
 }
 
-void _mvn_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _mvn_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rd = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -363,8 +414,9 @@ void _mvn_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_mvn_reg_16 R%d,R%d\n", Rd, Rm);
 }
 
-void _add_sp_reg_T1(uint16_t ins_code, armv7m_reg_t* regs)
+void _add_sp_reg_T1(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t DM = ins_code >> 7 & 0x1ul;
 	uint32_t Rdm = (DM << 3) | (ins_code & 0x7ul);
 	
@@ -376,8 +428,9 @@ void _add_sp_reg_T1(uint16_t ins_code, armv7m_reg_t* regs)
 	}
 }
 
-void _add_sp_reg_T2(uint16_t ins_code, armv7m_reg_t* regs)
+void _add_sp_reg_T2(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t Rm = ins_code >> 3 & 0xFul;
 	uint32_t Rd = SP_INDEX;
 	assert(Rm != 13);
@@ -386,16 +439,17 @@ void _add_sp_reg_T2(uint16_t ins_code, armv7m_reg_t* regs)
 	LOG_INSTRUCTION("_add_sp_reg_T1 SP,R%d\n", Rm);
 }
 
-void _add_reg_spec_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _add_reg_spec_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t DN = ins_code >> 7 & 0x1ul;
 	uint32_t Rdn = (DN << 3) | (ins_code & 0x7ul);
 	uint32_t Rm = ins_code >> 3 & 0xFul;
 
 	if(Rm == 13){
-		_add_sp_reg_T1(ins_code, regs);
+		_add_sp_reg_T1(ins_code, run_info, memory);
 	}else if(Rdn == 13){
-		_add_sp_reg_T2(ins_code, regs);
+		_add_sp_reg_T2(ins_code, run_info, memory);
 	}else{
 		/* unpredictable */
 		if((Rdn == 15 && InITBlock(regs) && !LastInITBlock(regs)) ||
@@ -408,8 +462,9 @@ void _add_reg_spec_16(uint16_t ins_code, armv7m_reg_t* regs)
 	}
 }
 
-void _cmp_reg_spec_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _cmp_reg_spec_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t DN = ins_code >> 7 & 0x1ul;
 	uint32_t Rn = (DN << 3) | (ins_code & 0x7ul);
 	uint32_t Rm = ins_code >> 3 & 0xFul;
@@ -424,8 +479,9 @@ void _cmp_reg_spec_16(uint16_t ins_code, armv7m_reg_t* regs)
 	}
 }
 
-void _mov_reg_spec_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _mov_reg_spec_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
 	uint32_t DN = ins_code >> 7 & 0x1ul;
 	uint32_t Rd = (DN << 3) | (ins_code & 0x7ul);
 	uint32_t Rm = ins_code >> 3 & 0xFul;	
@@ -439,37 +495,43 @@ void _mov_reg_spec_16(uint16_t ins_code, armv7m_reg_t* regs)
 	}
 }
 
-void _bx_spec_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _bx_spec_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
 	uint32_t Rm = ins_code >> 3 & 0xFul;
 	if((ins_code & 0x7ul) != 0 || 
 	   (InITBlock(regs) && !LastInITBlock(regs))){
 		LOG_INSTRUCTION("_bx_spec_16 R%d as UNPREDICTABLE\n", Rm);
 	}else{
-		_bx(Rm, regs);
+		_bx(Rm, regs, state);
 		LOG_INSTRUCTION("_bx_spec_16 R%d\n", Rm);
 	}
 }
 
-void _blx_spec_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _blx_spec_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
 	uint32_t Rm = ins_code >> 3 & 0xFul;
 	if((ins_code & 0x7ul) != 0 ||
 	   (InITBlock(regs) && !LastInITBlock(regs))){
 		LOG_INSTRUCTION("_blx_spec_16 R%d as UNPREDICTABLE\n", Rm);
 	}else{
-		_blx(Rm, regs);
+		_blx(Rm, regs,state);
 		LOG_INSTRUCTION("_blx_spec_16 R%d\n", Rm);
 	}
 }
 
-void _ldr_literal_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _ldr_literal_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
 	uint32_t imm8 = (ins_code & 0xFFul) << 2;
 	uint32_t Rt = ins_code >> 8 & 0x7ul;
 	bool_t add = TRUE;
 
-	_ldr_literal(imm8, Rt, add, regs, regs->memory);
+	_ldr_literal(imm8, Rt, add, regs, state, memory);
 	LOG_INSTRUCTION("_ldr_literal_16 R%d,[PC,#%d]\n", Rt, imm8);
 }
 
@@ -480,87 +542,103 @@ inline void decode_ldr_str_reg_16(uint16_t ins_code, _O uint32_t* Rm, _O uint32_
 	*Rm = LOW_BIT16(ins_code>>6, 3);
 }
 
-void _str_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _str_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
-	_str_reg(Rm, Rn, Rt, SRType_LSL, 0, regs, regs->memory);
+	_str_reg(Rm, Rn, Rt, SRType_LSL, 0, regs, state, memory);
 	LOG_INSTRUCTION("_str_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
 }
 
-void _strh_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _strh_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 
-	_strh_reg(Rm, Rn, Rt, SRType_LSL, 0, regs, regs->memory);
+	_strh_reg(Rm, Rn, Rt, SRType_LSL, 0, regs, state, memory);
 	LOG_INSTRUCTION("_strh_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
 }
 
-void _strb_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _strb_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 
-	_strb_reg(Rm, Rn, Rt, SRType_LSL, 0, regs, regs->memory);
+	_strb_reg(Rm, Rn, Rt, SRType_LSL, 0, regs, state, memory);
 	LOG_INSTRUCTION("_strb_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
 }
 
-void _ldrsb_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _ldrsb_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 
 	bool_t add = TRUE;
 	bool_t index = TRUE;
-	_ldrsb_reg(Rm, Rn, Rt, add, index, SRType_LSL, 0, regs, regs->memory);
+	_ldrsb_reg(Rm, Rn, Rt, add, index, SRType_LSL, 0, regs, state, memory);
 	LOG_INSTRUCTION("_ldrsb_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
 }
 
-void _ldr_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _ldr_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 	bool_t index = TRUE;
 	bool_t add = TRUE;
 	bool_t wback = FALSE;
 
-	_ldr_reg(Rm, Rn, Rt, add, index, wback, SRType_LSL, 0, regs, regs->memory);
+	_ldr_reg(Rm, Rn, Rt, add, index, wback, SRType_LSL, 0, regs, state, memory);
 	LOG_INSTRUCTION("_ldr_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
 }
 
-void _ldrh_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _ldrh_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 	bool_t index = TRUE;
 	bool_t add = TRUE;
 	bool_t wback = FALSE;
 
-	_ldrh_reg(Rm, Rn, Rt, add, index, wback, SRType_LSL, 0, regs, regs->memory);
+	_ldrh_reg(Rm, Rn, Rt, add, index, wback, SRType_LSL, 0, regs, state, memory);
 	LOG_INSTRUCTION("_ldrh_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
 }
 
-void _ldrb_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _ldrb_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 	bool_t index = TRUE;
 	bool_t add = TRUE;
 
-	_ldrb_reg(Rm, Rn, Rt, add, index, SRType_LSL, 0, regs, regs->memory);
+	_ldrb_reg(Rm, Rn, Rt, add, index, SRType_LSL, 0, regs, state, memory);
 	LOG_INSTRUCTION("_ldrb_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
 }
 
-void _ldrsh_reg_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _ldrsh_reg_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 	bool_t index = TRUE;
 	bool_t add = TRUE;
 	bool_t wback = FALSE;
 
-	_ldrsh_reg(Rm, Rn, Rt, add, index, wback, SRType_LSL, 0, regs, regs->memory);
+	_ldrsh_reg(Rm, Rn, Rt, add, index, wback, SRType_LSL, 0, regs, state, memory);
 	LOG_INSTRUCTION("_ldrb_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
 }
 
@@ -571,75 +649,87 @@ inline void decode_ldr_str_imm_16(uint16_t ins_code, _O uint32_t* imm, _O uint32
 	*imm = LOW_BIT16(ins_code>>6, 5);
 }
 
-void _str_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _str_imm_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
 	uint32_t imm5, Rt, Rn;
 	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
 	bool_t add = TRUE;
 	bool_t index = TRUE;
 	bool_t wback = FALSE;
 
-	_str_imm(imm5, Rn, Rt, add, index, wback, regs, regs->memory);
+	_str_imm(imm5, Rn, Rt, add, index, wback, regs, state, memory);
 	LOG_INSTRUCTION("_str_imm_16 R%d,[R%d,#0x%d]\n", Rt, Rn, imm5);
 }
 
-void _ldr_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _ldr_imm_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
 	uint32_t imm5, Rt, Rn;
 	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
 	bool_t add = TRUE;
 	bool_t index = TRUE;
 	bool_t wback = FALSE;
 
-	_ldr_imm(imm5, Rn, Rt, add, index, wback, regs, regs->memory);
+	_ldr_imm(imm5, Rn, Rt, add, index, wback, regs, state, memory);
 	LOG_INSTRUCTION("_ldr_imm_16 R%d,[R%d,#0x%d]\n", Rt, Rn, imm5);
 }
 
-void _strb_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _strb_imm_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
 	uint32_t imm5, Rt, Rn;
 	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
 	bool_t add = TRUE;
 	bool_t index = TRUE;
 	bool_t wback = FALSE;
 
-	_strb_imm(imm5, Rn, Rt, add, index, wback, regs, regs->memory);
+	_strb_imm(imm5, Rn, Rt, add, index, wback, regs, state, memory);
 	LOG_INSTRUCTION("_strb_imm_16 R%d,[R%d,#0x%d]\n", Rt, Rn, imm5);
 }
 
-void _ldrb_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _ldrb_imm_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
 	uint32_t imm5, Rt, Rn;
 	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
 	bool_t add = TRUE;
 	bool_t index = TRUE;
 	bool_t wback = FALSE;
 
-	_ldrb_imm(imm5, Rn, Rt, add, index, wback, regs, regs->memory);
+	_ldrb_imm(imm5, Rn, Rt, add, index, wback, regs, state, memory);
 	LOG_INSTRUCTION("_ldrb_imm_16 R%d,[R%d,#0x%d]\n", Rt, Rn, imm5);
 }
 
-void _strh_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _strh_imm_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
 	uint32_t imm5, Rt, Rn;
 	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
 	bool_t add = TRUE;
 	bool_t index = TRUE;
 	bool_t wback = FALSE;
 
-	_strh_imm(imm5, Rn, Rt, add, index, wback, regs, regs->memory);
+	_strh_imm(imm5, Rn, Rt, add, index, wback, regs, state, memory);
 	LOG_INSTRUCTION("_strh_imm_16 R%d,[R%d,#0x%d]\n", Rt, Rn, imm5);
 }
 
-void _ldrh_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _ldrh_imm_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
 	uint32_t imm5, Rt, Rn;
 	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
 	bool_t add = TRUE;
 	bool_t index = TRUE;
 	bool_t wback = FALSE;
 
-	_ldrh_imm(imm5, Rn, Rt, add, index, wback, regs, regs->memory);
+	_ldrh_imm(imm5, Rn, Rt, add, index, wback, regs, state, memory);
 	LOG_INSTRUCTION("_ldrh_imm_16 R%d,[R%d,#0x%d]\n", Rt, Rn, imm5);
 }
 
@@ -649,8 +739,10 @@ inline void decode_ldr_str_sp_imm_16(uint16_t ins_code, _O uint32_t* imm, _O uin
 	*Rt = LOW_BIT16(ins_code>>8, 3);
 }
 
-void _str_sp_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _str_sp_imm_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
 	uint32_t imm8, Rt;
 	uint32_t Rn = 13;
 	decode_ldr_str_sp_imm_16(ins_code, &imm8, &Rt);
@@ -659,12 +751,14 @@ void _str_sp_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
 	bool_t add = TRUE;
 	bool_t wback = FALSE;
 
-	_str_imm(imm8, Rn, Rt, add, index, wback, regs, regs->memory);
+	_str_imm(imm8, Rn, Rt, add, index, wback, regs, state, memory);
 	LOG_INSTRUCTION("_str_sp_imm_16 R%d,[SP,#0x%d]\n", Rt, imm8);
 }
 
-void _ldr_sp_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _ldr_sp_imm_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
 	uint32_t imm8, Rt;
 	uint32_t Rn = 13;
 	decode_ldr_str_sp_imm_16(ins_code, &imm8, &Rt);
@@ -673,11 +767,44 @@ void _ldr_sp_imm_16(uint16_t ins_code, armv7m_reg_t* regs)
 	bool_t add = TRUE;
 	bool_t wback = FALSE;
 
-	_ldr_imm(imm8, Rn, Rt, add, index, wback, regs, regs->memory);
+	_ldr_imm(imm8, Rn, Rt, add, index, wback, regs, state, memory);
 	LOG_INSTRUCTION("_ldr_sp_imm_16 R%d,[SP,#0x%d]\n", Rt, imm8);
 }
 
-void _unpredictable_16(uint16_t ins_code, armv7m_reg_t* regs)
+void _adr_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
+{
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	uint32_t imm8 = LOW_BIT16(ins_code, 8) << 2;
+	uint32_t Rd = LOW_BIT16(ins_code>>8, 3);
+	bool_t add = TRUE;
+
+	_adr(imm8, Rd, add, regs);
+	LOG_INSTRUCTION("_adr_16 R%d,#%d\n", Rd, imm8);
+}
+
+void _add_sp_imm_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
+{
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	uint32_t imm8 = LOW_BIT16(ins_code, 8) << 2;
+	uint32_t Rd = LOW_BIT16(ins_code>>8, 3);
+	uint32_t setflags = FALSE;
+
+	_add_sp_imm(imm8, Rd, setflags, regs);
+	LOG_INSTRUCTION("_add_sp_imm_16 R%d,sp,#%d\n", Rd, imm8);
+}
+
+void _add_sp_sp_imm_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
+{
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	uint32_t imm7 = LOW_BIT16(ins_code, 7) << 2;
+	uint32_t Rd = 13;
+	uint32_t setflags = FALSE;
+
+	_add_sp_imm(imm7, Rd, setflags, regs);
+	LOG_INSTRUCTION("_add_sp_sp_imm_16 sp,sp,#%d\n", imm7);
+}
+
+void _unpredictable_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
 	LOG(LOG_WARN, "ins_code: %x is unpredictable, treated as NOP\n", ins_code);
 }
@@ -691,8 +818,9 @@ void init_instruction_table(instruct_table_t* table)
 	set_base_table_value(table->base_table16, 0x11, 0x11, spdata_branch_exchange);	// 010001
 	set_base_table_value(table->base_table16, 0x12, 0x13, load_literal_pool);		// 01001x
 	set_base_table_value(table->base_table16, 0x14, 0x27, load_store_single);		// 0101xx 011xxx 100xxx
-	//base_table[0x28~0x29] = general_PC_address		// 10100x
-	//base_table[0x2A~0x2B] = general_SP_address		// 10101x
+	set_base_table_value(table->base_table16, 0x28, 0x29, pc_related_address);		// 10100x
+	set_base_table_value(table->base_table16, 0x2A, 0x2B, sp_related_address);		// 10101x
+	set_base_table_value(table->base_table16, 0x2C, 0x2F, misc_16bit_ins);			// 1011xx
 	//base_table[0x2C~0x2F] = misc_16bit_ins			// 1011xx
 	//base_table[0x30~0x31] = store_multiple			// 11000x
 	//base_table[0x32~0x33] = load_multiple			// 11001x
@@ -760,6 +888,15 @@ void init_instruction_table(instruct_table_t* table)
 	set_sub_table_value(table->load_store_single_table16, 0x44, 0x47, _ldrh_imm_16);			// 1000 1xx
 	set_sub_table_value(table->load_store_single_table16, 0x48, 0x4B, _str_sp_imm_16);			// 1001 0xx
 	set_sub_table_value(table->load_store_single_table16, 0x4C, 0x4F, _ldr_sp_imm_16);			// 1001 1xx
+
+	// pc related address A7-229
+	set_sub_table_value(table->pc_related_address_table16, 0x00, 0x00, _adr_16);
+
+	// sp related address A7-225
+	set_sub_table_value(table->sp_related_address_table16, 0x00, 0x00, _add_sp_imm_16);
+
+	// misc 16-bit instructions A5-161
+	set_sub_table_value(table->misc_16bit_ins_table, 0x00, 0x03, _add_sp_sp_imm_16);
 }
 
 
@@ -785,9 +922,10 @@ typedef struct{
 }opcode_t;
 
 /***** The main parsing function for the instruction *******/
-void parse_opcode16(uint16_t opcode, armv7m_instruct_t* ins)
+void parse_opcode16(uint16_t opcode, run_info_t* run_info, memory_map_t* memory)
 {
-	ins->ins_table->base_table16[opcode >> 10](opcode, ins);
+	armv7m_instruct_t* ins = (armv7m_instruct_t*)run_info->ins_set;
+	ins->ins_table->base_table16[opcode >> 10](opcode, run_info, memory);
 }
 
 void parse_opcode32(uint32_t opcode, armv7m_instruct_t* ins)
@@ -848,6 +986,18 @@ armv7m_instruct_t* create_armv7m_instruction()
 	return ins;
 }
 
+error_code_t ins_armv7m_init(cpu_t* cpu)
+{
+	armv7m_state* state = (armv7m_state* )malloc(sizeof(armv7m_state));
+	if(state == NULL){
+		return ERROR_NULL_POINTER;
+	}
+	set_cpu_spec_info(cpu, state);
+	armv7m_instruct_t* ins = create_armv7m_instruction();
+	set_cpu_ins(cpu, ins);
+
+	return SUCCESS;
+}
 
 error_code_t destory_armv7m_instruction(armv7m_instruct_t** ins)
 {

@@ -2,16 +2,15 @@
 ### Preparing for ADS-LD.
 ### Creating ADS-LD Command Line
 ### List of Objects: adding '"start.o"'
-### List of Objects: adding '"test.o"'
 ### ADS-LD Command completed:
---cpu Cortex-M3 "start.o" "test.o" --strict --scatter "cortex_m3_test.sct" 
+--cpu Cortex-M3 "start.o" --strict --scatter "cortex_m3_test.sct" 
 --summary_stderr --info summarysizes --map --xref --callgraph --symbols 
 --info sizes --info totals --info unused --info veneers 
  --list ".\cortex_m3_test.map" -o cortex_m3_test.axf### Preparing Environment (PrepEnvAds)
 ### ADS-LD Output File: 'cortex_m3_test.axf'
 ### ADS-LD Command File: 'cortex_m3_test.lnp'
 ### Checking for dirty Components...
-### Creating CmdFile 'cortex_m3_test.lnp', Handle=0x0000BE80
+### Creating CmdFile 'cortex_m3_test.lnp', Handle=0x000007F4
 ### Writing '.lnp' file
 ### ADS-LD Command file 'cortex_m3_test.lnp' is ready.
 ### ADS-LD: About to start ADS-LD Thread.

@@ -32,8 +32,18 @@ error_code_t set_cpu_ins(cpu_t* cpu, void* ins_set)
 		return ERROR_NULL_POINTER;
 	}
 
-	cpu->ins_set = ins_set;
+	cpu->run_info.ins_set = ins_set;
 
+	return SUCCESS;
+}
+
+error_code_t set_cpu_spec_info(cpu_t* cpu, void* info)
+{
+	if(cpu == NULL){
+		return ERROR_NULL_POINTER;
+	}
+
+	cpu->run_info.cpu_spec_info = info;
 	return SUCCESS;
 }
 
