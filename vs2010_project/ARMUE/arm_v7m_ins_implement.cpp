@@ -183,13 +183,16 @@ int MemU_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv,
 	if(0){
 		/* TODO: here is the condition of CCR.UNALIGN_TRP == 1*/
 		// ExceptionTaken(UsageFault);
+		return 0;
 	}else{
 		/* Since unaligned visit is not different from aligned one in emulation, we just do the samething. */
 		if(type == MEM_READ){
 			// TODO: Send an io request here and delay the real access to when the instruction finished.
 			// send_io_request(address, size, buffer, io_info, type);
 			retval = get_from_memory(address, size, buffer, memory);
+			/* reverse big endian */
 		}else if(type == MEM_WRITE){
+			/* reverse big endian */
 			retval = set_to_memory(address, size, buffer, memory);
 		}
 	}
@@ -197,10 +200,39 @@ int MemU_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv,
 	return retval;
 }
 
+/* TODO: Memory access is not complete for checking some flags like ALIGN and ENDIANs */
 /* <<ARMv7-M Architecture Reference Manual B2-696>> */
 int MemU(uint32_t address, int size, _IO uint8_t* buffer, int type, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory)
 {
 	return MemU_with_priv(address, size, buffer, FindPriv(regs, state), type, regs, memory);
+}
+
+int MemA_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv, int type, armv7m_reg_t* regs, memory_map_t* memory)
+{
+	int retval;
+	if(address != Align(address, size)){
+		//TODO: These registers are memory mapped. So they need to be treated like peripherals. 
+		/* UFSR.UNALIGENED = '1'
+		   ExceptionTaken(UsageFault)
+		 */
+		return 0;
+	}
+	// ValidateAddress() using MPU
+	if(type == MEM_READ){
+		retval = get_from_memory(address, size, buffer, memory);
+		// if AIRCR.ENDIANNESS == 1 then
+		//		value = BigEndianReverse(value, size);
+	}else if(type == MEM_WRITE){
+		// if AIRCR.ENDIANNESS == 1 then
+		// reverse big endian
+		retval = set_to_memory(address, size, buffer, memory);
+	}
+	return retval;
+}
+
+int MemA(uint32_t address, int size, _IO uint8_t* buffer, int type, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory)
+{
+	return MemA_with_priv(address, size, buffer, FindPriv(regs, state), type, regs, memory);
 }
 
 /***********************************
@@ -1453,4 +1485,142 @@ void _add_sp_imm(uint32_t imm32, uint32_t Rd, uint32_t setflags, armv7m_reg_t* r
 		SET_APSR_C(regs, carry);
 		SET_APSR_V(regs, overflow);
 	}
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-499>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+	(result, carry, overflow) = AddWithCarry(SP, NOT(imm32), ¡®1¡¯);
+	R[d] = result;
+	if setflags then
+		APSR.N = result<31>;
+		APSR.Z = IsZeroBit(result);
+		APSR.C = carry;
+		APSR.V = overflow;
+**************************************/
+void _sub_sp_imm(uint32_t imm32, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
+{
+	uint32_t result, carry, overflow;
+	uint32_t SP_val = GET_REG_VAL(regs, SP_INDEX);
+	AddWithCarry(SP_val, ~imm32, 1, &result, &carry, &overflow);
+	SET_REG_VAL(regs, Rd, result);
+	if(setflags){
+		SET_APSR_N(regs, result);
+		SET_APSR_Z(regs, result);
+		SET_APSR_C(regs, carry);
+		SET_APSR_V(regs, overflow);
+	}
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-251>>
+EncodingSpecificOperations();
+	if nonzero ^ IsZero(R[n]) then
+	BranchWritePC(PC + imm32);
+**************************************/
+void _cbnz_cbz(uint32_t imm32, uint32_t Rn, uint32_t nonzero, armv7m_reg_t* regs)
+{
+	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+	uint32_t PC_val = GET_REG_VAL(regs, PC_INDEX);
+	if(nonzero ^ (Rn_val == 0)){
+		BranchWritePC(PC_val + imm32, regs);
+	}
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-515>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+	rotated = ROR(R[m], rotation);
+	R[d] = SignExtend(rotated<15:0>, 32);
+**************************************/
+void _sxth(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs)
+{
+	// EncodingSpecificOperations();
+	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+	uint32_t rotated = Rm_val >> rotation;
+	uint32_t result = (int32_t)((int16_t)rotated);
+	SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-513>>
+if ConditionPassed() then
+EncodingSpecificOperations();
+	rotated = ROR(R[m], rotation);
+	R[d] = SignExtend(rotated<7:0>, 32);
+**************************************/
+void _sxtb(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs)
+{
+	// EncodingSpecificOperations();
+	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+	uint32_t rotated = Rm_val >> rotation;
+	uint32_t result = (int32_t)((int8_t)rotated);
+	SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-563>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+	rotated = ROR(R[m], rotation);
+	R[d] = ZeroExtend(rotated<15:0>, 32);
+**************************************/
+void _uxth(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs)
+{
+	// EncodingSpecificOperations();
+	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+	uint32_t rotated = Rm_val >> rotation;
+	uint32_t result = ((uint16_t)rotated);
+	SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-559>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+	rotated = ROR(R[m], rotation);
+	R[d] = ZeroExtend(rotated<7:0>, 32);
+**************************************/
+void _uxtb(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs)
+{
+	// EncodingSpecificOperations();
+	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+	uint32_t rotated = Rm_val >> rotation;
+	uint32_t result = (uint8_t)rotated;
+	SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-389>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+	address = SP - 4*BitCount(registers);
+
+	for i = 0 to 14
+		if registers<i> == ¡®1¡¯ then
+			MemA[address,4] = R[i];
+			address = address + 4;
+
+	SP = SP - 4*BitCount(registers);
+**************************************/
+void _push(uint32_t registers, uint32_t bitcount, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory)
+{
+	// EncodingSpecificOperations();
+	uint32_t SP_val = GET_REG_VAL(regs, SP_INDEX);
+	uint32_t address = SP_val - (bitcount << 2);
+
+	uint32_t data;
+	int i;
+	for(i = 0; i < 15; i++){
+		if(registers & (1ul << i)){
+			data = GET_REG_VAL(regs, i);
+			MemA(address, 4, (uint8_t*)&data, MEM_WRITE, regs, state, memory);
+			address += 4;
+		}
+	}
+
+	SP_val -= bitcount << 2;
+	SET_REG_VAL(regs, SP_INDEX, SP_val);
 }

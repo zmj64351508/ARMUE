@@ -77,6 +77,10 @@ typedef struct armv7m_state{
 // DOWN_ALIGN(a, n) == Align(a, 2^n) 
 #define DOWN_ALIGN(val, order) ((val) & (0xFFFFFFFFUL << order))
 #define CHECK_PC(PC_val) ((PC_val) & 0x1ul)
+inline uint32_t Align(uint32_t address, uint32_t size)
+{
+	return address-address%size;
+}
 
 inline uint32_t GET_REG_VAL(armv7m_reg_t* regs, uint32_t Rx){
 	uint32_t val = 0;
@@ -165,4 +169,11 @@ void _strh_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index
 void _ldrh_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map);
 void _adr(uint32_t imm32, uint32_t Rd, bool_t add, armv7m_reg_t* regs);
 void _add_sp_imm(uint32_t imm32, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs);
+void _sub_sp_imm(uint32_t imm32, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs);
+void _cbnz_cbz(uint32_t imm32, uint32_t Rn, uint32_t nonzero, armv7m_reg_t* regs);
+void _sxth(uint32_t Rm, uint32_t Rn, uint32_t rotation, armv7m_reg_t* regs);
+void _sxtb(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs);
+void _uxth(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs);
+void _uxtb(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs);
+void _push(uint32_t registers, uint32_t bitcount, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory);
 #endif

@@ -202,7 +202,7 @@ error_code_t open_rom(_I _TCHAR* path, _IO rom_t* rom)
 
 	// rom file doesn't exsist, create it
 	}else{
-		rom->rom_file = _wfopen(path, _T("w+"));
+		rom->rom_file = _wfopen(path, _T("wb+"));
 		if(rom->rom_file != NULL ){
 			
 			// edit the rom file and set rom attributes

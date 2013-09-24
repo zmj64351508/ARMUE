@@ -4,6 +4,16 @@
 #include <stdlib.h>
 #include <assert.h>
 
+uint32_t BitCount32(uint32_t bits)
+{
+	uint32_t count = 0;
+	while(bits != 0){
+		bits = bits & (bits-1);
+		count++;
+	}
+	return count;
+}
+
 /******							IMPROTANT									*/
 /****** PC always pointers to the address of next instruction.				*/
 /****** when 16bit coded, PC += 2. when 32bit coded, PC += 4.				*/		
@@ -804,9 +814,110 @@ void _add_sp_sp_imm_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* me
 	LOG_INSTRUCTION("_add_sp_sp_imm_16 sp,sp,#%d\n", imm7);
 }
 
+void _sub_sp_sp_imm_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
+{
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	uint32_t imm7 = LOW_BIT16(ins_code, 7) << 2;
+	uint32_t Rd = 13;
+	uint32_t setflags = FALSE;
+
+	_sub_sp_imm(imm7, Rd, setflags, regs);
+	LOG_INSTRUCTION("_sub_sp_sp_imm_16 sp,sp,#%d\n", imm7);
+}
+
+void _cbnz_cbz_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
+{
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	uint32_t Rn = LOW_BIT16(ins_code, 3);
+
+	uint32_t i = LOW_BIT16(ins_code >> 9, 1);
+	uint32_t imm5 = LOW_BIT16(ins_code>>3, 5);
+	uint32_t imm = (imm5 << 1) | (i << 6);
+
+	uint32_t nonzero = LOW_BIT16(ins_code>>11, 1);
+	if(InITBlock(regs)){
+		LOG_INSTRUCTION("UNPREDICTABLE: _cbnz_cbz_16 is treated as NOP\n");
+		return;
+	}
+
+	_cbnz_cbz(imm, Rn, nonzero, regs);
+	if(nonzero){
+		LOG_INSTRUCTION("_cbnz_16 R%d,#%d\n", Rn, imm);
+	}else{
+		LOG_INSTRUCTION("_cbz_16 R%d,#%d\n", Rn, imm);
+	}
+
+}
+
+inline void decode_xt_16(uint16_t ins_code, uint32_t *Rm, uint32_t *Rd)
+{
+	*Rd = LOW_BIT16(ins_code, 3);
+	*Rm = LOW_BIT16(ins_code>>3, 3);
+}
+
+void _sxth_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory_map)
+{
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	uint32_t Rd, Rm;
+	decode_xt_16(ins_code, &Rm, &Rd);
+	uint32_t rotation = 0;
+
+	_sxth(Rm, Rd, rotation, regs);
+	LOG_INSTRUCTION("_sxth_16 R%d,R%d\n", Rd, Rm);
+}
+
+void _sxtb_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory_map)
+{
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	uint32_t Rd, Rm;
+	decode_xt_16(ins_code, &Rm, &Rd);
+	uint32_t rotation = 0;
+
+	_sxtb(Rm, Rd, rotation, regs);
+	LOG_INSTRUCTION("_sxtb_16 R%d,R%d\n", Rd, Rm);
+}
+
+void _uxth_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory_map)
+{
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	uint32_t Rd, Rm;
+	decode_xt_16(ins_code, &Rm, &Rd);
+	uint32_t rotation = 0;
+
+	_uxth(Rm, Rd, rotation, regs);
+	LOG_INSTRUCTION("_uxth_16 R%d,R%d\n", Rd, Rm);
+}
+
+void _uxtb_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory_map)
+{
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	uint32_t Rd, Rm;
+	decode_xt_16(ins_code, &Rm, &Rd);
+	uint32_t rotation = 0;
+
+	_uxtb(Rm, Rd, rotation, regs);
+	LOG_INSTRUCTION("_uxtb_16 R%d,R%d\n", Rd, Rm);
+}
+
+void _push_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory_map)
+{
+	armv7m_reg_t* regs = ((armv7m_instruct_t*)run_info->ins_set)->regs;
+	armv7m_state* state = (armv7m_state*)run_info->cpu_spec_info;
+	uint32_t register_list = LOW_BIT16(ins_code, 7);
+	uint32_t registers = LOW_BIT16(ins_code >> 8, 1) << 14 | register_list; 
+	uint32_t bitcount = BitCount32(registers);
+	if(bitcount < 1){
+		LOG_INSTRUCTION("UNPREDICTABLE: push_16 is treated as NOP\n");
+		return;
+	}
+	_push(registers, bitcount, regs, state, memory_map);
+	LOG_INSTRUCTION("_push_16, %d", register_list);
+}
+
+
 void _unpredictable_16(uint16_t ins_code, run_info_t* run_info, memory_map_t* memory)
 {
-	LOG(LOG_WARN, "ins_code: %x is unpredictable, treated as NOP\n", ins_code);
+	LOG(LOG_WARN, "ins_code: %x is UNPREDICTABLE, treated as NOP\n", ins_code);
 }
 
 /****** init instruct table ******/
@@ -821,7 +932,6 @@ void init_instruction_table(instruct_table_t* table)
 	set_base_table_value(table->base_table16, 0x28, 0x29, pc_related_address);		// 10100x
 	set_base_table_value(table->base_table16, 0x2A, 0x2B, sp_related_address);		// 10101x
 	set_base_table_value(table->base_table16, 0x2C, 0x2F, misc_16bit_ins);			// 1011xx
-	//base_table[0x2C~0x2F] = misc_16bit_ins			// 1011xx
 	//base_table[0x30~0x31] = store_multiple			// 11000x
 	//base_table[0x32~0x33] = load_multiple			// 11001x
 	//base_table[0x34~0x37] = con_branch_super_call	// 1101xx
@@ -897,6 +1007,14 @@ void init_instruction_table(instruct_table_t* table)
 
 	// misc 16-bit instructions A5-161
 	set_sub_table_value(table->misc_16bit_ins_table, 0x00, 0x03, _add_sp_sp_imm_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x04, 0x07, _sub_sp_sp_imm_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x08, 0x0F, _cbnz_cbz_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x10, 0x11, _sxth_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x12, 0x13, _sxtb_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x14, 0x15, _uxth_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x16, 0x17, _uxtb_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x18, 0x1F, _cbnz_cbz_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x20, 0x2F, _push_16);
 }
 
 
@@ -986,7 +1104,8 @@ armv7m_instruct_t* create_armv7m_instruction()
 	return ins;
 }
 
-error_code_t ins_armv7m_init(cpu_t* cpu)
+/* create and initialize the instruction as well as the cpu state */
+error_code_t ins_armv7m_init(_IO cpu_t* cpu)
 {
 	armv7m_state* state = (armv7m_state* )malloc(sizeof(armv7m_state));
 	if(state == NULL){

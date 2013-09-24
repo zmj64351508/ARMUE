@@ -135,7 +135,7 @@
         <Mm>
           <WinNumber>1</WinNumber>
           <SubType>0</SubType>
-          <ItemText>0x10000000</ItemText>
+          <ItemText>0x08</ItemText>
         </Mm>
       </MemoryWindow1>
       <DebugFlag>
@@ -182,8 +182,8 @@
       <Focus>0</Focus>
       <ColumnNumber>0</ColumnNumber>
       <tvExpOptDlg>0</tvExpOptDlg>
-      <TopLine>21</TopLine>
-      <CurrentLine>21</CurrentLine>
+      <TopLine>14</TopLine>
+      <CurrentLine>23</CurrentLine>
       <bDave2>0</bDave2>
       <PathWithFileName>.\start.s</PathWithFileName>
       <FilenameWithoutPath>start.s</FilenameWithoutPath>
