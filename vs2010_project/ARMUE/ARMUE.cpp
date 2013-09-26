@@ -13,7 +13,7 @@ int _tmain(int argc, _TCHAR* argv[])
 //	printf("%d\n",sizeof(short int));
 	// register all exsisted modules
 	register_all_modules();
-
+	
 	// memory map
 	rom_t* rom = alloc_rom();
 	set_rom_size(rom, 2000);

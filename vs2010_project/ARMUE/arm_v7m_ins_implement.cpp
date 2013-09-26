@@ -80,6 +80,51 @@ inline void Shift(uint32_t val, SRType type, int amount, int carry_in, _O uint32
 	Shift_C(val, type, amount, carry_in, result, &carry_out);
 }
 
+inline uint8_t CurrentCond(armv7m_reg_t* regs)
+{
+	return (GET_ITSTATE(regs)>>4) & 0xF;
+}
+
+uint8_t ConditionPassed(uint8_t branch_cond, armv7m_reg_t* regs)
+{
+	if(!InITBlock(regs)){
+		return 1;
+	}
+	uint8_t cond;
+	if(branch_cond != 0){
+		cond = branch_cond;
+	}else{
+		cond = CurrentCond(regs);
+	}
+	uint8_t result;
+	switch(cond>>1){
+	case 0:
+		result = GET_APSR_Z(regs) == 1;	break;
+	case 1:
+		result = GET_APSR_C(regs) == 1; break;
+	case 2:
+		result = GET_APSR_N(regs) == 1; break;
+	case 3:
+		result = GET_APSR_V(regs) == 1; break;
+	case 4:
+		result = (GET_APSR_C(regs) == 1) && (GET_APSR_Z(regs) == 1); break;
+	case 5:
+		result = GET_APSR_N(regs) == GET_APSR_V(regs); break;
+	case 6:
+		result = (GET_APSR_N(regs) == GET_APSR_V(regs)) && (GET_APSR_Z(regs) == 0); break;
+	case 7:
+		result = 1; break;
+	default:
+		break;
+	}
+
+	if((cond & 0x1) && cond != 0xFF){
+		result = !result;
+	}
+
+	return result;
+}
+
 /*<<ARMv7-M Architecture Reference Manual A2-43>>*/
 inline void AddWithCarry(uint32_t op1, uint32_t op2, uint32_t carry_in, uint32_t* result, uint32_t* carry_out, uint32_t *overflow)
 {
@@ -252,6 +297,10 @@ void _lsl_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_
 	int carry = 0;
 	uint32_t result;
 	
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	Shift_C(GET_REG_VAL(regs, Rm), SRType_LSL, imm, GET_APSR_C(regs), &result, &carry);
 	SET_REG_VAL(regs, Rd, result);
 
@@ -278,6 +327,10 @@ void _lsr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_
 {
 	int carry = 0;
 	uint32_t result;
+
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
 
 	Shift_C(GET_REG_VAL(regs, Rm), SRType_LSR, imm, GET_APSR_C(regs), &result, &carry);
 	SET_REG_VAL(regs, Rd, result);
@@ -307,6 +360,10 @@ void _asr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_
 	int carry = 0;
 	uint32_t result;
 
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	Shift_C(GET_REG_VAL(regs, Rm), SRType_ASR, imm, GET_APSR_C(regs), &result, &carry);
 	SET_REG_VAL(regs, Rd, result);
 
@@ -335,6 +392,10 @@ if ConditionPassed() then
 *************************************/
 void _add_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t carry = GET_APSR_C(regs);
 	uint32_t overflow;
 	uint32_t shifted;
@@ -376,6 +437,10 @@ if ConditionPassed() then
 *************************************/
 void _add_sp_reg(uint32_t Rm, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t carry = GET_APSR_C(regs);
 	uint32_t overflow;
 	uint32_t shifted;
@@ -415,6 +480,10 @@ if ConditionPassed() then
 *************************************/
 void _sub_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t carry = GET_APSR_C(regs);
 	uint32_t overflow;
 	uint32_t shifted;
@@ -447,6 +516,10 @@ if ConditionPassed() then
 *************************************/
 void _add_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t carry = GET_APSR_C(regs);
 	uint32_t overflow;
 
@@ -477,6 +550,10 @@ if ConditionPassed() then
 *************************************/
 void _sub_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t carry = GET_APSR_C(regs);
 	uint32_t overflow;
 
@@ -506,6 +583,10 @@ if ConditionPassed() then
 *************************************/
 void _mov_imm(uint32_t Rd, uint32_t imm32, uint32_t setflags, int carry, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t result = imm32;
 	SET_REG_VAL(regs, Rd, result);
 	if(setflags != 0){
@@ -527,6 +608,10 @@ if ConditionPassed() then
 *************************************/
 void _cmp_imm(uint32_t imm32, uint32_t Rn, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t carry = GET_APSR_C(regs);
 	uint32_t overflow;
 
@@ -554,6 +639,10 @@ if ConditionPassed() then
 *************************************/
 void _and_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	int carry = GET_APSR_C(regs);
 
 	uint32_t shifted;
@@ -584,6 +673,10 @@ if ConditionPassed() then
 **************************************/
 void _eor_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	int carry = GET_APSR_C(regs);
 	uint32_t shifted;
 	Shift_C(GET_REG_VAL(regs, Rm), shift_t, shift_n, carry, &shifted, &carry);
@@ -612,6 +705,10 @@ if ConditionPassed() then
 **************************************/
 void _lsl_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t shift_n = GET_REG_VAL(regs, Rm) & 0x1F;
 	uint32_t result;
 	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
@@ -642,6 +739,10 @@ if ConditionPassed() then
 **************************************/
 void _lsr_reg(uint32_t Rm, uint32_t Rn ,uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t shift_n = GET_REG_VAL(regs, Rm) & 0x1F;
 	uint32_t result;
 	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
@@ -671,6 +772,10 @@ if ConditionPassed() then
 **************************************/
 void _asr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t shift_n = GET_REG_VAL(regs, Rm) & 0x1F;
 	uint32_t result;
 	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
@@ -700,6 +805,10 @@ if ConditionPassed() then
 **************************************/
 void _adc_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t shifted;
 	uint32_t carry = GET_APSR_C(regs);
 	Shift(GET_REG_VAL(regs, Rm), shift_t, shift_n, carry, &shifted);
@@ -731,6 +840,10 @@ if ConditionPassed() then
 **************************************/
 void _sbc_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t shifted;
 	uint32_t carry = GET_APSR_C(regs);
 	Shift(GET_REG_VAL(regs, Rm), shift_t, shift_n, carry, &shifted);
@@ -763,6 +876,10 @@ if ConditionPassed() then
 **************************************/
 void _ror_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t result;
 	int carry = GET_APSR_C(regs);
 	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
@@ -790,6 +907,10 @@ if ConditionPassed() then
 **************************************/
 void _tst_reg(uint32_t Rm, uint32_t Rn, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t shifted;
 	int carry = GET_APSR_C(regs);
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
@@ -816,6 +937,10 @@ if ConditionPassed() then
 **************************************/
 void _rsb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	/* Warning: this function is not tested since MDK can't generate 16bit code for it */
 	uint32_t result;
 	uint32_t overflow;
@@ -844,6 +969,10 @@ if ConditionPassed() then
 **************************************/
 void _cmp_reg(uint32_t Rm, uint32_t Rn, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t shifted;
 	uint32_t carry = GET_APSR_C(regs);
 	Shift(GET_REG_VAL(regs, Rm), shift_t, shift_n, carry, &shifted);
@@ -872,6 +1001,10 @@ if ConditionPassed() then
 **************************************/
 void _cmn_reg(uint32_t Rm, uint32_t Rn, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t shifted;
 	uint32_t carry = GET_APSR_C(regs);
 	Shift(GET_REG_VAL(regs, Rm), shift_t, shift_n, carry, &shifted);
@@ -902,6 +1035,10 @@ if ConditionPassed() then
 **************************************/
 void _orr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t shifted;
 	int32_t carry = GET_APSR_C(regs);
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
@@ -934,6 +1071,10 @@ if ConditionPassed() then
 **************************************/
 void _mul_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	// EncodingSpecificOperations();
 	int32_t operand1 = (int32_t)GET_REG_VAL(regs, Rn);
 	int32_t operand2 = (int32_t)GET_REG_VAL(regs, Rm);
@@ -961,6 +1102,10 @@ if ConditionPassed() then
 **************************************/
 void _bic_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t shifted;
 	int32_t carry = GET_APSR_C(regs);
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
@@ -992,6 +1137,10 @@ if ConditionPassed() then
 **************************************/
 void _mvn_reg(uint32_t Rm, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t shifted;
 	int32_t carry = GET_APSR_C(regs);
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
@@ -1024,6 +1173,10 @@ if ConditionPassed() then
 **************************************/
 void _mov_reg(uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
 	uint32_t result = Rm_val;
 	if(Rd == 15){
@@ -1046,6 +1199,10 @@ if ConditionPassed() then
 **************************************/
 void _bx(uint32_t Rm, armv7m_reg_t* regs, armv7m_state* state)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
 	BXWritePC(Rm_val, regs, state);
 }
@@ -1061,6 +1218,11 @@ if ConditionPassed() then
 **************************************/
 void _blx(uint32_t Rm, armv7m_reg_t* regs, armv7m_state* state)
 {
+	/* need to be fix for not T1 and T3*/
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t target = GET_REG_VAL(regs, Rm);
 	uint32_t PC_val = GET_REG_VAL(regs, PC_INDEX);
 	uint32_t next_instr_addr = PC_val - 2;
@@ -1084,6 +1246,10 @@ if ConditionPassed() then
 **************************************/
 void _ldr_literal(uint32_t imm32, uint32_t Rt, bool_t add, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t base = GET_REG_VAL(regs, PC_INDEX);
 	base = DOWN_ALIGN(base, 2);
 	uint32_t address = add ? base+imm32 : base-imm32;
@@ -1113,6 +1279,10 @@ if ConditionPassed() then
 **************************************/
 void _str_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
 	int32_t carry = GET_APSR_C(regs);
 	uint32_t offset;
@@ -1134,6 +1304,10 @@ if ConditionPassed() then
 **************************************/
 void _strh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
 	int32_t carry = GET_APSR_C(regs);
 	uint32_t offset;
@@ -1154,6 +1328,10 @@ if ConditionPassed() then
 **************************************/
 void _strb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
 	int32_t carry = GET_APSR_C(regs);
 	uint32_t offset;
@@ -1175,6 +1353,10 @@ if ConditionPassed() then
 **************************************/
 void _ldrsb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t offset;
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
 	int32_t carry = GET_APSR_C(regs);
@@ -1203,6 +1385,10 @@ if ConditionPassed() then
 **************************************/
 void _ldr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t offset;
 	uint32_t carry = GET_APSR_C(regs);
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
@@ -1239,6 +1425,10 @@ if ConditionPassed() then
 **************************************/
 void _ldrh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t offset;
 	uint32_t carry = GET_APSR_C(regs);
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
@@ -1265,6 +1455,10 @@ if ConditionPassed() then
 **************************************/
 void _ldrb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t offset;
 	uint32_t carry = GET_APSR_C(regs);
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
@@ -1290,6 +1484,10 @@ if ConditionPassed() then
 **************************************/
 void _ldrsh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t offset;
 	uint32_t carry = GET_APSR_C(regs);
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
@@ -1316,6 +1514,10 @@ if ConditionPassed() then
 **************************************/
 void _str_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
 	uint32_t offset_addr = add ? Rn_val+imm32 : Rn_val-imm32;
 	uint32_t address = index ? offset_addr : Rn_val;
@@ -1341,6 +1543,10 @@ if ConditionPassed() then
 **************************************/
 void _ldr_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
 	uint32_t offset_addr = add ? Rn_val+imm32 : Rn_val-imm32;
 	uint32_t address = index ? offset_addr : Rn_val;
@@ -1371,6 +1577,10 @@ if ConditionPassed() then
 **************************************/
 void _strb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
 	uint32_t offset_addr = add ? Rn_val+imm32 : Rn_val-imm32;
 	uint32_t address = index ? offset_addr : Rn_val;
@@ -1392,6 +1602,10 @@ if ConditionPassed() then
 **************************************/
 void _ldrb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
 	uint32_t offset_addr = add ? Rn_val+imm32 : Rn_val-imm32;
 	uint32_t address = index ? offset_addr : Rn_val;
@@ -1414,6 +1628,10 @@ if ConditionPassed() then
 **************************************/
 void _strh_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
 	uint32_t offset_addr = add ? Rn_val+imm32 : Rn_val-imm32;
 	uint32_t address = index ? offset_addr : Rn_val;
@@ -1436,6 +1654,10 @@ if ConditionPassed() then
 **************************************/
 void _ldrh_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
 	uint32_t offset_addr = add ? Rn_val+imm32 : Rn_val-imm32;
 	uint32_t address = index ? offset_addr : Rn_val;
@@ -1456,6 +1678,10 @@ if ConditionPassed() then
 **************************************/
 void _adr(uint32_t imm32, uint32_t Rd, bool_t add, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t PC_val = GET_REG_VAL(regs, PC_INDEX);
 	uint32_t result = add ? DOWN_ALIGN(PC_val, 2)+imm32 : DOWN_ALIGN(PC_val, 2)-imm32;
 	SET_REG_VAL(regs, Rd, result);
@@ -1475,6 +1701,10 @@ if ConditionPassed() then
 **************************************/
 void _add_sp_imm(uint32_t imm32, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t result, carry, overflow;
 	uint32_t SP_val = GET_REG_VAL(regs, SP_INDEX);
 	AddWithCarry(SP_val, imm32, 0, &result, &carry, &overflow);
@@ -1501,6 +1731,10 @@ if ConditionPassed() then
 **************************************/
 void _sub_sp_imm(uint32_t imm32, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	uint32_t result, carry, overflow;
 	uint32_t SP_val = GET_REG_VAL(regs, SP_INDEX);
 	AddWithCarry(SP_val, ~imm32, 1, &result, &carry, &overflow);
@@ -1537,6 +1771,10 @@ if ConditionPassed() then
 **************************************/
 void _sxth(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	// EncodingSpecificOperations();
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
 	uint32_t rotated = Rm_val >> rotation;
@@ -1553,6 +1791,10 @@ EncodingSpecificOperations();
 **************************************/
 void _sxtb(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	// EncodingSpecificOperations();
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
 	uint32_t rotated = Rm_val >> rotation;
@@ -1569,6 +1811,10 @@ if ConditionPassed() then
 **************************************/
 void _uxth(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	// EncodingSpecificOperations();
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
 	uint32_t rotated = Rm_val >> rotation;
@@ -1585,6 +1831,10 @@ if ConditionPassed() then
 **************************************/
 void _uxtb(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	// EncodingSpecificOperations();
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
 	uint32_t rotated = Rm_val >> rotation;
@@ -1607,6 +1857,10 @@ if ConditionPassed() then
 **************************************/
 void _push(uint32_t registers, uint32_t bitcount, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory)
 {
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
 	// EncodingSpecificOperations();
 	uint32_t SP_val = GET_REG_VAL(regs, SP_INDEX);
 	uint32_t address = SP_val - (bitcount << 2);
@@ -1623,4 +1877,134 @@ void _push(uint32_t registers, uint32_t bitcount, armv7m_reg_t* regs, armv7m_sta
 
 	SP_val -= bitcount << 2;
 	SET_REG_VAL(regs, SP_INDEX, SP_val);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-402>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+	bits(32) result;
+	result<31:24> = R[m]<7:0>;
+	result<23:16> = R[m]<15:8>;
+	result<15:8> = R[m]<23:16>;
+	result<7:0> = R[m]<31:24>;
+	R[d] = result;
+**************************************/
+void _rev(uint32_t Rm, uint32_t Rd, armv7m_reg_t* regs)
+{
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
+	// EncodingSpecificOperations();
+	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+	uint32_t result;
+	result = ((Rm_val&0x0000FFFF) << 16) | ((Rm_val&0xFFFF0000) >> 16);
+	result = ((result&0x00FF00FF) << 8) | ((result&0xFF00FF00) >> 8);
+	//result = ((result&0x0F0F0F0F) << 4) | ((result&0xF0F0F0F0) >> 4);
+	//result = ((result&0x33333333) << 2) | ((result&0xCCCCCCCC) >> 2);
+	//result = ((result&0x55555555) << 1) | ((result&0xAAAAAAAA) >> 1);
+	SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-403>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+	bits(32) result;
+	result<31:24> = R[m]<23:16>;
+	result<23:16> = R[m]<31:24>;
+	result<15:8> = R[m]<7:0>;
+	result<7:0> = R[m]<15:8>;
+	R[d] = result;
+**************************************/
+void _rev16(uint32_t Rm, uint32_t Rd, armv7m_reg_t* regs)
+{
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
+	// EncodingSpecificOperations();
+	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+	uint32_t result;
+	result = ((Rm_val&0x00FF00FF) << 8) | ((Rm_val&0xFF00FF00) >> 8);
+	SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-404>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+	bits(32) result;
+	result<31:8> = SignExtend(R[m]<7:0>, 24);
+	result<7:0> = R[m]<15:8>;
+	R[d] = result;
+**************************************/
+void _revsh(uint32_t Rm, uint32_t Rd, armv7m_reg_t* regs)
+{
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
+	// EncodingSpecificOperations();
+	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+	uint32_t result;
+	result = ((Rm_val&0x000000FF) << 8) | ((Rm_val&0x0000FF00) >> 8);
+	result = (int16_t)result;
+	SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-387>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+	address = SP;
+
+	for i = 0 to 14
+		if registers<i> == ¡®1¡¯ then
+			R[i] = MemA[address,4]; address = address + 4;
+	if registers<15> == ¡®1¡¯ then
+		LoadWritePC(MemA[address,4]);
+
+	SP = SP + 4*BitCount(registers);
+**************************************/
+void _pop(uint32_t registers, uint32_t bitcount, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory)
+{
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
+	// EncodingSpecificOperations();
+	uint32_t SP_val = GET_REG_VAL(regs, SP_INDEX);
+	uint32_t address = SP_val;
+
+	uint32_t data;
+	int i;
+	for(i = 0; i < 15; i++){
+		if(registers & (1ul << i)){
+			MemA(address, 4, (uint8_t*)&data, MEM_READ, regs, state, memory);
+			SET_REG_VAL(regs, i, data);
+			address += 4;
+		}
+	}
+	if(registers & (1ul << 15)){
+		MemA(address, 4, (uint8_t*)&data, MEM_READ, regs, state, memory);
+		LoadWritePC(data, regs, state);
+	}
+
+	SP_val += bitcount << 2;
+	SET_REG_VAL(regs, SP_INDEX, SP_val);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-387>>
+EncodingSpecificOperations();
+ITSTATE.IT<7:0> = firstcond:mask;
+**************************************/
+void _it(uint32_t firstcond, uint32_t mask, armv7m_reg_t* regs, armv7m_state* state)
+{
+	// EncodingSpecificOperations();
+	uint8_t value = (firstcond << 4) | mask;
+	state->excuting_IT = TRUE;
+	SET_ITSTATE(regs, value);
 }

@@ -47,6 +47,7 @@ typedef struct{
 }armv7m_reg_t;
 
 typedef struct armv7m_state{
+	uint8_t excuting_IT;
 	int mode;	
 }armv7m_state;
 
@@ -67,12 +68,55 @@ typedef struct armv7m_state{
 #define SET_APSR_V(regs, overflow) set_bit(&(regs)->xPSR, PSR_V, (overflow))
 #define SET_EPSR_T(regs, bit) set_bit(&(regs)->xPSR, PSR_T, (bit));
 
-
+#define GET_APSR_N(regs) get_bit(&(regs)->xPSR, PSR_N)
+#define GET_APSR_Z(regs) get_bit(&(regs)->xPSR, PSR_Z)
 #define GET_APSR_C(regs) get_bit(&(regs)->xPSR, PSR_C)
+#define GET_APSR_V(regs) get_bit(&(regs)->xPSR, PSR_V)
 #define GET_CONTROL_PRIV(regs) get_bit(&(regs)->CONTROL, CONTROL_nPRIV)
 
 #define GET_REG_VAL_UNCON(regs, Rx) (*(&(regs)->R[0]+(Rx)))
 #define SET_REG_VAL_UNCON(regs, Rx, val) (*(&(regs)->R[0]+(Rx)) = (val))
+
+#define GET_ITSTATE(regs) ((regs->xPSR >> 8 & 0xFC) | (regs->xPSR >> 25 & 0x3))
+#define SET_ITSTATE(regs, value_8bit) \
+do{\
+	regs->xPSR &= ~((0xFCul << 8)| (0x3ul << 25)); \
+	regs->xPSR |= ((value_8bit) & 0xFC) << 8; \
+	regs->xPSR |= ((value_8bit) & 0x3) << 25; \
+}while(0)
+
+inline uint32_t InITBlock(armv7m_reg_t* regs)
+{
+	uint8_t ITstate = GET_ITSTATE(regs);
+	return (ITstate & 0xF) != 0;
+}
+
+inline uint32_t LastInITBlock(armv7m_reg_t* regs)
+{
+	uint8_t ITstate = GET_ITSTATE(regs);
+	return (ITstate & 0xF) == 0x8;
+}
+
+inline void ITAdvance(armv7m_reg_t* regs)
+{
+	uint8_t itstat =  GET_ITSTATE(regs);
+	uint8_t low4bit = itstat & 0xF;
+	if((itstat & 0x7) == 0){
+		SET_ITSTATE(regs, 0);
+	}else{
+		low4bit <<= 1;
+		itstat &= ~0xF;
+		itstat |= low4bit;
+		SET_ITSTATE(regs, itstat);
+	}
+}
+
+inline uint8_t check_and_reset_excuting_IT(armv7m_state* state)
+{
+	uint8_t retval = state->excuting_IT;
+	state->excuting_IT = 0;
+	return retval;
+}
 
 // DOWN_ALIGN(a, n) == Align(a, 2^n) 
 #define DOWN_ALIGN(val, order) ((val) & (0xFFFFFFFFUL << order))
@@ -176,4 +220,9 @@ void _sxtb(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs);
 void _uxth(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs);
 void _uxtb(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs);
 void _push(uint32_t registers, uint32_t bitcount, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory);
+void _rev(uint32_t Rm, uint32_t Rd, armv7m_reg_t* regs);
+void _rev16(uint32_t Rm, uint32_t Rd, armv7m_reg_t* regs);
+void _revsh(uint32_t Rm, uint32_t Rd, armv7m_reg_t* regs);
+void _pop(uint32_t registers, uint32_t bitcount, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory);
+void _it(uint32_t firstcond, uint32_t mask, armv7m_reg_t* regs, armv7m_state* state);
 #endif

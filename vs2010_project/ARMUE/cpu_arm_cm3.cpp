@@ -59,6 +59,7 @@ error_code_t armcm3_startup(cpu_t* cpu)
 	
 	// set register initial value
 	// TODO: Following statements need to be pack in another function which should be in armv7m module
+	// reset behaviour refering to B1-642
 	regs->MSP = memory_map->interrupt_table[0];
 	regs->PC = align_address(memory_map->interrupt_table[1]);
 	regs->xPSR = 0x0;
@@ -89,6 +90,7 @@ void excute_armcm3_cpu(cpu_t* cpu, void* opcode){
 	
 	uint32_t opcode32 = *(uint32_t*)opcode;; 
 	armv7m_reg_t *regs = ((armv7m_instruct_t*)cpu->run_info.ins_set)->regs;
+	armv7m_state *state = (armv7m_state*)cpu->run_info.cpu_spec_info;
 	uint32_t PC_banked;
 
 	/******							IMPROTANT									*/
@@ -103,11 +105,10 @@ void excute_armcm3_cpu(cpu_t* cpu, void* opcode){
 			regs->PC_return = regs->PC + 2;
 			PC_banked = regs->PC;
 			parse_opcode16(opcode32, &cpu->run_info, cpu->memory_map);
-			LOG_REG(regs);
-			getchar();
 			/* PC is modified by instruction */
 			if(regs->PC != PC_banked){
-				break;
+				opcode32 = 0;
+				goto rest;
 			}
 			opcode32 >>= 16;
 			i++;
@@ -122,6 +123,13 @@ void excute_armcm3_cpu(cpu_t* cpu, void* opcode){
 			regs->PC_return = regs->PC;
 			//parse_opcode32(opcode32, (armv7m_instruct_t*)cpu->ins_set);
 		}
+rest:
+		/* check and update the IT stat */
+		if(!check_and_reset_excuting_IT(state) && InITBlock(regs)){
+			ITAdvance(regs);
+		}
+		LOG_REG(regs);
+		getchar();
 	}while(opcode32 != 0);
 }
 
@@ -136,9 +144,9 @@ cpu_t* create_armcm3_cpu()
 
 	// set cpu attributes
 	ins_armv7m_init(cpu);
-	set_cpu_startup_func(cpu, armcm3_startup);
-	set_cpu_fetch32_func(cpu, fetch_armcm3_cpu);
-	set_cpu_exec_func(cpu, excute_armcm3_cpu);
+	cpu->startup = armcm3_startup;
+	cpu->fetch32 = fetch_armcm3_cpu;
+	cpu->excute = excute_armcm3_cpu;
 	set_cpu_module(cpu, this_module);
 
 	// add cpu to cpu list
