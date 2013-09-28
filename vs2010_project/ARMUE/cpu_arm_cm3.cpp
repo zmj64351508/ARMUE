@@ -48,13 +48,13 @@ error_code_t init_armcm3_interrput_table(cpu_t* cpu)
 /****** start the cpu. It will set to cpu->start ******/
 error_code_t armcm3_startup(cpu_t* cpu)
 {
-	if(cpu == NULL || cpu->memory_map == NULL || cpu->run_info.ins_set == NULL){
+	if(cpu == NULL || cpu->memory_map == NULL){
 		return ERROR_NULL_POINTER;
 	}
 
 	init_armcm3_interrput_table(cpu);
 
-	armv7m_reg_t *regs = ((armv7m_instruct_t*)cpu->run_info.ins_set)->regs;
+	armv7m_reg_t *regs = (armv7m_reg_t *)cpu->regs;
 	memory_map_t* memory_map = cpu->memory_map;
 	
 	// set register initial value
@@ -73,72 +73,68 @@ error_code_t armcm3_startup(cpu_t* cpu)
 	return SUCCESS;
 }
 
-
-
 /****** fetch the instruction. It will set to cpu->fetch32 ******/
 uint32_t fetch_armcm3_cpu(cpu_t* cpu)
 {
-	memory_map_t* memory_map = cpu->memory_map;
-	uint32_t addr = ((armv7m_instruct_t*)cpu->run_info.ins_set)->regs->PC;
+	if(cpu->run_info.next_ins != 0){
+		return (uint32_t)cpu->run_info.next_ins;
+	}
 
+	memory_map_t* memory_map = cpu->memory_map;
+	uint32_t addr = ((armv7m_reg_t*)cpu->regs)->PC;
 	return get_from_memory32(addr, memory_map);
 }
 
+/* decode instruction, return the instruction info. It will be set to cpu->decode */
+ins_t decode_armcm3_cpu(cpu_t* cpu, void* opcode)
+{
+	ins_t ins_info = {NULL, 0};
+	uint32_t opcode32 = *(uint32_t*)opcode; 
+	armv7m_reg_t *regs = (armv7m_reg_t *)cpu->regs;
+	armv7m_state *state = (armv7m_state*)cpu->run_info.cpu_spec_info;
+
+	ins_info.opcode = opcode32;
+	if(is_16bit_code(opcode32) == TRUE){
+		ins_info.excute = armv7m_parse_opcode16(opcode32, cpu);
+		ins_info.length = 16;
+		cpu->run_info.next_ins = opcode32 >> 16;
+	}else{
+		ins_info.length = 32;
+		LOG(LOG_WARN, "32bit instruction: 0x%u\n", opcode32);
+	}
+	return ins_info;
+}
 
 /****** excute the cpu. It will set to cpu->excute ******/
-void excute_armcm3_cpu(cpu_t* cpu, void* opcode){
+void excute_armcm3_cpu(cpu_t* cpu, ins_t ins_info){
 	
-	uint32_t opcode32 = *(uint32_t*)opcode;; 
-	armv7m_reg_t *regs = ((armv7m_instruct_t*)cpu->run_info.ins_set)->regs;
+	armv7m_reg_t *regs = (armv7m_reg_t *)cpu->regs;
 	armv7m_state *state = (armv7m_state*)cpu->run_info.cpu_spec_info;
-	uint32_t PC_banked;
 
 	/******							IMPROTANT									*/
 	/****** PC always points to the address of next instruction.				*/
 	/****** when 16bit coded, PC += 2. when 32bit coded, PC += 4.				*/		
 	/****** But if instruction visits PC, it always returns PC+4				*/
-	int i = 0;
-	do{
-		// if the code is encoded by 16 bit coding then parse the fist 16 bit and second 16 bit seperately 
-		if(is_16bit_code(opcode32) == TRUE){
-			regs->PC += 2;
-			regs->PC_return = regs->PC + 2;
-			PC_banked = regs->PC;
-			parse_opcode16(opcode32, &cpu->run_info, cpu->memory_map);
-			/* PC is modified by instruction */
-			if(regs->PC != PC_banked){
-				opcode32 = 0;
-				goto rest;
-			}
-			opcode32 >>= 16;
-			i++;
+	armv7m_next_PC(cpu, ins_info.length);
+	if(ins_info.length == 16){
+		((armv7m_translate16_t)ins_info.excute)((uint16_t)ins_info.opcode, cpu);
+	}else{
+		// 32bit insturction
+		goto out;
+	}
+	if(!check_and_reset_excuting_IT(state) && InITBlock(regs)){
+		ITAdvance(regs);
+	}
 
-		// if the code is encoded by 32 bit coding then parse the 32 bit together 
-		}else{
-			/* the opcode is the low 16 bit but it seems to be a 32-bit instruction */
-			if(i == 1){
-				break;
-			}
-			regs->PC += 4;
-			regs->PC_return = regs->PC;
-			//parse_opcode32(opcode32, (armv7m_instruct_t*)cpu->ins_set);
-		}
-rest:
-		/* check and update the IT stat */
-		if(!check_and_reset_excuting_IT(state) && InITBlock(regs)){
-			ITAdvance(regs);
-		}
-		LOG_REG(regs);
-		getchar();
-	}while(opcode32 != 0);
+out:
+	LOG_REG(regs);
+	getchar();
 }
 
 
 /****** Create an instance of the cpu. It will set to module->create ******/
 cpu_t* create_armcm3_cpu()
 {	
-	LOG(LOG_DEBUG, "create_armcm3_cpu: create arm cortex m3 cpu.\n");
-	
 	// alloc memory for cpu
 	cpu_t* cpu = alloc_cpu();
 
@@ -146,6 +142,7 @@ cpu_t* create_armcm3_cpu()
 	ins_armv7m_init(cpu);
 	cpu->startup = armcm3_startup;
 	cpu->fetch32 = fetch_armcm3_cpu;
+	cpu->decode = decode_armcm3_cpu;
 	cpu->excute = excute_armcm3_cpu;
 	set_cpu_module(cpu, this_module);
 
@@ -157,13 +154,11 @@ cpu_t* create_armcm3_cpu()
 
 error_code_t destory_armcm3_cpu(cpu_t** cpu)
 {
-	LOG(LOG_DEBUG, "destory_armcm3_cpu: destory arm cortex m3 cpu.\n");
-	
+	ins_armv7m_destory(*cpu);
 	// delete from cpu list
 	delete_cpu(this_module->cpu_list, *cpu);
 
 	// destory
-	destory_armv7m_instruction( (armv7m_instruct_t **)&(*cpu)->run_info.ins_set );
 	dealloc_cpu(cpu);
 
 	return SUCCESS;

@@ -167,6 +167,7 @@ inline void set_bit(uint32_t* reg, uint32_t bit_pos,int bit_val)
 	}
 }
 
+#include "cpu.h"
 void _lsl_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs);
 void _lsr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs);
 void _asr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs);
@@ -194,23 +195,23 @@ void _mul_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_r
 void _bic_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs);
 void _mvn_reg(uint32_t Rm, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs);
 void _mov_reg(uint32_t Rm, uint32_t Rd, uint32_t setflag, armv7m_reg_t* regs);
-void _bx(uint32_t Rm, armv7m_reg_t* regs, armv7m_state* state);
-void _blx(uint32_t Rm, armv7m_reg_t* regs, armv7m_state* state);
-void _ldr_literal(uint32_t imm32, uint32_t Rt, bool_t add, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map);
-void _str_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map);
-void _strh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map);
-void _strb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state,  memory_map_t* memory_map);
-void _ldrsb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map);
-void _ldr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map);
-void _ldrh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map);
-void _ldrb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map);
-void _ldrsh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map);
-void _str_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map);
-void _ldr_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map);
-void _strb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map);
-void _ldrb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map);
-void _strh_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map);
-void _ldrh_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map);
+void _bx(uint32_t Rm, cpu_t* cpu);
+void _blx(uint32_t Rm, cpu_t* cpu);
+void _ldr_literal(uint32_t imm32, uint32_t Rt, bool_t add, cpu_t* cpu);
+void _str_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, cpu_t* cpu);
+void _strh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, cpu_t* cpu);
+void _strb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, cpu_t* cpu);
+void _ldrsb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, SRType shift_t, uint32_t shift_n, cpu_t* cpu);
+void _ldr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, cpu_t* cpu);
+void _ldrh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, cpu_t* cpu);
+void _ldrb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, SRType shift_t, uint32_t shift_n, cpu_t* cpu);
+void _ldrsh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, cpu_t* cpu);
+void _str_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu);
+void _ldr_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu);
+void _strb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu);
+void _ldrb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu);
+void _strh_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu);
+void _ldrh_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu);
 void _adr(uint32_t imm32, uint32_t Rd, bool_t add, armv7m_reg_t* regs);
 void _add_sp_imm(uint32_t imm32, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs);
 void _sub_sp_imm(uint32_t imm32, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs);
@@ -219,10 +220,10 @@ void _sxth(uint32_t Rm, uint32_t Rn, uint32_t rotation, armv7m_reg_t* regs);
 void _sxtb(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs);
 void _uxth(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs);
 void _uxtb(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs);
-void _push(uint32_t registers, uint32_t bitcount, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory);
+void _push(uint32_t registers, uint32_t bitcount, cpu_t* cpu);
 void _rev(uint32_t Rm, uint32_t Rd, armv7m_reg_t* regs);
 void _rev16(uint32_t Rm, uint32_t Rd, armv7m_reg_t* regs);
 void _revsh(uint32_t Rm, uint32_t Rd, armv7m_reg_t* regs);
-void _pop(uint32_t registers, uint32_t bitcount, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory);
+void _pop(uint32_t registers, uint32_t bitcount, cpu_t* cpu);
 void _it(uint32_t firstcond, uint32_t mask, armv7m_reg_t* regs, armv7m_state* state);
 #endif

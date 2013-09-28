@@ -22,9 +22,10 @@ error_code_t startup_soc(soc_t* soc)
 uint32_t run_soc(soc_t* soc)
 {
 	cpu_t *cpu = soc->cpu[0];
-	uint32_t instruction = cpu->fetch32(cpu);
-	cpu->excute(cpu, &instruction);
-	return instruction;
+	uint32_t opcode = cpu->fetch32(cpu);
+	ins_t ins_info = cpu->decode(cpu, &opcode);
+	cpu->excute(cpu, ins_info);
+	return opcode;
 }
 
 static soc_t* create_single_mem_soc(cpu_t* cpu, memory_map_t* memory_map)
@@ -40,19 +41,28 @@ static soc_t* create_single_mem_soc(cpu_t* cpu, memory_map_t* memory_map)
 
 soc_t* create_soc(soc_conf_t* config)
 {
+	soc_t* soc = NULL;
 	if(config->cpu_num != 1)
-		goto out;
+		goto err_out;
 
 	module_t* cpu_module = find_module(config->cpu_name);
 	cpu_t* cpu = cpu_module->create_cpu();
-	soc_t* soc = NULL;
+	if(!validate_cpu(cpu)){
+		LOG(LOG_ERROR, "create_soc: invalid cpu %s\n", cpu_module->name);
+		goto invalid_cpu;
+	}
+	LOG(LOG_DEBUG, "create_soc: created cpu %s\n", cpu_module->name);
 	if(config->memory_map_num == 1){
 		soc = create_single_mem_soc(cpu, config->memories[0]);
 	}else{
 
 	}
-out:
 	return soc;
+
+invalid_cpu:
+	cpu_module->destory_cpu(&cpu);
+err_out:
+	return NULL;
 }
 
 error_code_t destory_soc(soc_t **soc)

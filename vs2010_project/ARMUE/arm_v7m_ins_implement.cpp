@@ -222,8 +222,9 @@ bool_t FindPriv(armv7m_reg_t* regs, armv7m_state* state)
 }
 
 /* <<ARMv7-M Architecture Reference Manual B2-696>> */
-int MemU_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv, int type, armv7m_reg_t* regs, memory_map_t* memory)
+int MemU_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv, int type, cpu_t* cpu)
 {
+	memory_map_t* memory = cpu->memory_map;
 	int retval = 0;
 	if(0){
 		/* TODO: here is the condition of CCR.UNALIGN_TRP == 1*/
@@ -247,13 +248,16 @@ int MemU_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv,
 
 /* TODO: Memory access is not complete for checking some flags like ALIGN and ENDIANs */
 /* <<ARMv7-M Architecture Reference Manual B2-696>> */
-int MemU(uint32_t address, int size, _IO uint8_t* buffer, int type, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory)
+int MemU(uint32_t address, int size, _IO uint8_t* buffer, int type, cpu_t* cpu)
 {
-	return MemU_with_priv(address, size, buffer, FindPriv(regs, state), type, regs, memory);
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	armv7m_state* state = (armv7m_state*)cpu->run_info.cpu_spec_info;
+	return MemU_with_priv(address, size, buffer, FindPriv(regs, state), type, cpu);
 }
 
-int MemA_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv, int type, armv7m_reg_t* regs, memory_map_t* memory)
+int MemA_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv, int type, cpu_t* cpu)
 {
+	memory_map_t* memory = cpu->memory_map;
 	int retval;
 	if(address != Align(address, size)){
 		//TODO: These registers are memory mapped. So they need to be treated like peripherals. 
@@ -275,9 +279,11 @@ int MemA_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv,
 	return retval;
 }
 
-int MemA(uint32_t address, int size, _IO uint8_t* buffer, int type, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory)
-{
-	return MemA_with_priv(address, size, buffer, FindPriv(regs, state), type, regs, memory);
+int MemA(uint32_t address, int size, _IO uint8_t* buffer, int type, cpu_t* cpu)
+{	
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	armv7m_state* state = (armv7m_state*)cpu->run_info.cpu_spec_info;
+	return MemA_with_priv(address, size, buffer, FindPriv(regs, state), type, cpu);
 }
 
 /***********************************
@@ -1197,14 +1203,15 @@ if ConditionPassed() then
 	EncodingSpecificOperations();
 	BXWritePC(R[m]);
 **************************************/
-void _bx(uint32_t Rm, armv7m_reg_t* regs, armv7m_state* state)
+void _bx(uint32_t Rm, cpu_t* cpu)
 {
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
 
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
-	BXWritePC(Rm_val, regs, state);
+	BXWritePC(Rm_val, regs, (armv7m_state*)cpu->run_info.cpu_spec_info);
 }
 
 /***********************************
@@ -1216,9 +1223,9 @@ if ConditionPassed() then
 	LR = next_instr_addr<31:1> : ¡®1¡¯;
 	BLXWritePC(target);
 **************************************/
-void _blx(uint32_t Rm, armv7m_reg_t* regs, armv7m_state* state)
+void _blx(uint32_t Rm, cpu_t* cpu)
 {
-	/* need to be fix for not T1 and T3*/
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1228,7 +1235,7 @@ void _blx(uint32_t Rm, armv7m_reg_t* regs, armv7m_state* state)
 	uint32_t next_instr_addr = PC_val - 2;
 	uint32_t LR_val = next_instr_addr | 0x1ul;
 	SET_REG_VAL(regs, LR_INDEX, LR_val);
-	BXWritePC(target, regs, state);
+	BXWritePC(target, regs, (armv7m_state*)cpu->run_info.cpu_spec_info);
 }
 
 
@@ -1244,8 +1251,10 @@ if ConditionPassed() then
 	else
 		R[t] = data;
 **************************************/
-void _ldr_literal(uint32_t imm32, uint32_t Rt, bool_t add, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
+void _ldr_literal(uint32_t imm32, uint32_t Rt, bool_t add, cpu_t* cpu)
 {
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	armv7m_state* state = (armv7m_state*)cpu->run_info.cpu_spec_info;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1255,7 +1264,7 @@ void _ldr_literal(uint32_t imm32, uint32_t Rt, bool_t add, armv7m_reg_t* regs, a
 	uint32_t address = add ? base+imm32 : base-imm32;
 
 	uint32_t data;
-	MemU(address, 4, (uint8_t *)&data, MEM_READ, regs, state, memory_map);
+	MemU(address, 4, (uint8_t *)&data, MEM_READ, cpu);
 	if(Rt == 15){
 		if((address & 0x3ul) == 0){
 			LoadWritePC(data, regs, state);
@@ -1277,8 +1286,9 @@ if ConditionPassed() then
 	data = R[t];
 	MemU[address,4] = data;
 **************************************/
-void _str_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
+void _str_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, cpu_t* cpu)
 {
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1290,7 +1300,7 @@ void _str_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t sh
 	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
 	uint32_t address = Rn_val + offset; 
 	uint32_t data = GET_REG_VAL(regs, Rt);
-	MemU(address, 4, (uint8_t*)&data, MEM_WRITE, regs, state, memory_map);
+	MemU(address, 4, (uint8_t*)&data, MEM_WRITE, cpu);
 }
 
 
@@ -1302,8 +1312,9 @@ if ConditionPassed() then
 	address = R[n] + offset;
 	MemU[address,2] = R[t]<15:0>;
 **************************************/
-void _strh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
-{
+void _strh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, cpu_t* cpu)
+{	
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1315,7 +1326,7 @@ void _strh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t s
 	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
 	uint32_t address = Rn_val + offset; 
 	uint32_t data = GET_REG_VAL(regs, Rt);
-	MemU(address, 2, (uint8_t*)&data, MEM_WRITE, regs, state, memory_map);
+	MemU(address, 2, (uint8_t*)&data, MEM_WRITE, cpu);
 }
 
 /***********************************
@@ -1326,8 +1337,9 @@ if ConditionPassed() then
 	address = R[n] + offset;
 	MemU[address,1] = R[t]<7:0>;
 **************************************/
-void _strb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
-{
+void _strb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, cpu_t* cpu)
+{	
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1339,7 +1351,7 @@ void _strb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t s
 	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
 	uint32_t address = Rn_val + offset; 
 	uint32_t data = GET_REG_VAL(regs, Rt);
-	MemU(address, 1, (uint8_t*)&data, MEM_WRITE, regs, state, memory_map);
+	MemU(address, 1, (uint8_t*)&data, MEM_WRITE, cpu);
 }
 
 /***********************************
@@ -1351,8 +1363,9 @@ if ConditionPassed() then
 	address = if index then offset_addr else R[n];
 	R[t] = SignExtend(MemU[address,1], 32);
 **************************************/
-void _ldrsb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
-{
+void _ldrsb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, SRType shift_t, uint32_t shift_n, cpu_t* cpu)
+{	
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1365,7 +1378,7 @@ void _ldrsb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index,
 	uint32_t offset_addr = add ? Rn_val+offset : Rn_val-offset;
 	uint32_t address = index ? offset_addr : Rn_val;
 	int8_t data;
-	MemU(address, 1, (uint8_t*)&data, MEM_READ, regs, state, memory_map);
+	MemU(address, 1, (uint8_t*)&data, MEM_READ, cpu);
 	SET_REG_VAL(regs, Rt, (int32_t)data);
 }
 
@@ -1383,8 +1396,10 @@ if ConditionPassed() then
 	else
 		R[t] = data;
 **************************************/
-void _ldr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
-{
+void _ldr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, cpu_t* cpu)
+{	
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	armv7m_state* state = (armv7m_state*)cpu->run_info.cpu_spec_info;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1397,7 +1412,7 @@ void _ldr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, b
 	uint32_t offset_addr = add ? Rn_val+offset : Rn_val-offset;
 	uint32_t address = index ? offset_addr : Rn_val;
 	uint32_t data;
-	MemU(address, 4, (uint8_t *)&data, MEM_READ, regs, state, memory_map);
+	MemU(address, 4, (uint8_t *)&data, MEM_READ, cpu);
 	if(wback){
 		SET_REG_VAL(regs, Rn, offset_addr);
 	}
@@ -1423,8 +1438,9 @@ if ConditionPassed() then
 	if wback then R[n] = offset_addr;
 	R[t] = ZeroExtend(data, 32);
 **************************************/
-void _ldrh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
-{
+void _ldrh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, cpu_t* cpu)
+{	
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1437,7 +1453,7 @@ void _ldrh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, 
 	uint32_t offset_addr = add ? Rn_val+offset : Rn_val-offset;
 	uint32_t address = index ? offset_addr : Rn_val;
 	uint32_t data = 0;
-	MemU(address, 2, (uint8_t *)&data, MEM_READ, regs, state, memory_map);
+	MemU(address, 2, (uint8_t *)&data, MEM_READ, cpu);
 	if(wback){
 		SET_REG_VAL(regs, Rn, offset_addr);
 	}
@@ -1453,8 +1469,9 @@ if ConditionPassed() then
 	address = if index then offset_addr else R[n];
 	R[t] = ZeroExtend(MemU[address,1],32);
 **************************************/
-void _ldrb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
-{
+void _ldrb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, SRType shift_t, uint32_t shift_n, cpu_t* cpu)
+{	
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1467,7 +1484,7 @@ void _ldrb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, 
 	uint32_t offset_addr = add ? Rn_val+offset : Rn_val-offset;
 	uint32_t address = index ? offset_addr : Rn_val;
 	uint32_t data = 0;
-	MemU(address, 1, (uint8_t *)&data, MEM_READ, regs, state, memory_map);
+	MemU(address, 1, (uint8_t *)&data, MEM_READ, cpu);
 	SET_REG_VAL(regs, Rt, data);
 }
 
@@ -1482,8 +1499,9 @@ if ConditionPassed() then
 	if wback then R[n] = offset_addr;
 	R[t] = SignExtend(data, 32);
 **************************************/
-void _ldrsh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
-{
+void _ldrsh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, cpu_t* cpu)
+{	
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1496,7 +1514,7 @@ void _ldrsh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index,
 	uint32_t offset_addr = add ? Rn_val+offset : Rn_val-offset;
 	uint32_t address = index ? offset_addr : Rn_val;
 	int16_t data;
-	MemU(address, 2, (uint8_t *)&data, MEM_READ, regs, state, memory_map);
+	MemU(address, 2, (uint8_t *)&data, MEM_READ, cpu);
 	if(wback){
 		SET_REG_VAL(regs, Rn, offset_addr);
 	}
@@ -1512,8 +1530,9 @@ if ConditionPassed() then
 	MemU[address,4] = R[t];
 	if wback then R[n] = offset_addr;
 **************************************/
-void _str_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
-{
+void _str_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu)
+{	
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1522,7 +1541,7 @@ void _str_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index,
 	uint32_t offset_addr = add ? Rn_val+imm32 : Rn_val-imm32;
 	uint32_t address = index ? offset_addr : Rn_val;
 	uint32_t data = GET_REG_VAL(regs, Rt);
-	MemU(address, 4, (uint8_t *)&data, MEM_WRITE, regs, state, memory_map);
+	MemU(address, 4, (uint8_t *)&data, MEM_WRITE, cpu);
 	if(wback){
 		SET_REG_VAL(regs, Rn, offset_addr);
 	}
@@ -1541,8 +1560,10 @@ if ConditionPassed() then
 	else
 		R[t] = data;
 **************************************/
-void _ldr_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
+void _ldr_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu)
 {
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	armv7m_state* state = (armv7m_state*)cpu->run_info.cpu_spec_info;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1551,7 +1572,7 @@ void _ldr_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index,
 	uint32_t offset_addr = add ? Rn_val+imm32 : Rn_val-imm32;
 	uint32_t address = index ? offset_addr : Rn_val;
 	uint32_t data;
-	MemU(address, 4, (uint8_t*)&data, MEM_READ, regs, state, memory_map);
+	MemU(address, 4, (uint8_t*)&data, MEM_READ, cpu);
 	if(wback){
 		SET_REG_VAL(regs, Rn, offset_addr);
 	}
@@ -1575,8 +1596,9 @@ if ConditionPassed() then
 	MemU[address,1] = R[t]<7:0>;
 	if wback then R[n] = offset_addr;
 **************************************/
-void _strb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
+void _strb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu)
 {
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1585,7 +1607,7 @@ void _strb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index
 	uint32_t offset_addr = add ? Rn_val+imm32 : Rn_val-imm32;
 	uint32_t address = index ? offset_addr : Rn_val;
 	uint32_t data = GET_REG_VAL(regs, Rt);
-	MemU(address, 1, (uint8_t *)&data, MEM_WRITE, regs, state, memory_map);
+	MemU(address, 1, (uint8_t *)&data, MEM_WRITE, cpu);
 	if(wback){
 		SET_REG_VAL(regs, Rn, offset_addr);
 	}
@@ -1600,8 +1622,9 @@ if ConditionPassed() then
 	R[t] = ZeroExtend(MemU[address,1], 32);
 	if wback then R[n] = offset_addr;
 **************************************/
-void _ldrb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
+void _ldrb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu)
 {
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1610,7 +1633,7 @@ void _ldrb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index
 	uint32_t offset_addr = add ? Rn_val+imm32 : Rn_val-imm32;
 	uint32_t address = index ? offset_addr : Rn_val;
 	uint32_t data = 0;
-	MemU(address, 1, (uint8_t*)&data, MEM_READ, regs, state, memory_map);
+	MemU(address, 1, (uint8_t*)&data, MEM_READ, cpu);
 	SET_REG_VAL(regs, Rt, data);
 	if(wback){
 		SET_REG_VAL(regs, Rn, offset_addr);
@@ -1626,8 +1649,9 @@ if ConditionPassed() then
 	MemU[address,2] = R[t]<15:0>;
 	if wback then R[n] = offset_addr;
 **************************************/
-void _strh_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
+void _strh_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu)
 {
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1636,7 +1660,7 @@ void _strh_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index
 	uint32_t offset_addr = add ? Rn_val+imm32 : Rn_val-imm32;
 	uint32_t address = index ? offset_addr : Rn_val;
 	uint32_t data = GET_REG_VAL(regs, Rt);
-	MemU(address, 2, (uint8_t *)&data, MEM_WRITE, regs, state, memory_map);
+	MemU(address, 2, (uint8_t *)&data, MEM_WRITE, cpu);
 	if(wback){
 		SET_REG_VAL(regs, Rn, offset_addr);
 	}
@@ -1652,8 +1676,9 @@ if ConditionPassed() then
 	if wback then R[n] = offset_addr;
 	R[t] = ZeroExtend(data, 32);
 **************************************/
-void _ldrh_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory_map)
+void _ldrh_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu)
 {
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1662,7 +1687,7 @@ void _ldrh_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index
 	uint32_t offset_addr = add ? Rn_val+imm32 : Rn_val-imm32;
 	uint32_t address = index ? offset_addr : Rn_val;
 	uint32_t data = 0;
-	MemU(address, 2, (uint8_t*)&data, MEM_READ, regs, state, memory_map);
+	MemU(address, 2, (uint8_t*)&data, MEM_READ, cpu);
 	if(wback){
 		SET_REG_VAL(regs, Rn, offset_addr);
 	}
@@ -1855,8 +1880,9 @@ if ConditionPassed() then
 
 	SP = SP - 4*BitCount(registers);
 **************************************/
-void _push(uint32_t registers, uint32_t bitcount, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory)
+void _push(uint32_t registers, uint32_t bitcount, cpu_t* cpu)
 {
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1870,7 +1896,7 @@ void _push(uint32_t registers, uint32_t bitcount, armv7m_reg_t* regs, armv7m_sta
 	for(i = 0; i < 15; i++){
 		if(registers & (1ul << i)){
 			data = GET_REG_VAL(regs, i);
-			MemA(address, 4, (uint8_t*)&data, MEM_WRITE, regs, state, memory);
+			MemA(address, 4, (uint8_t*)&data, MEM_WRITE, cpu);
 			address += 4;
 		}
 	}
@@ -1968,8 +1994,10 @@ if ConditionPassed() then
 
 	SP = SP + 4*BitCount(registers);
 **************************************/
-void _pop(uint32_t registers, uint32_t bitcount, armv7m_reg_t* regs, armv7m_state* state, memory_map_t* memory)
+void _pop(uint32_t registers, uint32_t bitcount, cpu_t* cpu)
 {
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	armv7m_state* state = (armv7m_state*)cpu->run_info.cpu_spec_info;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1982,13 +2010,13 @@ void _pop(uint32_t registers, uint32_t bitcount, armv7m_reg_t* regs, armv7m_stat
 	int i;
 	for(i = 0; i < 15; i++){
 		if(registers & (1ul << i)){
-			MemA(address, 4, (uint8_t*)&data, MEM_READ, regs, state, memory);
+			MemA(address, 4, (uint8_t*)&data, MEM_READ, cpu);
 			SET_REG_VAL(regs, i, data);
 			address += 4;
 		}
 	}
 	if(registers & (1ul << 15)){
-		MemA(address, 4, (uint8_t*)&data, MEM_READ, regs, state, memory);
+		MemA(address, 4, (uint8_t*)&data, MEM_READ, cpu);
 		LoadWritePC(data, regs, state);
 	}
 

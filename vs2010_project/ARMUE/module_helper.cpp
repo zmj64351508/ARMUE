@@ -205,7 +205,7 @@ error_code_t register_prepare()
 // TODO: check the parameter of module
 error_code_t register_module_helper(module_t* module)
 {
-	LOG(LOG_DEBUG, "register_module_helper\n");
+	//LOG(LOG_DEBUG, "register_module_helper\n");
 	if(module == NULL){
 		return ERROR_NULL_POINTER;
 	}
@@ -214,6 +214,11 @@ error_code_t register_module_helper(module_t* module)
 		module->create_content == NULL || 
 		module->destory_content == NULL || 
 		module->unregister == NULL){
+		if(module->name != NULL){
+			LOG(LOG_ERROR, "register_module_helper: register module %s fail\n", module->name);
+		}else{
+			LOG(LOG_ERROR, "register_module_helper: register unnamed module\n");
+		}
 		return ERROR_INVALID_MODULE_PARAM;
 	}
 

@@ -3,14 +3,14 @@
 
 cpu_list_t* create_cpu_list()
 {
-	LOG(LOG_DEBUG, "create_cpu_list\n");
+	//LOG(LOG_DEBUG, "create_cpu_list\n");
 	cpu_list_t* cpu_list = (cpu_list_t*)calloc(1, sizeof(cpu_list_t));
 	return cpu_list;
 }
 
 cpu_t* alloc_cpu()
 {
-	LOG(LOG_DEBUG, "create_cpu_helper\n");
+	//LOG(LOG_DEBUG, "create_cpu_helper\n");
 	cpu_t* cpu = (cpu_t*)calloc(1, sizeof(cpu_t));
 	return cpu;
 }
@@ -22,17 +22,6 @@ error_code_t set_cpu_type(cpu_t* cpu, cpu_type_t type)
 	}
 
 	cpu->type = type;
-
-	return SUCCESS;
-}
-
-error_code_t set_cpu_ins(cpu_t* cpu, void* ins_set)
-{
-	if(cpu == NULL || ins_set == NULL){
-		return ERROR_NULL_POINTER;
-	}
-
-	cpu->run_info.ins_set = ins_set;
 
 	return SUCCESS;
 }
@@ -234,7 +223,7 @@ error_code_t dealloc_cpu(cpu_t** cpu)
 
 error_code_t destory_cpu_list(cpu_list_t** cpu_list)
 {	
-	LOG(LOG_DEBUG, "destory_cpu_list\n");
+	//LOG(LOG_DEBUG, "destory_cpu_list\n");
 	if(*cpu_list == NULL || cpu_list == NULL){
 		LOG(LOG_ERROR, "destory_cpu_list: invalid parameters\n");
 		return ERROR_NULL_POINTER;
@@ -256,4 +245,18 @@ error_code_t destory_cpu_list(cpu_list_t** cpu_list)
 	*cpu_list = NULL;
 
 	return SUCCESS;
+}
+
+int validate_cpu(cpu_t* cpu)
+{
+	if(cpu == NULL){
+		return 0;
+	}
+	if(cpu->startup == NULL || cpu->decode == NULL){
+		return 0;
+	}
+	if(cpu->fetch32 == NULL){
+		return 0;
+	}
+	return 1;
 }
