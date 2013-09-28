@@ -184,7 +184,7 @@ inline void ALUWritePC(uint32_t address, armv7m_reg_t* regs)
 }
 
 /* <<ARMv7-M Architecture Reference Manual 47>> */
-void BXWritePC(uint32_t address, armv7m_reg_t* regs, armv7m_state* state)
+void BXWritePC(uint32_t address, armv7m_reg_t* regs, thumb_state* state)
 {
 	uint32_t Tflag;
 	int CurrentMode = state->mode;
@@ -203,13 +203,13 @@ void BXWritePC(uint32_t address, armv7m_reg_t* regs, armv7m_state* state)
 }
 
 /* <<ARMv7-M Architecture Reference Manual 47>> */
-inline void LoadWritePC(uint32_t address, armv7m_reg_t* regs, armv7m_state* state)
+inline void LoadWritePC(uint32_t address, armv7m_reg_t* regs, thumb_state* state)
 {
 	BXWritePC(address, regs, state);
 }
 
 /* <<ARMv7-M Architecture Reference Manual B2-694>> */
-bool_t FindPriv(armv7m_reg_t* regs, armv7m_state* state)
+bool_t FindPriv(armv7m_reg_t* regs, thumb_state* state)
 {
 	bool_t ispriv;
 	if(state->mode == MODE_HANDLER ||
@@ -251,7 +251,7 @@ int MemU_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv,
 int MemU(uint32_t address, int size, _IO uint8_t* buffer, int type, cpu_t* cpu)
 {
 	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
-	armv7m_state* state = (armv7m_state*)cpu->run_info.cpu_spec_info;
+	thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
 	return MemU_with_priv(address, size, buffer, FindPriv(regs, state), type, cpu);
 }
 
@@ -282,7 +282,7 @@ int MemA_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv,
 int MemA(uint32_t address, int size, _IO uint8_t* buffer, int type, cpu_t* cpu)
 {	
 	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
-	armv7m_state* state = (armv7m_state*)cpu->run_info.cpu_spec_info;
+	thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
 	return MemA_with_priv(address, size, buffer, FindPriv(regs, state), type, cpu);
 }
 
@@ -1211,7 +1211,7 @@ void _bx(uint32_t Rm, cpu_t* cpu)
 	}
 
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
-	BXWritePC(Rm_val, regs, (armv7m_state*)cpu->run_info.cpu_spec_info);
+	BXWritePC(Rm_val, regs, (thumb_state*)cpu->run_info.cpu_spec_info);
 }
 
 /***********************************
@@ -1235,7 +1235,7 @@ void _blx(uint32_t Rm, cpu_t* cpu)
 	uint32_t next_instr_addr = PC_val - 2;
 	uint32_t LR_val = next_instr_addr | 0x1ul;
 	SET_REG_VAL(regs, LR_INDEX, LR_val);
-	BXWritePC(target, regs, (armv7m_state*)cpu->run_info.cpu_spec_info);
+	BXWritePC(target, regs, (thumb_state*)cpu->run_info.cpu_spec_info);
 }
 
 
@@ -1254,7 +1254,7 @@ if ConditionPassed() then
 void _ldr_literal(uint32_t imm32, uint32_t Rt, bool_t add, cpu_t* cpu)
 {
 	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
-	armv7m_state* state = (armv7m_state*)cpu->run_info.cpu_spec_info;
+	thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1399,7 +1399,7 @@ if ConditionPassed() then
 void _ldr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, cpu_t* cpu)
 {	
 	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
-	armv7m_state* state = (armv7m_state*)cpu->run_info.cpu_spec_info;
+	thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1563,7 +1563,7 @@ if ConditionPassed() then
 void _ldr_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu)
 {
 	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
-	armv7m_state* state = (armv7m_state*)cpu->run_info.cpu_spec_info;
+	thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1997,7 +1997,7 @@ if ConditionPassed() then
 void _pop(uint32_t registers, uint32_t bitcount, cpu_t* cpu)
 {
 	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
-	armv7m_state* state = (armv7m_state*)cpu->run_info.cpu_spec_info;
+	thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -2029,7 +2029,7 @@ void _pop(uint32_t registers, uint32_t bitcount, cpu_t* cpu)
 EncodingSpecificOperations();
 ITSTATE.IT<7:0> = firstcond:mask;
 **************************************/
-void _it(uint32_t firstcond, uint32_t mask, armv7m_reg_t* regs, armv7m_state* state)
+void _it(uint32_t firstcond, uint32_t mask, armv7m_reg_t* regs, thumb_state* state)
 {
 	// EncodingSpecificOperations();
 	uint8_t value = (firstcond << 4) | mask;

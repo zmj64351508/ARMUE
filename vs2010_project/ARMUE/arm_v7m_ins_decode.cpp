@@ -4,7 +4,9 @@
 #include <stdlib.h>
 #include <assert.h>
 
-armv7m_instruct_table_t translate_table;
+thumb_instruct_table_t *M_translate_table; // table for ARMvX-M
+thumb_instruct_table_t *R_translate_table; // table for ARMvX-R, implement in the future
+thumb_instruct_table_t *A_translate_table; // table for ARMvX-A, implement in the future
 
 uint32_t BitCount32(uint32_t bits)
 {
@@ -20,9 +22,7 @@ uint32_t BitCount32(uint32_t bits)
 /****** PC always pointers to the address of next instruction.				*/
 /****** when 16bit coded, PC += 2. when 32bit coded, PC += 4.				*/		
 /****** But, when 16 bit coded instruction visit PC, it will return PC+2	*/
-
-
-error_code_t set_base_table_value(armv7m_translate16_t* table, int start, int end, armv7m_translate16_t value)
+error_code_t set_base_table_value(thumb_translate16_t* table, int start, int end, thumb_translate16_t value)
 {
 	for(int i = start; i <= end; i++){
 		table[i] = value;
@@ -45,49 +45,49 @@ void print_reg_val(armv7m_reg_t* regs)
 }
 
 /****** Here are some sub-parsing functions *******/
-armv7m_translate16_t shift_add_sub_mov(uint16_t ins_code, cpu_t* cpu)
+thumb_translate16_t shift_add_sub_mov(uint16_t ins_code, cpu_t* cpu)
 {
 	// call appropriate instruction implement function by inquiring 13~9bit
-	return translate_table.shift_add_sub_mov_table16[ins_code >> 9 & 0x1F];
+	return M_translate_table->shift_add_sub_mov_table16[ins_code >> 9 & 0x1F];
 }
 
-armv7m_translate16_t data_process(uint16_t ins_code, cpu_t* cpu)
+thumb_translate16_t data_process(uint16_t ins_code, cpu_t* cpu)
 {
 	// call appropriate instruction implement function by inquiring 9~6bit
-	return translate_table.data_process_table16[ins_code >> 6 & 0x0F];	
+	return M_translate_table->data_process_table16[ins_code >> 6 & 0x0F];	
 }
 
-armv7m_translate16_t spdata_branch_exchange(uint16_t ins_code, cpu_t* cpu)
+thumb_translate16_t spdata_branch_exchange(uint16_t ins_code, cpu_t* cpu)
 {
 	// call appropriate instruction implement function by inquiring 9~6bit
-	return translate_table.spdata_branch_exchange_table16[ins_code >> 6 & 0x0F];
+	return M_translate_table->spdata_branch_exchange_table16[ins_code >> 6 & 0x0F];
 }
 
-armv7m_translate16_t load_literal_pool(uint16_t ins_code, cpu_t* cpu)
+thumb_translate16_t load_literal_pool(uint16_t ins_code, cpu_t* cpu)
 {
 	/* load fron literal pool set has only 1 instruction */
-	return translate_table.load_literal_table16[0];
+	return M_translate_table->load_literal_table16[0];
 }
 
-armv7m_translate16_t load_store_single(uint16_t ins_code, cpu_t* cpu)
+thumb_translate16_t load_store_single(uint16_t ins_code, cpu_t* cpu)
 {
 	// call appropriate instruction implement function by inquiring 15~9bit
-	return translate_table.load_store_single_table16[ins_code >> 9 & 0x7F];
+	return M_translate_table->load_store_single_table16[ins_code >> 9 & 0x7F];
 }
 
-armv7m_translate16_t pc_related_address(uint16_t ins_code, cpu_t* cpu)
+thumb_translate16_t pc_related_address(uint16_t ins_code, cpu_t* cpu)
 {
-	return translate_table.pc_related_address_table16[0];
+	return M_translate_table->pc_related_address_table16[0];
 }
 
-armv7m_translate16_t sp_related_address(uint16_t ins_code, cpu_t* cpu)
+thumb_translate16_t sp_related_address(uint16_t ins_code, cpu_t* cpu)
 {
-	return translate_table.sp_related_address_table16[0];
+	return M_translate_table->sp_related_address_table16[0];
 }
 
-armv7m_translate16_t misc_16bit_ins(uint16_t ins_code, cpu_t* cpu)
+thumb_translate16_t misc_16bit_ins(uint16_t ins_code, cpu_t* cpu)
 {
-	return translate_table.misc_16bit_ins_table[ins_code >> 5 & 0x7F];
+	return M_translate_table->misc_16bit_ins_table[ins_code >> 5 & 0x7F];
 }
 
 /****** Here are the final decoders of 16bit instructions ******/
@@ -929,7 +929,7 @@ void _bkpt_16(uint16_t ins_code, cpu_t* cpu)
 void _it_16(uint32_t opA, uint32_t opB, cpu_t* cpu)
 {
 	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
-	armv7m_state* state = (armv7m_state*)cpu->run_info.cpu_spec_info;
+	thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
 	uint32_t mask = opB;
 	uint32_t firstcond = opA;
 	if(firstcond == 0xF || (firstcond == 0xE && BitCount32(mask) != 1)){
@@ -985,113 +985,112 @@ void _unpredictable_16(uint16_t ins_code, cpu_t* cpu)
 	LOG(LOG_WARN, "ins_code: %x is UNPREDICTABLE, treated as NOP\n", ins_code);
 }
 
-/****** init instruct table ******/
-void init_instruction_table(armv7m_instruct_table_t* table)
+/****** init instruction table ******/
+void init_instruction_table(thumb_instruct_table_t* table)
 {
+	LOG(LOG_DEBUG, "ARM size of instruction table is %d byte\n", sizeof(thumb_instruct_table_t));
 	// 15~10 bit A5-156
-	set_base_table_value(table->base_table16, 0x00, 0x0F, (armv7m_translate16_t)shift_add_sub_mov);		// 00xxxx		
-	set_base_table_value(table->base_table16, 0x10, 0x10, (armv7m_translate16_t)data_process);			// 010000				
-	set_base_table_value(table->base_table16, 0x11, 0x11, (armv7m_translate16_t)spdata_branch_exchange);	// 010001
-	set_base_table_value(table->base_table16, 0x12, 0x13, (armv7m_translate16_t)load_literal_pool);		// 01001x
-	set_base_table_value(table->base_table16, 0x14, 0x27, (armv7m_translate16_t)load_store_single);		// 0101xx 011xxx 100xxx
-	set_base_table_value(table->base_table16, 0x28, 0x29, (armv7m_translate16_t)pc_related_address);		// 10100x
-	set_base_table_value(table->base_table16, 0x2A, 0x2B, (armv7m_translate16_t)sp_related_address);		// 10101x
-	set_base_table_value(table->base_table16, 0x2C, 0x2F, (armv7m_translate16_t)misc_16bit_ins);			// 1011xx
+	set_base_table_value(table->base_table16, 0x00, 0x0F, (thumb_translate16_t)shift_add_sub_mov);		// 00xxxx		
+	set_base_table_value(table->base_table16, 0x10, 0x10, (thumb_translate16_t)data_process);			// 010000				
+	set_base_table_value(table->base_table16, 0x11, 0x11, (thumb_translate16_t)spdata_branch_exchange);	// 010001
+	set_base_table_value(table->base_table16, 0x12, 0x13, (thumb_translate16_t)load_literal_pool);		// 01001x
+	set_base_table_value(table->base_table16, 0x14, 0x27, (thumb_translate16_t)load_store_single);		// 0101xx 011xxx 100xxx
+	set_base_table_value(table->base_table16, 0x28, 0x29, (thumb_translate16_t)pc_related_address);		// 10100x
+	set_base_table_value(table->base_table16, 0x2A, 0x2B, (thumb_translate16_t)sp_related_address);		// 10101x
+	set_base_table_value(table->base_table16, 0x2C, 0x2F, (thumb_translate16_t)misc_16bit_ins);			// 1011xx
 	//base_table[0x30~0x31] = store_multiple			// 11000x
 	//base_table[0x32~0x33] = load_multiple			// 11001x
 	//base_table[0x34~0x37] = con_branch_super_call	// 1101xx
 	//base_table[0x38~0x39] = uncon_branch			// 11100x
 
 	// shift(imm) add sub mov A5-157
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x00, 0x03, (armv7m_translate16_t)_lsl_imm_16);	// 000xx
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x04, 0x07, (armv7m_translate16_t)_lsr_imm_16);	// 001xx
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x08, 0x0B, (armv7m_translate16_t)_asr_imm_16);	// 010xx
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x0C, 0x0C, (armv7m_translate16_t)_add_reg_16);	// 01100
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x0D, 0x0D, (armv7m_translate16_t)_sub_reg_16);	// 01101
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x0E, 0x0E, (armv7m_translate16_t)_add_imm3_16);	// 01110
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x0F, 0x0F, (armv7m_translate16_t)_sub_imm3_16);	// 01111
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x10, 0x13, (armv7m_translate16_t)_mov_imm_16);	// 100xx
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x14, 0x17, (armv7m_translate16_t)_cmp_imm_16);	// 101xx
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x18, 0x1B, (armv7m_translate16_t)_add_imm8_16);	// 110xx
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x1C, 0x1F, (armv7m_translate16_t)_sub_imm8_16);	// 111xx
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x00, 0x03, (thumb_translate16_t)_lsl_imm_16);	// 000xx
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x04, 0x07, (thumb_translate16_t)_lsr_imm_16);	// 001xx
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x08, 0x0B, (thumb_translate16_t)_asr_imm_16);	// 010xx
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x0C, 0x0C, (thumb_translate16_t)_add_reg_16);	// 01100
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x0D, 0x0D, (thumb_translate16_t)_sub_reg_16);	// 01101
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x0E, 0x0E, (thumb_translate16_t)_add_imm3_16);	// 01110
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x0F, 0x0F, (thumb_translate16_t)_sub_imm3_16);	// 01111
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x10, 0x13, (thumb_translate16_t)_mov_imm_16);	// 100xx
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x14, 0x17, (thumb_translate16_t)_cmp_imm_16);	// 101xx
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x18, 0x1B, (thumb_translate16_t)_add_imm8_16);	// 110xx
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x1C, 0x1F, (thumb_translate16_t)_sub_imm8_16);	// 111xx
 
 	// data processing A5-158
-	set_sub_table_value(table->data_process_table16, 0x00, 0x00, (armv7m_translate16_t)_and_reg_16);		// 0000
-	set_sub_table_value(table->data_process_table16, 0x01, 0x01, (armv7m_translate16_t)_eor_reg_16);		// 0001
-	set_sub_table_value(table->data_process_table16, 0x02, 0x02, (armv7m_translate16_t)_lsl_reg_16);		// 0010
-	set_sub_table_value(table->data_process_table16, 0x03, 0x03, (armv7m_translate16_t)_lsr_reg_16);		// 0011
-	set_sub_table_value(table->data_process_table16, 0x04, 0x04, (armv7m_translate16_t)_asr_reg_16);		// 0100
-	set_sub_table_value(table->data_process_table16, 0x05, 0x05, (armv7m_translate16_t)_adc_reg_16);		// 0101
-	set_sub_table_value(table->data_process_table16, 0x06, 0x06, (armv7m_translate16_t)_sbc_reg_16);		// 0110
-	set_sub_table_value(table->data_process_table16, 0x07, 0x07, (armv7m_translate16_t)_ror_reg_16);		// 0111
-	set_sub_table_value(table->data_process_table16, 0x08, 0x08, (armv7m_translate16_t)_tst_reg_16);		// 1000
-	set_sub_table_value(table->data_process_table16, 0x09, 0x09, (armv7m_translate16_t)_rsb_imm_16);		// 1001
-	set_sub_table_value(table->data_process_table16, 0x0A, 0x0A, (armv7m_translate16_t)_cmp_reg_16);		// 1010
-	set_sub_table_value(table->data_process_table16, 0x0B, 0x0B, (armv7m_translate16_t)_cmn_reg_16);		// 1011
-	set_sub_table_value(table->data_process_table16, 0x0C, 0x0C, (armv7m_translate16_t)_orr_reg_16);		// 1100
-	set_sub_table_value(table->data_process_table16, 0x0D, 0x0D, (armv7m_translate16_t)_mul_reg_16);		// 1101
-	set_sub_table_value(table->data_process_table16, 0x0E, 0x0E, (armv7m_translate16_t)_bic_reg_16);		// 1110
-	set_sub_table_value(table->data_process_table16, 0x0F, 0x0F, (armv7m_translate16_t)_mvn_reg_16);		// 1111
+	set_sub_table_value(table->data_process_table16, 0x00, 0x00, (thumb_translate16_t)_and_reg_16);		// 0000
+	set_sub_table_value(table->data_process_table16, 0x01, 0x01, (thumb_translate16_t)_eor_reg_16);		// 0001
+	set_sub_table_value(table->data_process_table16, 0x02, 0x02, (thumb_translate16_t)_lsl_reg_16);		// 0010
+	set_sub_table_value(table->data_process_table16, 0x03, 0x03, (thumb_translate16_t)_lsr_reg_16);		// 0011
+	set_sub_table_value(table->data_process_table16, 0x04, 0x04, (thumb_translate16_t)_asr_reg_16);		// 0100
+	set_sub_table_value(table->data_process_table16, 0x05, 0x05, (thumb_translate16_t)_adc_reg_16);		// 0101
+	set_sub_table_value(table->data_process_table16, 0x06, 0x06, (thumb_translate16_t)_sbc_reg_16);		// 0110
+	set_sub_table_value(table->data_process_table16, 0x07, 0x07, (thumb_translate16_t)_ror_reg_16);		// 0111
+	set_sub_table_value(table->data_process_table16, 0x08, 0x08, (thumb_translate16_t)_tst_reg_16);		// 1000
+	set_sub_table_value(table->data_process_table16, 0x09, 0x09, (thumb_translate16_t)_rsb_imm_16);		// 1001
+	set_sub_table_value(table->data_process_table16, 0x0A, 0x0A, (thumb_translate16_t)_cmp_reg_16);		// 1010
+	set_sub_table_value(table->data_process_table16, 0x0B, 0x0B, (thumb_translate16_t)_cmn_reg_16);		// 1011
+	set_sub_table_value(table->data_process_table16, 0x0C, 0x0C, (thumb_translate16_t)_orr_reg_16);		// 1100
+	set_sub_table_value(table->data_process_table16, 0x0D, 0x0D, (thumb_translate16_t)_mul_reg_16);		// 1101
+	set_sub_table_value(table->data_process_table16, 0x0E, 0x0E, (thumb_translate16_t)_bic_reg_16);		// 1110
+	set_sub_table_value(table->data_process_table16, 0x0F, 0x0F, (thumb_translate16_t)_mvn_reg_16);		// 1111
 
 	// special data instructions and branch and exchange A5-159
-	set_sub_table_value(table->spdata_branch_exchange_table16, 0x00, 0x03, (armv7m_translate16_t)_add_reg_spec_16);	// 00xx
-	set_sub_table_value(table->spdata_branch_exchange_table16, 0x04, 0x04, (armv7m_translate16_t)_unpredictable_16);	// 0100(*)
-	set_sub_table_value(table->spdata_branch_exchange_table16, 0x05, 0x07, (armv7m_translate16_t)_cmp_reg_spec_16);	// 0101,011x
-	set_sub_table_value(table->spdata_branch_exchange_table16, 0x08, 0x0B, (armv7m_translate16_t)_mov_reg_spec_16);	// 10xx
-	set_sub_table_value(table->spdata_branch_exchange_table16, 0x0C, 0x0D, (armv7m_translate16_t)_bx_spec_16);		// 110x
-	set_sub_table_value(table->spdata_branch_exchange_table16, 0x0E, 0x0F, (armv7m_translate16_t)_blx_spec_16);		// 111x
+	set_sub_table_value(table->spdata_branch_exchange_table16, 0x00, 0x03, (thumb_translate16_t)_add_reg_spec_16);	// 00xx
+	set_sub_table_value(table->spdata_branch_exchange_table16, 0x04, 0x04, (thumb_translate16_t)_unpredictable_16);	// 0100(*)
+	set_sub_table_value(table->spdata_branch_exchange_table16, 0x05, 0x07, (thumb_translate16_t)_cmp_reg_spec_16);	// 0101,011x
+	set_sub_table_value(table->spdata_branch_exchange_table16, 0x08, 0x0B, (thumb_translate16_t)_mov_reg_spec_16);	// 10xx
+	set_sub_table_value(table->spdata_branch_exchange_table16, 0x0C, 0x0D, (thumb_translate16_t)_bx_spec_16);		// 110x
+	set_sub_table_value(table->spdata_branch_exchange_table16, 0x0E, 0x0F, (thumb_translate16_t)_blx_spec_16);		// 111x
 
 	// load from literal pool A7-289
-	set_sub_table_value(table->load_literal_table16, 0x00, 0x00, (armv7m_translate16_t)_ldr_literal_16);
+	set_sub_table_value(table->load_literal_table16, 0x00, 0x00, (thumb_translate16_t)_ldr_literal_16);
 
 	// load store single data item A5-160
-	set_sub_table_value(table->load_store_single_table16, 0x00, 0x27, (armv7m_translate16_t)_unpredictable_16);		// 0000 000 ~ 0010 011
-	set_sub_table_value(table->load_store_single_table16, 0x28, 0x28, (armv7m_translate16_t)_str_reg_16);				// 0101 000
-	set_sub_table_value(table->load_store_single_table16, 0x29, 0x29, (armv7m_translate16_t)_strh_reg_16);			// 0101 001
-	set_sub_table_value(table->load_store_single_table16, 0x2A, 0x2A, (armv7m_translate16_t)_strb_reg_16);			// 0101 010
-	set_sub_table_value(table->load_store_single_table16, 0x2B, 0x2B, (armv7m_translate16_t)_ldrsb_reg_16);			// 0101 011
-	set_sub_table_value(table->load_store_single_table16, 0x2C, 0x2C, (armv7m_translate16_t)_ldr_reg_16);				// 0101	100
-	set_sub_table_value(table->load_store_single_table16, 0x2D, 0x2D, (armv7m_translate16_t)_ldrh_reg_16);			// 0101 101
-	set_sub_table_value(table->load_store_single_table16, 0x2E, 0x2E, (armv7m_translate16_t)_ldrb_reg_16);			// 0101 110
-	set_sub_table_value(table->load_store_single_table16, 0x2F, 0x2F, (armv7m_translate16_t)_ldrsh_reg_16);			// 0101 111
-	set_sub_table_value(table->load_store_single_table16, 0x2F, 0x2F, (armv7m_translate16_t)_ldrsh_reg_16);			// 0101 111
-	set_sub_table_value(table->load_store_single_table16, 0x30, 0x33, (armv7m_translate16_t)_str_imm_16);				// 0110 0xx
-	set_sub_table_value(table->load_store_single_table16, 0x34, 0x37, (armv7m_translate16_t)_ldr_imm_16);				// 0110 1xx
-	set_sub_table_value(table->load_store_single_table16, 0x38, 0x3B, (armv7m_translate16_t)_strb_imm_16);			// 0111 0xx
-	set_sub_table_value(table->load_store_single_table16, 0x3C, 0x3F, (armv7m_translate16_t)_ldrb_imm_16);			// 0111 1xx
-	set_sub_table_value(table->load_store_single_table16, 0x40, 0x43, (armv7m_translate16_t)_strh_imm_16);			// 1000 0xx
-	set_sub_table_value(table->load_store_single_table16, 0x44, 0x47, (armv7m_translate16_t)_ldrh_imm_16);			// 1000 1xx
-	set_sub_table_value(table->load_store_single_table16, 0x48, 0x4B, (armv7m_translate16_t)_str_sp_imm_16);			// 1001 0xx
-	set_sub_table_value(table->load_store_single_table16, 0x4C, 0x4F, (armv7m_translate16_t)_ldr_sp_imm_16);			// 1001 1xx
+	set_sub_table_value(table->load_store_single_table16, 0x00, 0x27, (thumb_translate16_t)_unpredictable_16);		// 0000 000 ~ 0010 011
+	set_sub_table_value(table->load_store_single_table16, 0x28, 0x28, (thumb_translate16_t)_str_reg_16);				// 0101 000
+	set_sub_table_value(table->load_store_single_table16, 0x29, 0x29, (thumb_translate16_t)_strh_reg_16);			// 0101 001
+	set_sub_table_value(table->load_store_single_table16, 0x2A, 0x2A, (thumb_translate16_t)_strb_reg_16);			// 0101 010
+	set_sub_table_value(table->load_store_single_table16, 0x2B, 0x2B, (thumb_translate16_t)_ldrsb_reg_16);			// 0101 011
+	set_sub_table_value(table->load_store_single_table16, 0x2C, 0x2C, (thumb_translate16_t)_ldr_reg_16);				// 0101	100
+	set_sub_table_value(table->load_store_single_table16, 0x2D, 0x2D, (thumb_translate16_t)_ldrh_reg_16);			// 0101 101
+	set_sub_table_value(table->load_store_single_table16, 0x2E, 0x2E, (thumb_translate16_t)_ldrb_reg_16);			// 0101 110
+	set_sub_table_value(table->load_store_single_table16, 0x2F, 0x2F, (thumb_translate16_t)_ldrsh_reg_16);			// 0101 111
+	set_sub_table_value(table->load_store_single_table16, 0x2F, 0x2F, (thumb_translate16_t)_ldrsh_reg_16);			// 0101 111
+	set_sub_table_value(table->load_store_single_table16, 0x30, 0x33, (thumb_translate16_t)_str_imm_16);				// 0110 0xx
+	set_sub_table_value(table->load_store_single_table16, 0x34, 0x37, (thumb_translate16_t)_ldr_imm_16);				// 0110 1xx
+	set_sub_table_value(table->load_store_single_table16, 0x38, 0x3B, (thumb_translate16_t)_strb_imm_16);			// 0111 0xx
+	set_sub_table_value(table->load_store_single_table16, 0x3C, 0x3F, (thumb_translate16_t)_ldrb_imm_16);			// 0111 1xx
+	set_sub_table_value(table->load_store_single_table16, 0x40, 0x43, (thumb_translate16_t)_strh_imm_16);			// 1000 0xx
+	set_sub_table_value(table->load_store_single_table16, 0x44, 0x47, (thumb_translate16_t)_ldrh_imm_16);			// 1000 1xx
+	set_sub_table_value(table->load_store_single_table16, 0x48, 0x4B, (thumb_translate16_t)_str_sp_imm_16);			// 1001 0xx
+	set_sub_table_value(table->load_store_single_table16, 0x4C, 0x4F, (thumb_translate16_t)_ldr_sp_imm_16);			// 1001 1xx
 
 	// pc related address A7-229
-	set_sub_table_value(table->pc_related_address_table16, 0x00, 0x00, (armv7m_translate16_t)_adr_16);
+	set_sub_table_value(table->pc_related_address_table16, 0x00, 0x00, (thumb_translate16_t)_adr_16);
 
 	// sp related address A7-225
-	set_sub_table_value(table->sp_related_address_table16, 0x00, 0x00, (armv7m_translate16_t)_add_sp_imm_16);
+	set_sub_table_value(table->sp_related_address_table16, 0x00, 0x00, (thumb_translate16_t)_add_sp_imm_16);
 
 	// misc 16-bit instructions A5-161
-	set_sub_table_value(table->misc_16bit_ins_table, 0x00, MISC_16BIT_INS_SIZE-1, (armv7m_translate16_t)_unpredictable_16);
-	set_sub_table_value(table->misc_16bit_ins_table, 0x00, 0x03, (armv7m_translate16_t)_add_sp_sp_imm_16);
-	set_sub_table_value(table->misc_16bit_ins_table, 0x04, 0x07, (armv7m_translate16_t)_sub_sp_sp_imm_16);
-	set_sub_table_value(table->misc_16bit_ins_table, 0x08, 0x0F, (armv7m_translate16_t)_cbnz_cbz_16);
-	set_sub_table_value(table->misc_16bit_ins_table, 0x10, 0x11, (armv7m_translate16_t)_sxth_16);
-	set_sub_table_value(table->misc_16bit_ins_table, 0x12, 0x13, (armv7m_translate16_t)_sxtb_16);
-	set_sub_table_value(table->misc_16bit_ins_table, 0x14, 0x15, (armv7m_translate16_t)_uxth_16);
-	set_sub_table_value(table->misc_16bit_ins_table, 0x16, 0x17, (armv7m_translate16_t)_uxtb_16);
-	set_sub_table_value(table->misc_16bit_ins_table, 0x18, 0x1F, (armv7m_translate16_t)_cbnz_cbz_16);
-	set_sub_table_value(table->misc_16bit_ins_table, 0x20, 0x2F, (armv7m_translate16_t)_push_16);
-	set_sub_table_value(table->misc_16bit_ins_table, 0x48, 0x4F, (armv7m_translate16_t)_cbnz_cbz_16);
-	set_sub_table_value(table->misc_16bit_ins_table, 0x50, 0x51, (armv7m_translate16_t)_rev_16);
-	set_sub_table_value(table->misc_16bit_ins_table, 0x52, 0x53, (armv7m_translate16_t)_rev16_16);
-	set_sub_table_value(table->misc_16bit_ins_table, 0x56, 0x57, (armv7m_translate16_t)_revsh_16);
-	set_sub_table_value(table->misc_16bit_ins_table, 0x58, 0x5F, (armv7m_translate16_t)_cbnz_cbz_16);
-	set_sub_table_value(table->misc_16bit_ins_table, 0x60, 0x67, (armv7m_translate16_t)_pop_16);
-	set_sub_table_value(table->misc_16bit_ins_table, 0x70, 0x77, (armv7m_translate16_t)_bkpt_16);
-	set_sub_table_value(table->misc_16bit_ins_table, 0x78, 0x7F, (armv7m_translate16_t)_it_hint_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x00, MISC_16BIT_INS_SIZE-1, (thumb_translate16_t)_unpredictable_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x00, 0x03, (thumb_translate16_t)_add_sp_sp_imm_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x04, 0x07, (thumb_translate16_t)_sub_sp_sp_imm_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x08, 0x0F, (thumb_translate16_t)_cbnz_cbz_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x10, 0x11, (thumb_translate16_t)_sxth_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x12, 0x13, (thumb_translate16_t)_sxtb_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x14, 0x15, (thumb_translate16_t)_uxth_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x16, 0x17, (thumb_translate16_t)_uxtb_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x18, 0x1F, (thumb_translate16_t)_cbnz_cbz_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x20, 0x2F, (thumb_translate16_t)_push_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x48, 0x4F, (thumb_translate16_t)_cbnz_cbz_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x50, 0x51, (thumb_translate16_t)_rev_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x52, 0x53, (thumb_translate16_t)_rev16_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x56, 0x57, (thumb_translate16_t)_revsh_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x58, 0x5F, (thumb_translate16_t)_cbnz_cbz_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x60, 0x67, (thumb_translate16_t)_pop_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x70, 0x77, (thumb_translate16_t)_bkpt_16);
+	set_sub_table_value(table->misc_16bit_ins_table, 0x78, 0x7F, (thumb_translate16_t)_it_hint_16);
 }
-
-
 
 bool_t is_16bit_code(uint16_t opcode)
 {
@@ -1114,55 +1113,10 @@ typedef struct{
 }opcode_t;
 
 /***** The main parsing function for the instruction *******/
-armv7m_translate16_t armv7m_parse_opcode16(uint16_t opcode, cpu_t* cpu)
+thumb_translate16_t thumb_parse_opcode16(uint16_t opcode, cpu_t* cpu)
 {
-	return (armv7m_translate16_t)translate_table.base_table16[opcode >> 10](opcode, cpu);
+	return (thumb_translate16_t)M_translate_table->base_table16[opcode >> 10](opcode, cpu);
 }
-
-//void _armv7m_parse_opcode16(uint16_t opcode, run_info_t* run_info, memory_map_t* memory)
-//{
-//	armv7m_instruct_t* ins = (armv7m_instruct_t*)run_info->ins_set;
-//	ins->ins_table->base_table16[opcode >> 10](opcode, run_info, memory);
-//
-//	switch(opcode>>11){
-//	case 0x00:
-//		// lsl imm
-//	case 0x01:
-//		// lsr imm
-//	case 0x02:
-//		// asr imm
-//	case 0x03:
-//		switch((opcode>>9) & 0x3ul){
-//		case 0x0:
-//			// add reg
-//		case 0x1:
-//			// sub reg
-//		case 0x2:
-//			// add imm3
-//		case 0x3:
-//			// sub imm3
-//		}
-//		break;
-//	case 0x04:
-//		// mov imm
-//	case 0x05:
-//		// cmp imm
-//	case 0x06:
-//		// add imm8
-//	case 0x07:
-//		// sub imm8
-//	case 0x08:
-//		switch((opcode>>6) & 0x1Ful){
-//		case 0x00:
-//			//and reg
-//		case 0x01:
-//			//eor reg
-//		case 0x02:
-//			// lsl reg
-//		}
-//		break;
-//	}
-//}
 
 void parse_opcode32(uint32_t opcode, armv7m_instruct_t* ins)
 {
@@ -1189,6 +1143,7 @@ void armv7m_next_PC(cpu_t* cpu, int ins_length)
 	}else if(ins_length == 32){
 		armv7m_next_PC_32(regs);
 	}
+	/* store pc to indicate whether pc is changed by the opcode*/
 	cpu->run_info.last_pc = regs->PC;
 }
 
@@ -1217,12 +1172,12 @@ error_code_t destory_armv7m_regs(armv7m_reg_t** regs)
 	return SUCCESS;
 }
 
-armv7m_state* create_armv7m_state()
+thumb_state* create_thumb_state()
 {
-	return (armv7m_state*)malloc(sizeof(armv7m_state))	;
+	return (thumb_state*)malloc(sizeof(thumb_state))	;
 }
 
-error_code_t destory_armv7m_state(armv7m_state** state)
+error_code_t destory_thumb_state(thumb_state** state)
 {
 	if(state == NULL || *state == NULL){
 		return ERROR_NULL_POINTER;
@@ -1234,10 +1189,15 @@ error_code_t destory_armv7m_state(armv7m_state** state)
 	return SUCCESS;
 }
 
-/* create and initialize the instruction as well as the cpu state */
-error_code_t ins_armv7m_init(_IO cpu_t* cpu)
+thumb_instruct_table_t* create_instruction_table()
 {
-	armv7m_state* state = create_armv7m_state();
+	return (thumb_instruct_table_t*)malloc(sizeof(thumb_instruct_table_t));
+}
+
+/* create and initialize the instruction as well as the cpu state */
+error_code_t ins_thumb_init(_IO cpu_t* cpu)
+{
+	thumb_state* state = create_thumb_state();
 	if(state == NULL){
 		goto state_error;
 	}
@@ -1246,20 +1206,25 @@ error_code_t ins_armv7m_init(_IO cpu_t* cpu)
 	if(cpu->regs == NULL){
 		goto regs_error;
 	}
-	init_instruction_table(&translate_table);
-	cpu->instruction_data = &translate_table;
+	M_translate_table = create_instruction_table();
+	if(M_translate_table == NULL){
+		goto table_err;
+	}
+	init_instruction_table(M_translate_table);
 	return SUCCESS;
 
+table_err:
+	destory_armv7m_regs((armv7m_reg_t**)&cpu->regs);
 regs_error:
-	destory_armv7m_state((armv7m_state**)&cpu->run_info.cpu_spec_info);
+	destory_thumb_state((thumb_state**)&cpu->run_info.cpu_spec_info);
 state_error:
 	return ERROR_CREATE;
 }
 
-error_code_t ins_armv7m_destory(cpu_t* cpu)
+error_code_t ins_thumb_destory(cpu_t* cpu)
 {
 	destory_armv7m_regs((armv7m_reg_t**)&cpu->regs);
-	destory_armv7m_state((armv7m_state**)&cpu->run_info.cpu_spec_info);
+	destory_thumb_state((thumb_state**)&cpu->run_info.cpu_spec_info);
 	cpu->instruction_data = NULL;
 
 	return SUCCESS;

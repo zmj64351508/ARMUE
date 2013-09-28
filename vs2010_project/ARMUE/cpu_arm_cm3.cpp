@@ -67,7 +67,7 @@ error_code_t armcm3_startup(cpu_t* cpu)
 	/* if ESPR T is not zero, refer to B1-625 */
 
 	regs->LR = 0xFFFFFFFF;
-	armv7m_state* arm_state = (armv7m_state*)cpu->run_info.cpu_spec_info;
+	thumb_state* arm_state = (thumb_state*)cpu->run_info.cpu_spec_info;
 	arm_state->mode = MODE_THREAD;
 
 	return SUCCESS;
@@ -76,10 +76,12 @@ error_code_t armcm3_startup(cpu_t* cpu)
 /****** fetch the instruction. It will set to cpu->fetch32 ******/
 uint32_t fetch_armcm3_cpu(cpu_t* cpu)
 {
+	/* needn't fetch from memory */
 	if(cpu->run_info.next_ins != 0){
 		return (uint32_t)cpu->run_info.next_ins;
 	}
 
+	/* fetch opcode according to PC */
 	memory_map_t* memory_map = cpu->memory_map;
 	uint32_t addr = ((armv7m_reg_t*)cpu->regs)->PC;
 	return get_from_memory32(addr, memory_map);
@@ -91,15 +93,19 @@ ins_t decode_armcm3_cpu(cpu_t* cpu, void* opcode)
 	ins_t ins_info = {NULL, 0};
 	uint32_t opcode32 = *(uint32_t*)opcode; 
 	armv7m_reg_t *regs = (armv7m_reg_t *)cpu->regs;
-	armv7m_state *state = (armv7m_state*)cpu->run_info.cpu_spec_info;
+	thumb_state *state = (thumb_state*)cpu->run_info.cpu_spec_info;
 
+	/* decode the opcode. If opcode is 16bit coded, next_ins will store the next 16bit of this 32bit opcode
+	   so that we don't need to read memory again to fetch opcode. When next_ins = 0, it indicates that no
+	   more opcode is available and need to fetch code from memory */
 	ins_info.opcode = opcode32;
 	if(is_16bit_code(opcode32) == TRUE){
-		ins_info.excute = armv7m_parse_opcode16(opcode32, cpu);
+		ins_info.excute = thumb_parse_opcode16(opcode32, cpu);
 		ins_info.length = 16;
 		cpu->run_info.next_ins = opcode32 >> 16;
 	}else{
 		ins_info.length = 32;
+		cpu->run_info.next_ins = 0;
 		LOG(LOG_WARN, "32bit instruction: 0x%u\n", opcode32);
 	}
 	return ins_info;
@@ -109,7 +115,7 @@ ins_t decode_armcm3_cpu(cpu_t* cpu, void* opcode)
 void excute_armcm3_cpu(cpu_t* cpu, ins_t ins_info){
 	
 	armv7m_reg_t *regs = (armv7m_reg_t *)cpu->regs;
-	armv7m_state *state = (armv7m_state*)cpu->run_info.cpu_spec_info;
+	thumb_state *state = (thumb_state*)cpu->run_info.cpu_spec_info;
 
 	/******							IMPROTANT									*/
 	/****** PC always points to the address of next instruction.				*/
@@ -117,7 +123,7 @@ void excute_armcm3_cpu(cpu_t* cpu, ins_t ins_info){
 	/****** But if instruction visits PC, it always returns PC+4				*/
 	armv7m_next_PC(cpu, ins_info.length);
 	if(ins_info.length == 16){
-		((armv7m_translate16_t)ins_info.excute)((uint16_t)ins_info.opcode, cpu);
+		((thumb_translate16_t)ins_info.excute)((uint16_t)ins_info.opcode, cpu);
 	}else{
 		// 32bit insturction
 		goto out;
@@ -131,15 +137,13 @@ out:
 	getchar();
 }
 
-
 /****** Create an instance of the cpu. It will set to module->create ******/
 cpu_t* create_armcm3_cpu()
 {	
-	// alloc memory for cpu
 	cpu_t* cpu = alloc_cpu();
 
 	// set cpu attributes
-	ins_armv7m_init(cpu);
+	ins_thumb_init(cpu);
 	cpu->startup = armcm3_startup;
 	cpu->fetch32 = fetch_armcm3_cpu;
 	cpu->decode = decode_armcm3_cpu;
@@ -154,13 +158,11 @@ cpu_t* create_armcm3_cpu()
 
 error_code_t destory_armcm3_cpu(cpu_t** cpu)
 {
-	ins_armv7m_destory(*cpu);
+	ins_thumb_destory(*cpu);
 	// delete from cpu list
 	delete_cpu(this_module->cpu_list, *cpu);
 
-	// destory
 	dealloc_cpu(cpu);
-
 	return SUCCESS;
 }
 
@@ -176,6 +178,8 @@ error_code_t unregister_armcm3_module()
 	
 	destory_module(&this_module);
 
+	/* registered is the flag for whether this module is registered or not
+	   Is there a better way to do something similar ? */
 	registered--;
 
 	return SUCCESS;
@@ -186,7 +190,8 @@ error_code_t register_armcm3_module()
 {
 	error_code_t error_code;
 	
-	// Important the module can only be registered once
+	/* Important the module can only be registered once
+	   But this is not a good way. */	
 	if(registered == 1){
 		return ERROR_REGISTERED;
 	}
@@ -208,13 +213,13 @@ error_code_t register_armcm3_module()
 	set_module_content_create(this_module, (create_func_t)create_armcm3_cpu);
 	set_module_content_destory(this_module, (destory_func_t)destory_armcm3_cpu);
 	
-
 	// register this module
 	error_code = register_module_helper(this_module);
 	if(error_code != SUCCESS){
 		LOG(LOG_ERROR, "register_armcm3_module: can't regist module.\n");
 	}
 	
+	/* Well, as metioned, this should be improved. */
 	registered++;
 
 	return error_code;

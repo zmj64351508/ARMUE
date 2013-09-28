@@ -53,6 +53,6 @@ int _tmain(int argc, _TCHAR* argv[])
 		}
 		destory_soc(&soc);
 	}
-		
+
 	unregister_all_modules();
 }

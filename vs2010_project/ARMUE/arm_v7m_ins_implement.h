@@ -46,10 +46,10 @@ typedef struct{
 							   and PC+2 in 16-bit instructions */
 }armv7m_reg_t;
 
-typedef struct armv7m_state{
+typedef struct thumb_state{
 	uint8_t excuting_IT;
 	int mode;	
-}armv7m_state;
+}thumb_state;
 
 #define PSR_N (0x1UL << 31)
 #define PSR_Z (0x1UL << 30)
@@ -111,7 +111,7 @@ inline void ITAdvance(armv7m_reg_t* regs)
 	}
 }
 
-inline uint8_t check_and_reset_excuting_IT(armv7m_state* state)
+inline uint8_t check_and_reset_excuting_IT(thumb_state* state)
 {
 	uint8_t retval = state->excuting_IT;
 	state->excuting_IT = 0;
@@ -225,5 +225,5 @@ void _rev(uint32_t Rm, uint32_t Rd, armv7m_reg_t* regs);
 void _rev16(uint32_t Rm, uint32_t Rd, armv7m_reg_t* regs);
 void _revsh(uint32_t Rm, uint32_t Rd, armv7m_reg_t* regs);
 void _pop(uint32_t registers, uint32_t bitcount, cpu_t* cpu);
-void _it(uint32_t firstcond, uint32_t mask, armv7m_reg_t* regs, armv7m_state* state);
+void _it(uint32_t firstcond, uint32_t mask, armv7m_reg_t* regs, thumb_state* state);
 #endif
