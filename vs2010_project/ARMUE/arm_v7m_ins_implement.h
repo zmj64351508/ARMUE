@@ -51,6 +51,10 @@ typedef struct thumb_state{
 	int mode;	
 }thumb_state;
 
+
+#define ARMv7m_GET_REGS(cpu) ((armv7m_reg_t*)(cpu)->regs)
+#define ARMv7m_GET_STATE(cpu) ((thumb_state*)(cpu)->run_info.cpu_spec_info)
+
 #define PSR_N (0x1UL << 31)
 #define PSR_Z (0x1UL << 30)
 #define PSR_C (0x1UL << 29)
@@ -226,4 +230,7 @@ void _rev16(uint32_t Rm, uint32_t Rd, armv7m_reg_t* regs);
 void _revsh(uint32_t Rm, uint32_t Rd, armv7m_reg_t* regs);
 void _pop(uint32_t registers, uint32_t bitcount, cpu_t* cpu);
 void _it(uint32_t firstcond, uint32_t mask, armv7m_reg_t* regs, thumb_state* state);
+void _stm(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_t* cpu);
+void _ldm(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_t* cpu);
+void _b(int32_t imm32, uint8_t cond, cpu_t* cpu);
 #endif

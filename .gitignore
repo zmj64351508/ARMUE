@@ -164,3 +164,9 @@ pip-log.txt
 
 # Document
 vs2010_project/reference
+
+# tests
+vs2010_project/cortex_m3_test
+vs2010_project/test.rom
+vs2010_project/SourceMonitor.smproj
+

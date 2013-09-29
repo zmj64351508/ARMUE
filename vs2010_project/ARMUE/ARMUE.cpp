@@ -16,7 +16,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	
 	// memory map
 	rom_t* rom = alloc_rom();
-	set_rom_size(rom, 2000);
+	set_rom_size(rom, 0x4000);
 	set_rom_base_addr(rom, 0x00);
 	if(SUCCESS != open_rom(_T("E:\\GitHub\\ARMUE\\vs2010_project\\test.rom"), rom)){
 		return -1;

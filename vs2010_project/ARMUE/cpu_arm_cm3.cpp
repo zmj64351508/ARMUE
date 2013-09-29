@@ -124,17 +124,21 @@ void excute_armcm3_cpu(cpu_t* cpu, ins_t ins_info){
 	armv7m_next_PC(cpu, ins_info.length);
 	if(ins_info.length == 16){
 		((thumb_translate16_t)ins_info.excute)((uint16_t)ins_info.opcode, cpu);
+		if(armv7m_PC_modified(cpu)){
+			cpu->run_info.next_ins = 0;
+		}
 	}else{
 		// 32bit insturction
 		goto out;
 	}
+
 	if(!check_and_reset_excuting_IT(state) && InITBlock(regs)){
 		ITAdvance(regs);
 	}
 
 out:
 	LOG_REG(regs);
-	getchar();
+	//getchar();
 }
 
 /****** Create an instance of the cpu. It will set to module->create ******/
