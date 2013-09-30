@@ -3,26 +3,141 @@
 #include <stdlib.h>
 #include <assert.h>
 
-
-error_code_t set_memory_map_rom(memory_map_t* map, rom_t* rom, int rom_index)
+/* If the 2 regions have overlapping area, they are regared as equal.*/
+int memory_region_compare(void* a, void* b)
 {
-	if(map == NULL || rom == NULL){
-		return ERROR_NULL_POINTER;
+	memory_region_t* ma = (memory_region_t*)a;
+	memory_region_t* mb = (memory_region_t*)b;
+	uint32_t ma_max_addr = ma->base_addr + ma->size - 1;
+	uint32_t mb_max_addr = mb->base_addr + mb->size - 1;
+	if(ma_max_addr < mb->base_addr){
+		return -1;
+	}else if(ma->base_addr > mb_max_addr){
+		return 1;
+	}else{
+		return 0;
 	}
+}
 
-	map->ROM[rom_index] = rom;
+memory_region_t* create_memory_region(void* region_data)
+{
+	memory_region_t* region = (memory_region_t*)malloc(sizeof(memory_region_t));
+	if(region == NULL){
+		goto out;
+	}
+	region->region_data = region_data;
+out:
+	return region;
+}
+
+int add_memroy_region(memory_map_t* memory, memory_region_t* region)
+{
+	bstree_node_t* new_node = bstree_create_node(region);
+	if(new_node == NULL){
+		return -ERROR_CREATE;
+	}
+	bstree_node_t* new_root = bstree_add_node(memory->map, new_node, memory_region_compare);
+	if(new_root == NULL){
+		return -ERROR_ADD;
+	}else{
+		/* update the root node as the insert operation may change the root */
+		memory->map = new_root;
+	}
 
 	return SUCCESS;
 }
 
-error_code_t set_memory_map_ram(memory_map_t* map, ram_t* ram, int ram_index)
+memory_region_t* find_address(memory_map_t* memory, uint32_t address)
 {
-	if(map == NULL || ram == NULL){
-		return ERROR_NULL_POINTER;
+	memory_region_t region;
+	region.base_addr = address;
+	region.size = 1;
+
+	bstree_node_t* node = bstree_find_node(memory->map, &region, memory_region_compare);
+	if(node == NULL){
+		return NULL;
+	}
+	return (memory_region_t*)node->data;
+}
+
+/* call back function for rom's read */
+int general_rom_read(uint32_t addr, uint8_t* buffer, int size, memory_region_t* region)
+{
+	rom_t* rom = (rom_t*)region->region_data;
+	uint32_t offset_addr = addr - region->base_addr;
+	uint32_t data32;
+	int i;
+	switch(size){
+	case 4:
+		data32 = fetch_rom_data32(addr, rom);
+		memcpy(buffer, &data32, 4);
+		return 4;
+	default:
+		for(i = 0; i < size; i++){
+			buffer[i] = fetch_rom_data8(offset_addr+i, rom);
+			if(buffer[i] == EOF){
+				break;
+			}
+		}
+		return i;
+	}
+}
+
+/* call back function for rom's write */
+int general_rom_write(uint32_t addr, uint8_t *buffer, int size, memory_region_t* region)
+{
+	rom_t *rom = (rom_t*)region->region_data;
+	uint32_t offset_addr = addr - region->base_addr;
+	int retval, i;
+	for(i = 0; i < size; i++){
+		retval = send_rom_data8(offset_addr+i, buffer[i], rom);
+		if(retval == EOF){
+			break;
+		}
+	}
+	return i;
+}
+
+int setup_memory_map_rom(memory_map_t* memory, rom_t* rom, int base_addr)
+{
+	memory_region_t* rom_region = create_memory_region(rom);
+	if(rom_region == NULL){
+		return ERROR_CREATE;
+	}
+	rom_region->type = MEMORY_REGION_ROM;
+	rom_region->base_addr = base_addr;
+	rom_region->size = rom->size;
+	rom_region->write = general_rom_write;
+	rom_region->read = general_rom_read;
+	return add_memroy_region(memory, rom_region);
+}
+
+/* The main memory write routine */
+int write_memory(uint32_t addr, uint8_t* buffer, int size, memory_map_t* memory)
+{
+	memory_region_t* region = find_address(memory, addr);
+	if(region == NULL){
+		LOG(LOG_ERROR, "Can't access address 0x%u\n", addr);
+		return -1;
 	}
 
-	map->RAM[ram_index] = ram;
+	return region->write(addr, buffer, size, region);
+}
 
+/* The main memory read routine */
+int read_memory(uint32_t addr, uint8_t* buffer, int size, memory_map_t* memory)
+{
+	memory_region_t* region = find_address(memory, addr);
+	if(region == NULL){
+		LOG(LOG_ERROR, "Can't access address 0x%u\n", addr);
+		return -1;
+	}
+
+	return region->read(addr, buffer, size, region);
+}
+
+error_code_t set_memory_map_ram(memory_map_t* map, ram_t* ram, int ram_index)
+{
 	return SUCCESS;
 }
 
@@ -32,134 +147,19 @@ memory_map_t* create_memory_map()
 	return map;
 }
 
-
 error_code_t destory_memory_map(memory_map_t** map)
 {
 	if(map == NULL || *map == NULL){
 		return ERROR_NULL_POINTER;
 	}
 
-	destory_rom(&(*map)->ROM[0]);
+	/* destory contents */
+	// TODO
 
 	free(*map);
 	*map = NULL;
 
 	return SUCCESS;
-}
-
-
-// return the index of the rom which match the address, if it doesn't mach any rom, return -1
-int addr_in_rom(uint32_t addr, memory_map_t* map)
-{
-	if(map == NULL){
-		return -1;
-	}
-
-	for(int i = 0; i < ROM_MAX; i++){
-		if(map->ROM[i] && map->ROM[i]->allocated == TRUE &&
-		   addr >= map->ROM[i]->base_address && 
-		   addr < map->ROM[i]->base_address + map->ROM[i]->size){
-			   return i;
-		}
-	}
-
-	return -1;
-}
-
-// return the index of the ram which match the address, if it doesn't mach any ram, return -1
-int addr_in_ram(uint32_t addr, memory_map_t* map)
-{
-	if(map == NULL){
-		return -1;
-	}
-
-	for(int i = 0; i < RAM_MAX; i++){
-		if(map->RAM[i] && map->RAM[i]->allocated == TRUE &&
-			addr >= map->RAM[i]->base_address && 
-			addr < map->RAM[i]->base_address + map->RAM[i]->size){
-				return i;
-		}
-	}
-
-	return -1;
-}
-
-uint32_t get_from_memory32(uint32_t addr, memory_map_t* memory_map)
-{
-	int storer_index;
-	
-	if((storer_index = addr_in_rom(addr, memory_map)) >= 0){
-		return fetch_rom_data32(addr, memory_map->ROM[storer_index]);
-	}else if((storer_index = addr_in_ram(addr, memory_map)) >= 0){
-		LOG(LOG_DEBUG, "fetch from ram\n");
-		return 0;// TODO: fetch from ram
-	}else{
-		LOG(LOG_ERROR, "get_from_memory32: Can't access 0x%x\n", addr);
-		return -1;
-	}
-}
-
-int get_from_memory_general(uint32_t addr, int size, uint8_t* buffer, memory_map_t* memory_map)
-{
-	int storer_index;
-	if((storer_index = addr_in_rom(addr, memory_map)) >= 0){
-		for(int i = 0; i < size; i++){
-			buffer[i] = fetch_rom_data8(addr+i, memory_map->ROM[storer_index]);
-		}
-		return 0;
-	}else if((storer_index = addr_in_ram(addr, memory_map)) >= 0){
-		LOG(LOG_DEBUG, "fetch from ram\n");
-		return 0; //TODO: fetch from ram
-	}else{
-		LOG(LOG_ERROR, "get_from_memory32: Can't access 0x%x\n", addr);
-		return -1;
-	}
-}
-
-int get_from_memory(uint32_t addr, int size, uint8_t* buffer, memory_map_t* memory_map)
-{
-	assert(buffer != NULL);
-	uint32_t data32;
-	int retval;
-	switch(size){
-	case 4:
-		data32 = get_from_memory32(addr, memory_map);
-		memcpy(buffer, &data32, 4);
-		retval = 0;
-		break;
-	default:
-		retval = get_from_memory_general(addr, size, buffer, memory_map);
-	}
-	return retval;
-}
-
-int set_to_memory_general(uint32_t addr, int size, uint8_t* buffer, memory_map_t* memory_map)
-{
-	int retval;
-	int storer_index;
-	if((storer_index = addr_in_rom(addr, memory_map)) >= 0){
-		for(int i = 0; i < size; i++){
-			retval = send_rom_data8(addr+i, buffer[i], memory_map->ROM[storer_index]);
-			if(retval < 0){
-				LOG(LOG_ERROR, "set_to_memroy_general: Write cause error\n");
-				return i;
-			}
-		}
-		return 0;
-	}else if((storer_index = addr_in_ram(addr, memory_map)) >= 0){
-		LOG(LOG_DEBUG, "set to ram\n");
-		return 0; //TODO: set to ram
-	}else{
-		LOG(LOG_ERROR, "set_to_memory_general: Can't access 0x%x\n", addr);
-		return -1;
-	}
-}
-
-int set_to_memory(uint32_t addr, int size, uint8_t* buffer, memory_map_t* memory_map)
-{
-	assert(buffer != NULL);
-	int retval = set_to_memory_general(addr, size, buffer, memory_map);
-	return retval;
 }
 
 // set the interrupt table
@@ -174,3 +174,6 @@ error_code_t set_interrput_table(uint32_t* table, uint32_t intrpt_value, int int
 
 	return SUCCESS;
 }
+
+
+

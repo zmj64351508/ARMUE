@@ -17,7 +17,6 @@ typedef struct rom_s_t
 	int content_start;			// where the rom data start.
 	int last_offset;			// last read or write offset of the rom file
 	FILE* rom_file;				
-	uint32_t base_address;		// base address of the rom in memory
 	uint32_t size;				// the size of the rom in byte
 	int rw_flag;
 }rom_t;

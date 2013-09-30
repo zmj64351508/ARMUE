@@ -19,25 +19,18 @@ error_code_t init_armcm3_interrput_table(cpu_t* cpu)
 	memory_map_t* memory_map = cpu->memory_map;
 
 	// search for start rom which base address is 0x00
-	rom_t* start_rom = NULL;	
-	for(int i = 0; i < ROM_MAX; i++){
-		if(memory_map->ROM[i]->base_address == 0 && 
-			memory_map->ROM[i]->allocated == TRUE){
-				start_rom = memory_map->ROM[i];
-				break;
-		}
-	}
-
-	if(start_rom == NULL){
+	memory_region_t* region = find_address(memory_map, 0);
+	if(region == NULL || region->type != MEMORY_REGION_ROM){
 		return ERROR_NO_START_ROM;
 	}
+	rom_t* start_rom = (rom_t*)region->region_data;	
 
 	uint32_t addr = 0;
 	uint32_t interrput_vector = 0;
 	int inpterrupt_table_size = sizeof(memory_map->interrupt_table)/sizeof(memory_map->interrupt_table[0]);
 	
 	for(int i = 0; i < inpterrupt_table_size; i++){
-		interrput_vector = fetch_rom_data32(addr, start_rom);
+		read_memory(addr, (uint8_t*)&interrput_vector, 4, memory_map);
 		set_interrput_table(memory_map->interrupt_table, interrput_vector, i);
 		addr += 4;
 	}
@@ -84,7 +77,9 @@ uint32_t fetch_armcm3_cpu(cpu_t* cpu)
 	/* fetch opcode according to PC */
 	memory_map_t* memory_map = cpu->memory_map;
 	uint32_t addr = ((armv7m_reg_t*)cpu->regs)->PC;
-	return get_from_memory32(addr, memory_map);
+	uint32_t opcode;
+	read_memory(addr, (uint8_t*)&opcode, 4, memory_map);
+	return opcode;
 }
 
 /* decode instruction, return the instruction info. It will be set to cpu->decode */
@@ -138,7 +133,7 @@ void excute_armcm3_cpu(cpu_t* cpu, ins_t ins_info){
 
 out:
 	LOG_REG(regs);
-	//getchar();
+	getchar();
 }
 
 /****** Create an instance of the cpu. It will set to module->create ******/

@@ -51,6 +51,9 @@
     <ClCompile Include="arm_v7m_ins_implement.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="bstree.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="module_helper.h">
@@ -90,6 +93,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="arm_v7m_ins_decode.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="bstree.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

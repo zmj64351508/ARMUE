@@ -83,6 +83,7 @@
     <ClCompile Include="ARMUE.cpp" />
     <ClCompile Include="arm_v7m_ins_implement.cpp" />
     <ClCompile Include="arm_v7m_ins_decode.cpp" />
+    <ClCompile Include="bstree.cpp" />
     <ClCompile Include="cpu.cpp" />
     <ClCompile Include="cpu_arm_cm3.cpp" />
     <ClCompile Include="memory_map.cpp" />
@@ -95,6 +96,7 @@
   <ItemGroup>
     <ClInclude Include="arm_v7m_ins_decode.h" />
     <ClInclude Include="arm_v7m_ins_implement.h" />
+    <ClInclude Include="bstree.h" />
     <ClInclude Include="cpu.h" />
     <ClInclude Include="cpu_arm_cm3.h" />
     <ClInclude Include="error_code.h" />

@@ -235,11 +235,11 @@ int MemU_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv,
 		if(type == MEM_READ){
 			// TODO: Send an io request here and delay the real access to when the instruction finished.
 			// send_io_request(address, size, buffer, io_info, type);
-			retval = get_from_memory(address, size, buffer, memory);
+			retval = read_memory(address, buffer, size, memory);
 			/* reverse big endian */
 		}else if(type == MEM_WRITE){
 			/* reverse big endian */
-			retval = set_to_memory(address, size, buffer, memory);
+			retval = write_memory(address, buffer, size, memory);
 		}
 	}
 
@@ -268,13 +268,13 @@ int MemA_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv,
 	}
 	// ValidateAddress() using MPU
 	if(type == MEM_READ){
-		retval = get_from_memory(address, size, buffer, memory);
+		retval = read_memory(address, buffer, size, memory);
 		// if AIRCR.ENDIANNESS == 1 then
 		//		value = BigEndianReverse(value, size);
 	}else if(type == MEM_WRITE){
 		// if AIRCR.ENDIANNESS == 1 then
 		// reverse big endian
-		retval = set_to_memory(address, size, buffer, memory);
+		retval = write_memory(address, buffer, size, memory);
 	}
 	return retval;
 }

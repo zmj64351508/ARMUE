@@ -118,10 +118,6 @@ static error_code_t validate_rom_param(rom_t* rom)
 		return ERROR_NULL_POINTER;
 	}
 
-	if(rom->base_address){
-
-	}
-
 	if(rom->size == 0){
 		return ERROR_INVALID_ROM_FILE;
 	}
@@ -140,21 +136,13 @@ static error_code_t parse_rom_file_head(_IO rom_t *rom)
 	
 	FILE *file = rom->rom_file;
 
-	uint32_t read_base_address;
 	uint32_t read_size;
 
 	read_size = (uint32_t)parse_next_line_int(file, "size:");
-	read_base_address = (uint32_t)parse_next_line_int(file, "base_address:");
 
 	if(read_size == READ_ROM_SIZE){
 		rom->size = read_size;
 	}else if(read_size != rom->size){
-		return ERROR_ROM_PARAM_DISMATCH;
-	}
-
-	if(read_base_address == READ_BASE_ADDRESS){
-		rom->base_address = read_base_address;
-	}else if(read_base_address != rom->base_address){
 		return ERROR_ROM_PARAM_DISMATCH;
 	}
 
@@ -208,7 +196,6 @@ error_code_t open_rom(_I _TCHAR* path, _IO rom_t* rom)
 			// edit the rom file and set rom attributes
 			if(validate_rom_param(rom) == SUCCESS){
 				fprintf(rom->rom_file, "size:%d\n", rom->size);
-				fprintf(rom->rom_file, "base_address:%d\n", rom->base_address);
 				rom->content_start = ftell(rom->rom_file);
 				rom->last_offset = rom->content_start-1;
 				rom->allocated = TRUE;
@@ -236,17 +223,6 @@ error_code_t set_rom_size(rom_t *rom, uint32_t size)
 	return SUCCESS;
 }
 
-error_code_t set_rom_base_addr(rom_t* rom, uint32_t base_addr)
-{
-	if(rom == NULL){
-		return ERROR_NULL_POINTER;
-	}
-
-	rom->base_address = base_addr;
-
-	return SUCCESS;
-}
-
 /* switch read and write mode for rom file */
 static inline void switch_rom_rw(rom_t* rom, int rw_flag)
 {
@@ -256,10 +232,10 @@ static inline void switch_rom_rw(rom_t* rom, int rw_flag)
 	}
 }
 
-int send_rom_data8(uint32_t addr, uint8_t char_to_send, rom_t* rom)
+int send_rom_data8(uint32_t offset_addr, uint8_t char_to_send, rom_t* rom)
 {
 	int retval;
-	int cur_offset = addr - rom->base_address + rom->content_start;
+	int cur_offset = offset_addr + rom->content_start;
 	switch_rom_rw(rom, ROM_WRITE);
 	if(cur_offset == rom->last_offset + 1){
 		retval = fputc(char_to_send, rom->rom_file);
@@ -273,9 +249,9 @@ int send_rom_data8(uint32_t addr, uint8_t char_to_send, rom_t* rom)
 	return retval;
 }
 
-uint8_t fetch_rom_data8(uint32_t addr, rom_t* rom)
+uint8_t fetch_rom_data8(uint32_t offset_addr, rom_t* rom)
 {
-	int cur_offset = addr - rom->base_address + rom->content_start;
+	int cur_offset = offset_addr + rom->content_start;
 	int8_t buf = 0;
 	switch_rom_rw(rom, ROM_READ);
 	if(cur_offset == rom->last_offset + 1){
@@ -291,9 +267,9 @@ uint8_t fetch_rom_data8(uint32_t addr, rom_t* rom)
 
 
 // get the 32bit data in rom specifical address
-uint32_t fetch_rom_data32(uint32_t addr, rom_t* rom)
+uint32_t fetch_rom_data32(uint32_t offset_addr, rom_t* rom)
 {
-	int cur_offset = addr - rom->base_address + rom->content_start;
+	int cur_offset = offset_addr + rom->content_start;
 	int8_t buf[4] = {0};
 
 	switch_rom_rw(rom, ROM_READ);
@@ -316,9 +292,9 @@ uint32_t fetch_rom_data32(uint32_t addr, rom_t* rom)
 	return *(uint32_t*)buf;
 }
 
-uint16_t fetch_rom_data16(uint32_t addr, rom_t* rom)
+uint16_t fetch_rom_data16(uint32_t offset_addr, rom_t* rom)
 {
-	int cur_offset = addr - rom->base_address + rom->content_start;
+	int cur_offset = offset_addr + rom->content_start;
 	int8_t buf[2] = {0};
 	switch_rom_rw(rom, ROM_READ);
 

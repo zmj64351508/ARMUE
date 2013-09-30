@@ -10,20 +10,21 @@
 #include "soc.h"
 int _tmain(int argc, _TCHAR* argv[])
 {
-//	printf("%d\n",sizeof(short int));
 	// register all exsisted modules
 	register_all_modules();
 	
 	// memory map
 	rom_t* rom = alloc_rom();
 	set_rom_size(rom, 0x4000);
-	set_rom_base_addr(rom, 0x00);
 	if(SUCCESS != open_rom(_T("E:\\GitHub\\ARMUE\\vs2010_project\\test.rom"), rom)){
 		return -1;
 	}
 	fill_rom_with_bin(rom, _T("E:\\GitHub\\ARMUE\\vs2010_project\\cortex_m3_test\\test.bin"));
 	memory_map_t *memory_map = create_memory_map();		
-	set_memory_map_rom(memory_map, rom, 0);
+	int result = setup_memory_map_rom(memory_map, rom, 0x00);
+	if(result < 0){
+		LOG(LOG_ERROR, "Faild to setup rom\n");
+	}
 
 	/*
 	module_t* uart_module = find_module(_T("uart"));
@@ -42,13 +43,13 @@ int _tmain(int argc, _TCHAR* argv[])
 	soc_conf.memories[0] = memory_map;
 
 	// soc
-	uint32_t ins;
+	uint32_t opcode;
 	soc_t* soc = create_soc(&soc_conf);
 	if(soc != NULL){
 		startup_soc(soc);
-		for(;;){
-			ins = run_soc(soc);
-			if(ins == 0)
+		while(1){
+			opcode = run_soc(soc);
+			if(opcode == 0)
 				break;
 		}
 		destory_soc(&soc);
