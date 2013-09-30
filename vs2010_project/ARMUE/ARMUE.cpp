@@ -13,17 +13,24 @@ int _tmain(int argc, _TCHAR* argv[])
 	// register all exsisted modules
 	register_all_modules();
 	
-	// memory map
+	memory_map_t *memory_map = create_memory_map();		
+	// ROM
 	rom_t* rom = alloc_rom();
-	set_rom_size(rom, 0x4000);
+	set_rom_size(rom, 0x1000);
 	if(SUCCESS != open_rom(_T("E:\\GitHub\\ARMUE\\vs2010_project\\test.rom"), rom)){
 		return -1;
 	}
 	fill_rom_with_bin(rom, _T("E:\\GitHub\\ARMUE\\vs2010_project\\cortex_m3_test\\test.bin"));
-	memory_map_t *memory_map = create_memory_map();		
 	int result = setup_memory_map_rom(memory_map, rom, 0x00);
 	if(result < 0){
-		LOG(LOG_ERROR, "Faild to setup rom\n");
+		LOG(LOG_ERROR, "Faild to setup ROM\n");
+	}
+
+	/* RAM */
+	ram_t* ram = create_ram(0x1000);
+	result = setup_memory_map_ram(memory_map, ram, 0x01000000);
+	if(result < 0){
+		LOG(LOG_ERROR, "Failed to setup RAM\n");
 	}
 
 	/*

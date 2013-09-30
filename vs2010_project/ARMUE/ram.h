@@ -1,13 +1,19 @@
 #ifndef _RAM_H_
 #define _RAM_H_
+#ifdef __cplusplus
+extern "C"{
+#endif
 
 #include "_types.h"
 
 typedef struct{
-	bool_t allocated;
 	uint32_t size;
-	uint32_t base_address;
-	uint8_t* memory_base;
+	uint8_t* data;
 }ram_t;
 
+ram_t* create_ram(size_t size);
+
+#ifdef __cplusplus
+}
+#endif
 #endif

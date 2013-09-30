@@ -117,7 +117,7 @@ int write_memory(uint32_t addr, uint8_t* buffer, int size, memory_map_t* memory)
 {
 	memory_region_t* region = find_address(memory, addr);
 	if(region == NULL){
-		LOG(LOG_ERROR, "Can't access address 0x%u\n", addr);
+		LOG(LOG_ERROR, "Can't access address 0x%x\n", addr);
 		return -1;
 	}
 
@@ -129,15 +129,41 @@ int read_memory(uint32_t addr, uint8_t* buffer, int size, memory_map_t* memory)
 {
 	memory_region_t* region = find_address(memory, addr);
 	if(region == NULL){
-		LOG(LOG_ERROR, "Can't access address 0x%u\n", addr);
+		LOG(LOG_ERROR, "Can't access address 0x%x\n", addr);
 		return -1;
 	}
 
 	return region->read(addr, buffer, size, region);
 }
 
-error_code_t set_memory_map_ram(memory_map_t* map, ram_t* ram, int ram_index)
+int general_ram_read(uint32_t addr, uint8_t* buffer, int size, memory_region_t* ram_region)
 {
+	ram_t* ram = (ram_t*)ram_region->region_data;
+	uint32_t offset_addr = addr - ram_region->base_addr;
+	memcpy(buffer, ram->data+offset_addr, size);
+	return size;
+}
+
+int general_ram_write(uint32_t addr, uint8_t* buffer, int size, memory_region_t* ram_region)
+{
+	ram_t* ram = (ram_t*)ram_region->region_data;
+	uint32_t offset_addr = addr - ram_region->base_addr;
+	memcpy(ram->data+offset_addr, buffer, size);
+	return size;
+}
+
+int setup_memory_map_ram(memory_map_t* memory, ram_t* ram, int base_addr)
+{
+	memory_region_t* ram_region = create_memory_region(ram);
+	if(ram_region == NULL){
+		return ERROR_CREATE;
+	}
+	ram_region->type = MEMORY_REGION_RAM;
+	ram_region->base_addr = base_addr;
+	ram_region->size = ram->size;
+	ram_region->write = general_ram_write;
+	ram_region->read = general_ram_read;
+	return add_memroy_region(memory, ram_region);
 	return SUCCESS;
 }
 

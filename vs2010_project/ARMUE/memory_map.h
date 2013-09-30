@@ -35,7 +35,7 @@ typedef struct memory_region_t{
 
 
 int setup_memory_map_rom(memory_map_t* memory, rom_t* rom, int base_addr);
-error_code_t set_memory_map_ram(memory_map_t* map, ram_t* ram, int ram_index);
+int setup_memory_map_ram(memory_map_t* memory, ram_t* ram, int base_addr);
 error_code_t set_interrput_table(uint32_t* memory_map, uint32_t intrpt_value, int intrpt_num);
 memory_map_t* create_memory_map();
 error_code_t destory_memory_map(memory_map_t** map);
