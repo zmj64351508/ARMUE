@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "_types.h"
 #include "arm_v7m_ins_decode.h"
+#include "cm_NVIC.h"
 
 static module_t* this_module;
 static int registered = 0;
@@ -27,13 +28,16 @@ error_code_t init_armcm3_interrput_table(cpu_t* cpu)
 
 	uint32_t addr = 0;
 	uint32_t interrput_vector = 0;
-	int inpterrupt_table_size = sizeof(memory_map->interrupt_table)/sizeof(memory_map->interrupt_table[0]);
+	int inpterrupt_table_size = cpu->cm_NVIC->vector_table_size;
 	
 	for(int i = 0; i < inpterrupt_table_size; i++){
 		read_memory(addr, (uint8_t*)&interrput_vector, 4, memory_map);
-		set_interrput_table(memory_map->interrupt_table, interrput_vector, i);
+		set_vector_table(cpu->cm_NVIC, interrput_vector, i);
 		addr += 4;
 	}
+	cpu->cm_NVIC->throw_exception = cm_NVIC_throw_exception;
+	cpu->cm_NVIC->check_exception = cm_NVIC_check_exception;
+	cpu->cm_NVIC->handle_exception = cm_NVIC_handle_exception;
 
 	return SUCCESS;
 }
@@ -53,10 +57,10 @@ error_code_t armcm3_startup(cpu_t* cpu)
 	// set register initial value
 	// TODO: Following statements need to be pack in another function which should be in armv7m module
 	// reset behaviour refering to B1-642
-	regs->MSP = memory_map->interrupt_table[0];
-	regs->PC = align_address(memory_map->interrupt_table[1]);
+	regs->MSP = get_vector_value(cpu->cm_NVIC, 0);
+	regs->PC = align_address(get_vector_value(cpu->cm_NVIC, 1));
 	regs->xPSR = 0x0;
-	SET_EPSR_T(regs, memory_map->interrupt_table[1] & BIT_0);
+	SET_EPSR_T(regs, get_vector_value(cpu->cm_NVIC, 1) & BIT_0);
 	/* if ESPR T is not zero, refer to B1-625 */
 
 	regs->LR = 0xFFFFFFFF;

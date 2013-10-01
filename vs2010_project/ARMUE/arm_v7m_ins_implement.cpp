@@ -202,6 +202,11 @@ void BXWritePC(uint32_t address, armv7m_reg_t* regs, thumb_state* state)
 	}
 }
 
+void armv7m_branch(uint32_t address, cpu_t* cpu)
+{
+	BXWritePC(address, (armv7m_reg_t*)cpu->regs, (thumb_state*)cpu->run_info.cpu_spec_info);
+}
+
 /* <<ARMv7-M Architecture Reference Manual 47>> */
 inline void LoadWritePC(uint32_t address, armv7m_reg_t* regs, thumb_state* state)
 {

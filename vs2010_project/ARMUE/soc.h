@@ -15,7 +15,14 @@ typedef struct {
 typedef struct soc_conf_t{
 	int cpu_num;
 	char* cpu_name;
+
+	int exception_num;
+	int nested_level;
 	
+	int has_GIC;
+	int GIC_interrupt_num;
+	int GIC_nested_level;
+
 	int memory_map_num;
 	memory_map_t* memories[MEMORY_NUM_MAX];
 }soc_conf_t;

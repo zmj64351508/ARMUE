@@ -3,6 +3,7 @@
 
 #include "error_code.h"
 #include "memory_map.h"
+#include "exception_interrupt.h"
 
 typedef enum{
 	CPU_INVALID,
@@ -36,8 +37,6 @@ typedef struct run_info_t
 	//interrupt_t
 }run_info_t;
 
-
-
 typedef struct cpu_t
 {
 	int cpu_id;			// cpu id not use
@@ -48,6 +47,15 @@ typedef struct cpu_t
 	run_info_t run_info;
 	void *regs;
 	void *instruction_data;
+
+	/* For cortex-m profile, NVIC is internal with function of exception controller and 
+	   general interrupt controller, while other profile like A, R and classical ARM cpu
+	   has an internal exception controller and an external interrupt controller. */
+	union{
+		vector_exception_t* exceptions;
+		vector_interrupt_t* cm_NVIC;
+	};
+	vector_interrupt_t* GIC;
 
 	/* for some architecture with seperated io and memory space.
 	   If the architecture has only single io and memory space, 
@@ -71,7 +79,6 @@ typedef struct cpu_t
 	struct cpu_t* pre_cpu;
 	cpu_list_t* list;
 }cpu_t;
-
 
 cpu_list_t*		create_cpu_list();
 error_code_t	destory_cpu_list(cpu_list_t** cpu_list);

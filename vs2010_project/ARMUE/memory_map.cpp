@@ -188,18 +188,5 @@ error_code_t destory_memory_map(memory_map_t** map)
 	return SUCCESS;
 }
 
-// set the interrupt table
-// NOTE: it doesn't check the array index
-error_code_t set_interrput_table(uint32_t* table, uint32_t intrpt_value, int intrpt_num)
-{
-	if(table == NULL){
-		return ERROR_NULL_POINTER;
-	}
-
-	table[intrpt_num] = intrpt_value;
-
-	return SUCCESS;
-}
-
 
 

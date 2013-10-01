@@ -1041,7 +1041,7 @@ void _con_b_16(uint16_t ins_code, cpu_t* cpu)
 	}
 
 	_b(imm32, cond, cpu);
-	LOG_INSTRUCTION("_con_b_16, %u\n", imm32);
+	LOG_INSTRUCTION("_con_b_16, 0x%x\n", imm32);
 }
 
 void _svc_16(uint16_t ins_code, cpu_t* cpu)
@@ -1050,8 +1050,9 @@ void _svc_16(uint16_t ins_code, cpu_t* cpu)
 	uint32_t imm32 = LOW_BIT16(ins_code, 8);
 
 	//TODO: exception and interrupt
+	cpu->cm_NVIC->throw_exception(11, cpu->cm_NVIC);
 
-	LOG_INSTRUCTION("_svc_16, #%d", imm32);
+	LOG_INSTRUCTION("_svc_16, #%d\n", imm32);
 }
 
 void _uncon_b_16(uint16_t ins_code, cpu_t* cpu)
@@ -1065,7 +1066,7 @@ void _uncon_b_16(uint16_t ins_code, cpu_t* cpu)
 	}
 
 	_b(imm32, 0, cpu);
-	LOG_INSTRUCTION("_uncon_b_16, %u\n", imm32);
+	LOG_INSTRUCTION("_uncon_b_16, 0x%x\n", imm32);
 }
 
 void _unpredictable_16(uint16_t ins_code, cpu_t* cpu)
@@ -1305,10 +1306,12 @@ error_code_t ins_thumb_init(_IO cpu_t* cpu)
 		goto state_error;
 	}
 	set_cpu_spec_info(cpu, state);
+
 	cpu->regs = create_armv7m_regs();
 	if(cpu->regs == NULL){
 		goto regs_error;
 	}
+
 	M_translate_table = create_instruction_table();
 	if(M_translate_table == NULL){
 		goto table_err;

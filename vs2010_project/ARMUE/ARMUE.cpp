@@ -46,6 +46,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	soc_conf_t soc_conf;
 	soc_conf.cpu_num = 1;
 	soc_conf.cpu_name = "arm_cm3";
+	soc_conf.exception_num = 255;
+	soc_conf.nested_level = 10;
+	soc_conf.has_GIC = 0;
 	soc_conf.memory_map_num = 1;
 	soc_conf.memories[0] = memory_map;
 

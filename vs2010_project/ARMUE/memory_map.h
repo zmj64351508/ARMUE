@@ -13,14 +13,12 @@ typedef enum{
 }memory_region_type_t;
 
 #define MEM_MAP_CACHE_SIZE 4000
-#define MAX_INTERRUPT_NUM 255
 #define ROM_MAX 4
 #define RAM_MAX 4
 
 #include "bstree.h"
 typedef struct{
 	uint32_t size_total;
-	uint32_t interrupt_table[MAX_INTERRUPT_NUM];
 	bstree_node_t *map;	
 }memory_map_t;
 
@@ -36,7 +34,6 @@ typedef struct memory_region_t{
 
 int setup_memory_map_rom(memory_map_t* memory, rom_t* rom, int base_addr);
 int setup_memory_map_ram(memory_map_t* memory, ram_t* ram, int base_addr);
-error_code_t set_interrput_table(uint32_t* memory_map, uint32_t intrpt_value, int intrpt_num);
 memory_map_t* create_memory_map();
 error_code_t destory_memory_map(memory_map_t** map);
 

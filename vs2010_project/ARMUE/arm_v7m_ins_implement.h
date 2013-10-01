@@ -2,6 +2,8 @@
 #define _ARM_V7M_INS_IMPLEMENT_H_
 
 #include "_types.h"
+#include "cpu.h"
+#include "memory_map.h"
 
 typedef enum{
 	SRType_LSL,
@@ -25,7 +27,6 @@ typedef enum{
 #define PC_INDEX 15
 #define PC_RAW_INDEX 16
 
-#include "memory_map.h"
 typedef struct{
 	// general registers
 	uint32_t R[16];			// 0x00~0x0D * sizeof(uint32_t)
@@ -155,7 +156,6 @@ inline void SET_REG_VAL(armv7m_reg_t* regs, uint32_t Rx, uint32_t val){
 	SET_REG_VAL_UNCON(regs, Rx, modified);
 }
 
-
 inline uint8_t get_bit(uint32_t* reg, uint32_t bit_pos)
 {
 	return (*reg & bit_pos) == 0 ? 0: 1;
@@ -171,7 +171,9 @@ inline void set_bit(uint32_t* reg, uint32_t bit_pos,int bit_val)
 	}
 }
 
-#include "cpu.h"
+void armv7m_branch(uint32_t addr, cpu_t* cpu);
+
+/* implementation of instructions */
 void _lsl_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs);
 void _lsr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs);
 void _asr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs);

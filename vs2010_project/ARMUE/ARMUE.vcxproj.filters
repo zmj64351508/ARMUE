@@ -54,6 +54,15 @@
     <ClCompile Include="bstree.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="cm_NVIC.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="exception_interrupt.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="fifo.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="module_helper.h">
@@ -96,6 +105,15 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="bstree.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="exception_interrupt.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="fifo.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="cm_NVIC.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

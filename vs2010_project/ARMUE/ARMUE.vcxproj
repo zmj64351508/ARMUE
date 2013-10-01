@@ -84,8 +84,11 @@
     <ClCompile Include="arm_v7m_ins_implement.cpp" />
     <ClCompile Include="arm_v7m_ins_decode.cpp" />
     <ClCompile Include="bstree.cpp" />
+    <ClCompile Include="cm_NVIC.cpp" />
     <ClCompile Include="cpu.cpp" />
     <ClCompile Include="cpu_arm_cm3.cpp" />
+    <ClCompile Include="exception_interrupt.cpp" />
+    <ClCompile Include="fifo.cpp" />
     <ClCompile Include="memory_map.cpp" />
     <ClCompile Include="module_helper.cpp" />
     <ClCompile Include="ram.cpp" />
@@ -97,9 +100,12 @@
     <ClInclude Include="arm_v7m_ins_decode.h" />
     <ClInclude Include="arm_v7m_ins_implement.h" />
     <ClInclude Include="bstree.h" />
+    <ClInclude Include="cm_NVIC.h" />
     <ClInclude Include="cpu.h" />
     <ClInclude Include="cpu_arm_cm3.h" />
     <ClInclude Include="error_code.h" />
+    <ClInclude Include="exception_interrupt.h" />
+    <ClInclude Include="fifo.h" />
     <ClInclude Include="memory_map.h" />
     <ClInclude Include="module_helper.h" />
     <ClInclude Include="peripheral.h" />

@@ -25,6 +25,14 @@ uint32_t run_soc(soc_t* soc)
 	uint32_t opcode = cpu->fetch32(cpu);
 	ins_t ins_info = cpu->decode(cpu, &opcode);
 	cpu->excute(cpu, ins_info);
+	if(cpu->GIC){
+
+	}
+	uint32_t vector_num = cpu->exceptions->check_exception(cpu);
+	if(vector_num != 0){
+		cpu->exceptions->handle_exception(vector_num, cpu);
+	}
+
 	return opcode;
 }
 
@@ -51,6 +59,20 @@ soc_t* create_soc(soc_conf_t* config)
 		LOG(LOG_ERROR, "create_soc: invalid cpu %s\n", cpu_module->name);
 		goto invalid_cpu;
 	}
+
+	cpu->exceptions = create_vector_exception(config->exception_num, config->nested_level);
+	if(cpu->exceptions == NULL){
+		goto exception_null;
+	}
+	if(config->has_GIC){
+		cpu->GIC = create_vector_exception(config->GIC_interrupt_num, config->GIC_nested_level);
+		if(cpu->GIC == NULL){
+			goto GIC_null;
+		}
+	}else{
+		cpu->GIC = NULL;
+	}
+
 	LOG(LOG_DEBUG, "create_soc: created cpu %s\n", cpu_module->name);
 	if(config->memory_map_num == 1){
 		soc = create_single_mem_soc(cpu, config->memories[0]);
@@ -59,6 +81,9 @@ soc_t* create_soc(soc_conf_t* config)
 	}
 	return soc;
 
+GIC_null:
+	destory_vector_exception(&cpu->exceptions);
+exception_null:
 invalid_cpu:
 	cpu_module->destory_cpu(&cpu);
 err_out:
