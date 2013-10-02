@@ -83,6 +83,7 @@
     <ClCompile Include="ARMUE.cpp" />
     <ClCompile Include="arm_v7m_ins_implement.cpp" />
     <ClCompile Include="arm_v7m_ins_decode.cpp" />
+    <ClCompile Include="bheap.cpp" />
     <ClCompile Include="bstree.cpp" />
     <ClCompile Include="cm_NVIC.cpp" />
     <ClCompile Include="cpu.cpp" />
@@ -99,6 +100,7 @@
   <ItemGroup>
     <ClInclude Include="arm_v7m_ins_decode.h" />
     <ClInclude Include="arm_v7m_ins_implement.h" />
+    <ClInclude Include="bheap.h" />
     <ClInclude Include="bstree.h" />
     <ClInclude Include="cm_NVIC.h" />
     <ClInclude Include="cpu.h" />

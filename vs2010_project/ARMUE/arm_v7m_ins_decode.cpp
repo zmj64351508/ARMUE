@@ -8,15 +8,7 @@ thumb_instruct_table_t *M_translate_table; // table for ARMvX-M
 thumb_instruct_table_t *R_translate_table; // table for ARMvX-R, implement in the future
 thumb_instruct_table_t *A_translate_table; // table for ARMvX-A, implement in the future
 
-uint32_t BitCount32(uint32_t bits)
-{
-	uint32_t count = 0;
-	while(bits != 0){
-		bits = bits & (bits-1);
-		count++;
-	}
-	return count;
-}
+
 
 /******							IMPROTANT									*/
 /****** PC always pointers to the address of next instruction.				*/
@@ -35,7 +27,7 @@ error_code_t set_base_table_value(thumb_decode_t* table, int start, int end, thu
 }
 #define set_sub_table_value set_base_table_value
 
-void print_reg_val(armv7m_reg_t* regs)
+void armv7m_print_reg_val(armv7m_reg_t* regs)
 {
 	for(int i = 0; i < 13; i++){
 		printf("R%-3d=0x%08x\n", i, regs->R[i]);

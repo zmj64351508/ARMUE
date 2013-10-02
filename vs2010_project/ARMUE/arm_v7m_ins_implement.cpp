@@ -207,6 +207,17 @@ void armv7m_branch(uint32_t address, cpu_t* cpu)
 	BXWritePC(address, (armv7m_reg_t*)cpu->regs, (thumb_state*)cpu->run_info.cpu_spec_info);
 }
 
+void armv7m_push_reg(uint32_t reg_val, cpu_t* cpu)
+{
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+
+	uint32_t SP_val = GET_REG_VAL(regs, SP_INDEX);
+	SP_val -= 4;
+	write_memory(SP_val, (uint8_t*)&reg_val, 4, cpu->memory_map);
+
+	SET_REG_VAL(regs, SP_INDEX, SP_val);
+}
+
 /* <<ARMv7-M Architecture Reference Manual 47>> */
 inline void LoadWritePC(uint32_t address, armv7m_reg_t* regs, thumb_state* state)
 {

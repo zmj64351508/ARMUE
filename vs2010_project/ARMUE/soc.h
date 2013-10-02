@@ -29,7 +29,7 @@ typedef struct soc_conf_t{
 
 soc_t* create_soc(soc_conf_t* config);
 error_code_t destory_soc(soc_t **soc);
-error_code_t startup_soc(soc_t* soc);
+int startup_soc(soc_t* soc);
 uint32_t run_soc(soc_t* soc);
 
 #endif

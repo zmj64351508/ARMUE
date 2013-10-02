@@ -11,45 +11,17 @@ static int registered = 0;
 
 #include <stdio.h>
 
-error_code_t init_armcm3_interrput_table(cpu_t* cpu)
-{
-	if(cpu == NULL || cpu->memory_map == NULL){
-		return ERROR_NULL_POINTER;
-	}
-
-	memory_map_t* memory_map = cpu->memory_map;
-
-	// search for start rom which base address is 0x00
-	memory_region_t* region = find_address(memory_map, 0);
-	if(region == NULL || region->type != MEMORY_REGION_ROM){
-		return ERROR_NO_START_ROM;
-	}
-	rom_t* start_rom = (rom_t*)region->region_data;	
-
-	uint32_t addr = 0;
-	uint32_t interrput_vector = 0;
-	int inpterrupt_table_size = cpu->cm_NVIC->vector_table_size;
-	
-	for(int i = 0; i < inpterrupt_table_size; i++){
-		read_memory(addr, (uint8_t*)&interrput_vector, 4, memory_map);
-		set_vector_table(cpu->cm_NVIC, interrput_vector, i);
-		addr += 4;
-	}
-	cpu->cm_NVIC->throw_exception = cm_NVIC_throw_exception;
-	cpu->cm_NVIC->check_exception = cm_NVIC_check_exception;
-	cpu->cm_NVIC->handle_exception = cm_NVIC_handle_exception;
-
-	return SUCCESS;
-}
 
 /****** start the cpu. It will set to cpu->start ******/
-error_code_t armcm3_startup(cpu_t* cpu)
+int armcm3_startup(cpu_t* cpu)
 {
 	if(cpu == NULL || cpu->memory_map == NULL){
 		return ERROR_NULL_POINTER;
 	}
 
-	init_armcm3_interrput_table(cpu);
+	if(cm_NVIC_init(cpu) < 0){
+		return -ERROR_SOC_STARTUP;
+	}
 
 	armv7m_reg_t *regs = (armv7m_reg_t *)cpu->regs;
 	memory_map_t* memory_map = cpu->memory_map;
@@ -128,16 +100,13 @@ void excute_armcm3_cpu(cpu_t* cpu, ins_t ins_info){
 		}
 	}else{
 		// 32bit insturction
-		goto out;
+		return;
 	}
 
 	if(!check_and_reset_excuting_IT(state) && InITBlock(regs)){
 		ITAdvance(regs);
 	}
 
-out:
-	LOG_REG(regs);
-	getchar();
 }
 
 /****** Create an instance of the cpu. It will set to module->create ******/

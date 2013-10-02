@@ -40,7 +40,7 @@ typedef enum
 	printf("[INSTRUCTION] "##message, __VA_ARGS__);
 
 #define LOG_REG(regs)\
-		print_reg_val(regs);
+		armv7m_print_reg_val(regs);
 #else
 #define LOG_INSTRUCTION(message, ...)
 #define LOG_REG(regs)

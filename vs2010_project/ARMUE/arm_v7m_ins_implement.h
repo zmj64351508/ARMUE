@@ -50,6 +50,7 @@ typedef struct{
 typedef struct thumb_state{
 	uint8_t excuting_IT;
 	int mode;	
+	int cur_exception;
 }thumb_state;
 
 
@@ -67,12 +68,14 @@ typedef struct thumb_state{
 #define BIT_1	(0x1UL << 1)
 #define BIT_0	(0x1UL)
 
+#define SET_PSR(regs, val) ((regs)->xPSR = (val))
 #define SET_APSR_N(regs, result_reg) set_bit(&(regs)->xPSR, PSR_N, (result_reg) & BIT_31)
 #define SET_APSR_Z(regs, result_reg) set_bit(&(regs)->xPSR, PSR_Z, (result_reg) == 0 ? 1 : 0)
 #define SET_APSR_C(regs, carry) set_bit(&(regs)->xPSR, PSR_C, (carry))
 #define SET_APSR_V(regs, overflow) set_bit(&(regs)->xPSR, PSR_V, (overflow))
 #define SET_EPSR_T(regs, bit) set_bit(&(regs)->xPSR, PSR_T, (bit));
 
+#define GET_PSR(regs) ((regs)->xPSR)
 #define GET_APSR_N(regs) get_bit(&(regs)->xPSR, PSR_N)
 #define GET_APSR_Z(regs) get_bit(&(regs)->xPSR, PSR_Z)
 #define GET_APSR_C(regs) get_bit(&(regs)->xPSR, PSR_C)
@@ -171,7 +174,19 @@ inline void set_bit(uint32_t* reg, uint32_t bit_pos,int bit_val)
 	}
 }
 
+inline uint32_t BitCount32(uint32_t bits)
+{
+	uint32_t count = 0;
+	while(bits != 0){
+		bits = bits & (bits-1);
+		count++;
+	}
+	return count;
+}
+
+/* directly operate registers */
 void armv7m_branch(uint32_t addr, cpu_t* cpu);
+void armv7m_push_reg(uint32_t reg, cpu_t* cpu);
 
 /* implementation of instructions */
 void _lsl_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs);

@@ -3,12 +3,12 @@
 #include <stdlib.h>
 
 
-error_code_t startup_soc(soc_t* soc)
+int startup_soc(soc_t* soc)
 {	
 	if(soc == NULL || soc->cpu == NULL || soc->cpu[0]->memory_map == NULL){
 		return ERROR_NULL_POINTER;
 	}
-	error_code_t retval = ERROR_SOC_STARTUP;
+	int retval = -ERROR_SOC_STARTUP;
 
 	cpu_t *cpu = soc->cpu[0];
 
@@ -18,7 +18,7 @@ error_code_t startup_soc(soc_t* soc)
 
 	return retval;
 }
-
+#include "arm_v7m_ins_decode.h"
 uint32_t run_soc(soc_t* soc)
 {
 	cpu_t *cpu = soc->cpu[0];
@@ -32,7 +32,8 @@ uint32_t run_soc(soc_t* soc)
 	if(vector_num != 0){
 		cpu->exceptions->handle_exception(vector_num, cpu);
 	}
-
+	LOG_REG((armv7m_reg_t*)cpu->regs);
+	getchar();
 	return opcode;
 }
 
@@ -60,12 +61,12 @@ soc_t* create_soc(soc_conf_t* config)
 		goto invalid_cpu;
 	}
 
-	cpu->exceptions = create_vector_exception(config->exception_num, config->nested_level);
+	cpu->exceptions = create_vector_exception(config->exception_num);
 	if(cpu->exceptions == NULL){
 		goto exception_null;
 	}
 	if(config->has_GIC){
-		cpu->GIC = create_vector_exception(config->GIC_interrupt_num, config->GIC_nested_level);
+		cpu->GIC = create_vector_exception(config->GIC_interrupt_num);
 		if(cpu->GIC == NULL){
 			goto GIC_null;
 		}
