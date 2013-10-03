@@ -5,6 +5,11 @@
 #include "arm_v7m_ins_implement.h"
 #include "cpu.h"
 
+enum ARM_INS_TYPE{
+	ARM_INS_THUMB16,
+	ARM_INS_THUMB32,
+	ARM_INS_ARM,
+};
 
 #define LOW_BIT32(value, bit_num) (assert(bit_num < 32 && bit_num > 0), ((value) & (0xFFFFFFFF >> (32-(bit_num)))))
 #define LOW_BIT16(value, bit_num) (assert(bit_num < 16 && bit_num > 0), ((value) & (0xFFFF >> (16-(bit_num)))))

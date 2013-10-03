@@ -1,5 +1,5 @@
 #include "cpu.h"
-#include "arm_v7m_ins_implement.h"
+#include "arm_v7m_ins_decode.h"
 #include "cm_NVIC.h"
 #include <stdlib.h>
 
@@ -22,6 +22,274 @@ enum cm_NVIC_vector{
 	CM_NVIC_VEC_PENDSV		=	14,
 	CM_NVIC_VEC_SYSTICK		=	15,
 };
+
+/* ARMv7-M defined operation */
+inline void DeActivate(int exc_num, cpu_t *cpu)
+{
+	cm_NVIC_t *NVIC_info = (cm_NVIC_t *)cpu->cm_NVIC->controller_info;
+	armv7m_reg_t *regs = ARMv7m_GET_REGS(cpu);
+	NVIC_info->exception_active[exc_num] = 0;
+	NVIC_info->nested_exception--;
+	if(GET_IPSR(regs) != 0x2ul){
+		regs->FAULTMASK &= ~1ul;
+	}
+}
+
+uint32_t ReturnAddress(int excep_num, cpu_t *cpu)
+{
+	armv7m_reg_t *regs = ARMv7m_GET_REGS(cpu);
+	switch(excep_num){
+	case CM_NVIC_VEC_HARDFAULT:
+	case CM_NVIC_VEC_BUSFAULT:
+	case CM_NVIC_VEC_USAGEFAULT:
+		/* address of current instruction */
+		return GET_REG_VAL(regs, PC_INDEX) - 4;
+	default:
+		/* address of next instruction */
+		return GET_REG_VAL(regs, PC_RAW_INDEX);
+	}
+}
+
+void PushStack(int excep_num, cpu_t *cpu) 
+{
+	armv7m_reg_t *regs = ARMv7m_GET_REGS(cpu);
+	thumb_state *state = ARMv7m_GET_STATE(cpu);
+	
+	int framesize;
+	uint32_t forcealign = 0;
+	/*
+	if(HaveFPExt() && (exc_return & 0x10ul) == 0){
+		framesize = 0x68;
+		forcealign = 1;
+	}else{*/
+		framesize = 0x20;
+		forcealign = 1;
+		//forcealign = CCR.STKALIGN;
+	/*}*/
+
+	uint32_t spmask = ~(forcealign << 2);
+	uint32_t frameptralign;
+	uint32_t frameptr;
+	uint32_t banked_sp;
+
+	sync_banked_register(regs, SP_INDEX);
+
+	if(GET_CONTROL_SPSEL(regs) == 1 && state->mode == MODE_THREAD){
+		banked_sp = BANK_INDEX_PSP;
+		regs->bank_index_sp = BANK_INDEX_PSP;
+	}else{
+		banked_sp = BANK_INDEX_MSP;
+		regs->bank_index_sp = BANK_INDEX_MSP;
+	}
+	frameptralign = (regs->SP_bank[banked_sp] >> 2) & forcealign;
+	regs->SP_bank[banked_sp] = (regs->SP_bank[banked_sp] - framesize) & spmask;
+	frameptr = regs->SP_bank[banked_sp];
+	
+	uint32_t regval;
+	regval = GET_REG_VAL(regs, 0);
+	MemA(frameptr, 4, (uint8_t*)&regval, MEM_WRITE, cpu);
+	regval = GET_REG_VAL(regs, 1);
+	MemA(frameptr + 0x4, 4, (uint8_t*)&regval, MEM_WRITE, cpu);
+	regval = GET_REG_VAL(regs, 2);
+	MemA(frameptr + 0x8, 4, (uint8_t*)&regval, MEM_WRITE, cpu);
+	regval = GET_REG_VAL(regs, 3);
+	MemA(frameptr + 0xC, 4, (uint8_t*)&regval, MEM_WRITE, cpu);
+	regval = GET_REG_VAL(regs, 12);
+	MemA(frameptr + 0x10, 4, (uint8_t*)&regval, MEM_WRITE, cpu);
+	regval = GET_REG_VAL(regs, LR_INDEX);
+	MemA(frameptr + 0x14, 4, (uint8_t*)&regval, MEM_WRITE, cpu);
+	regval = ReturnAddress(excep_num, cpu);
+	MemA(frameptr + 0x18, 4, (uint8_t*)&regval, MEM_WRITE, cpu);
+	regval = (GET_PSR(regs) & ~(1ul << 9)) | (frameptralign << 9);
+	MemA(frameptr + 0x1C, 4, (uint8_t*)&regval, MEM_WRITE, cpu);
+
+	restore_banked_register(regs, SP_INDEX);
+	/* HaveFPExt() && CONTROL.FPCA == 1*/
+
+	/* HaveFPExt()*/
+
+	/*else*/
+	if(state->mode == MODE_HANDLER){
+		SET_REG_VAL(regs, LR_INDEX, 0xFFFFFFF1);
+	}else{
+		SET_REG_VAL(regs, LR_INDEX, 0xFFFFFFF9 | (GET_CONTROL_SPSEL(regs) << 3));
+	}
+}
+
+void ExceptionTaken(int excep_num, cpu_t *cpu)
+{
+	armv7m_reg_t *regs = ARMv7m_GET_REGS(cpu);
+	thumb_state *state = ARMv7m_GET_STATE(cpu);
+	cm_NVIC_t *NVIC_info = (cm_NVIC_t *)cpu->cm_NVIC->controller_info;
+
+	cpu->run_info.next_ins = 0;
+	state->cur_exception = excep_num;
+
+	uint32_t addr = get_vector_value(cpu->cm_NVIC, excep_num);
+	SET_REG_VAL(regs, PC_INDEX, addr & 0xFFFFFFFE);
+	uint32_t tbit = addr & 1ul;
+	state->mode = MODE_HANDLER;
+	SET_EPSR_T(regs, tbit);
+	SET_IPSR(regs, excep_num & 0x1FF);
+	SET_ITSTATE(regs, 0);
+	/*
+	if(haveFPExt){
+	}
+	*/
+	SET_CONTROL_SPSEL(regs, 0);
+	NVIC_info->exception_active[excep_num] = 1;
+	NVIC_info->nested_exception++;
+	
+	// SCS_UpdateStatusRegs
+	// ClearExclusiveLocal
+	// SetEventRegister
+	// Barrier
+}
+
+void PopStack(uint32_t frameptr, int exc_return, cpu_t* cpu)
+{
+	armv7m_reg_t *regs = ARMv7m_GET_REGS(cpu);
+
+	int framesize;
+	uint8_t forcealign;
+	/*
+	if(HaveFPExt() && (exc_return & 0x10ul) == 0){
+		framesize = 0x68;
+		forcealign = 1;
+	}else{*/
+		framesize = 0x20;
+		forcealign = 1;
+		//forcealign = CCR.STKALIGN;
+	/*}*/
+
+	uint32_t regval;
+	MemA(frameptr, 4, (uint8_t*)&regval, MEM_READ, cpu);
+	SET_REG_VAL(regs, 0, regval);
+	MemA(frameptr + 0x4, 4, (uint8_t*)&regval, MEM_READ, cpu);
+	SET_REG_VAL(regs, 1, regval);
+	MemA(frameptr + 0x8, 4, (uint8_t*)&regval, MEM_READ, cpu);
+	SET_REG_VAL(regs, 2, regval);
+	MemA(frameptr + 0xC, 4, (uint8_t*)&regval, MEM_READ, cpu);
+	SET_REG_VAL(regs, 3, regval);
+	MemA(frameptr + 0x10, 4, (uint8_t*)&regval, MEM_READ, cpu);
+	SET_REG_VAL(regs, 12, regval);
+	MemA(frameptr + 0x14, 4, (uint8_t*)&regval, MEM_READ, cpu);
+	SET_REG_VAL(regs, LR_INDEX, regval);
+	MemA(frameptr + 0x18, 4, (uint8_t*)&regval, MEM_READ, cpu);
+	SET_REG_VAL(regs, PC_INDEX, regval);
+	uint32_t psr;
+	MemA(frameptr + 0x1C, 4, (uint8_t*)&psr, MEM_READ, cpu);
+
+/*	if(HaveFPExt()){
+
+	}
+	*/
+
+	uint32_t spmask = ((psr >> 9) & forcealign) << 2;
+	switch(exc_return & 0xFul){
+	case 0x1:
+	case 0x9:
+		regs->SP_bank[BANK_INDEX_MSP] = (regs->SP_bank[BANK_INDEX_MSP] + framesize) | spmask;
+		break;
+	case 0xD:
+		regs->SP_bank[BANK_INDEX_PSP] = (regs->SP_bank[BANK_INDEX_PSP] + framesize) | spmask;
+	}
+	/*
+	if(HaveDSPExt()){
+		SET_PSR(regs, psr);
+	}else{*/
+		uint32_t cur_psr = GET_PSR(regs);
+		cur_psr &= ~0xFF00FFFF;
+		psr &= 0xFF00FFFF;
+		SET_PSR(regs, cur_psr | psr);
+	/*}*/
+}
+
+void ExceptionReturn(uint32_t exc_return, cpu_t *cpu)
+{
+	thumb_state *state = ARMv7m_GET_STATE(cpu);
+	armv7m_reg_t *regs = ARMv7m_GET_REGS(cpu);
+	cm_NVIC_t *NVIC_info = (cm_NVIC_t *)cpu->cm_NVIC->controller_info;
+
+	cpu->run_info.next_ins = 0;
+
+	/* 
+	if HaveFPExt(){
+		if((exc_return & 0x00FFFFE0) != 0x00FFFFE0) unpredictable
+	}else{
+		if((exc_return & 0x00FFFFF0) != 0x00FFFFF0) unpredictable
+	}
+	*/
+	int ret_excep_num = state->cur_exception;
+	uint8_t nested_activation = NVIC_info->nested_exception;
+	if(NVIC_info->exception_active[ret_excep_num] == 0){
+		DeActivate(ret_excep_num, cpu);
+		goto usage_fault;
+		return;
+	}
+
+	sync_banked_register(regs, SP_INDEX);
+
+	uint32_t framptr;
+	switch(exc_return & 0xFul){
+	case 0x1:
+		framptr = regs->SP_bank[BANK_INDEX_MSP];
+		regs->bank_index_sp = BANK_INDEX_MSP;
+		state->mode = MODE_HANDLER;
+		SET_CONTROL_SPSEL(regs, 0);
+		break;
+	case 0x9:
+		if(nested_activation != 1 /*&& CCR.NONBASETHRDENA == 0*/){
+			DeActivate(ret_excep_num, cpu);
+			goto usage_fault;
+		}else{
+			framptr = regs->SP_bank[BANK_INDEX_MSP];
+			regs->bank_index_sp = BANK_INDEX_MSP;
+			state->mode = MODE_THREAD;
+			SET_CONTROL_SPSEL(regs, 0);
+		}
+		break;
+	case 0xD:
+		if(nested_activation != 1 /*&& CCR.NONBASETHRDENA == 0*/){
+			DeActivate(ret_excep_num, cpu);
+			goto usage_fault;
+			return;
+		}else{
+			framptr = regs->SP_bank[BANK_INDEX_PSP];
+			regs->bank_index_sp = BANK_INDEX_PSP;
+			state->mode = MODE_THREAD;
+			SET_CONTROL_SPSEL(regs, 1);
+		}
+		break;
+	default:
+		DeActivate(ret_excep_num, cpu);
+		goto usage_fault;
+	}
+
+	DeActivate(ret_excep_num, cpu);
+	PopStack(framptr, exc_return, cpu);
+
+	if((state->mode == MODE_HANDLER && (GET_IPSR(regs) & 0x1FFul) == 0) ||
+		(state->mode == MODE_THREAD && (GET_IPSR(regs) & 0x1FFul) != 0)){
+		PushStack(ret_excep_num, cpu);
+		goto usage_fault;
+	}
+
+	//ClearExclusiveLocal();
+	//SetEventRegister();
+	//Barrier();
+
+	restore_banked_register(regs, SP_INDEX);
+	return;
+
+usage_fault:
+	restore_banked_register(regs, SP_INDEX);
+	// UFSR.INVPC = 1;
+	SET_REG_VAL(regs, LR_INDEX, 0xF0000000 + exc_return);
+	cpu->cm_NVIC->throw_exception(CM_NVIC_VEC_USAGEFAULT, cpu->cm_NVIC);
+	return;
+}
+/* ARMv7-M defined operation end */
 
 rom_t* find_startup_rom(memory_map_t* memory)
 {
@@ -83,6 +351,10 @@ int setup_cm_NVIC_info(vector_exception_t* controller)
 
 	info->preempt_mask = 0xF;
 	info->prio_mask = 0xF;
+	info->nested_exception = 0;
+	for(int i = 0; i < NVIC_MAX_EXCEPTION; i++){
+		info->exception_active[i] = 0;
+	}
 	return 0;
 
 pending_list_null:
@@ -117,7 +389,7 @@ int cm_NVIC_init(cpu_t* cpu)
 
 	cm_NVIC_vector_table_init(cpu->cm_NVIC, memory_map);
 	cm_NVIC_prio_table_init(cpu->cm_NVIC);
-
+	
 	return SUCCESS;
 }
 
@@ -159,38 +431,7 @@ int cm_NVIC_check_exception(cpu_t* cpu)
 
 int cm_NVIC_handle_exception(int vector_num, cpu_t* cpu)
 {
-	uint32_t addr = get_vector_value(cpu->cm_NVIC, vector_num);
-	cpu->run_info.next_ins = 0;
-	/* TODO: Push xPSR PC LR R12 R3-R0 */
-
-	thumb_state* state = ARMv7m_GET_STATE(cpu);
-	armv7m_reg_t *regs = (armv7m_reg_t*)cpu->regs;
-
-	/* if defined double word align */
-	uint32_t SP_val = GET_REG_VAL(regs, SP_INDEX);
-	SP_val = DOWN_ALIGN(SP_val, 3);
-	SET_REG_VAL(regs, SP_INDEX, SP_val);
-
-	uint32_t PSR_val = GET_PSR(regs);
-	armv7m_push_reg(PSR_val, cpu);
-	armv7m_push_reg(GET_REG_VAL(regs, PC_INDEX), cpu);
-	armv7m_push_reg(GET_REG_VAL(regs, LR_INDEX), cpu);
-	armv7m_push_reg(GET_REG_VAL(regs, 12), cpu);
-	armv7m_push_reg(GET_REG_VAL(regs, 3), cpu);
-	armv7m_push_reg(GET_REG_VAL(regs, 2), cpu);
-	armv7m_push_reg(GET_REG_VAL(regs, 1), cpu);
-	armv7m_push_reg(GET_REG_VAL(regs, 0), cpu);
-
-	uint32_t new_LR = 0xFFFFFFF9 | ((regs->CONTROL << 1) & 0x4);
-	if(state->mode == MODE_HANDLER){
-		new_LR &= ~(1ul << 3);
-	}
-	SET_REG_VAL(regs, LR_INDEX, new_LR);
-
-	SET_PSR(regs, (PSR_val & 0xFF) | vector_num);
-	armv7m_branch(addr, cpu);
-	
-	state->mode = MODE_HANDLER;
-	state->cur_exception = vector_num;
+	PushStack(vector_num, cpu);
+	ExceptionTaken(vector_num, cpu);
 	return 0;
 }

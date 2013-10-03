@@ -2,7 +2,27 @@
 #include "error_code.h"
 #include "memory_map.h"
 #include "cpu.h"
+#include "cm_NVIC.h"
 #include <assert.h>
+
+void sync_banked_register(armv7m_reg_t *regs, int reg_index)
+{
+	switch(reg_index){
+	case SP_INDEX:
+		regs->SP_bank[regs->bank_index_sp] = regs->R[reg_index];
+		break;
+	default:
+		break;
+	}
+}
+
+void restore_banked_register(armv7m_reg_t *regs, int reg_index)
+{
+	switch(reg_index){
+	case SP_INDEX:
+		regs->R[reg_index] = regs->SP_bank[regs->bank_index_sp];
+	}
+}
 
 void LSL_C(uint32_t val, int shift, _O uint32_t* result, _O int *carry_out)
 {
@@ -184,13 +204,15 @@ inline void ALUWritePC(uint32_t address, armv7m_reg_t* regs)
 }
 
 /* <<ARMv7-M Architecture Reference Manual 47>> */
-void BXWritePC(uint32_t address, armv7m_reg_t* regs, thumb_state* state)
+void BXWritePC(uint32_t address, cpu_t* cpu)
 {
+	armv7m_reg_t *regs = ARMv7m_GET_REGS(cpu);
+	thumb_state *state = ARMv7m_GET_STATE(cpu);
 	uint32_t Tflag;
 	int CurrentMode = state->mode;
 	if(CurrentMode == MODE_HANDLER &&
 		((address >> 28) & 0xFul) == 0xFul){
-			//TODO: ExceptionReturn();
+		ExceptionReturn(address & 0x00FFFFFF, cpu);
 	}else{
 		Tflag = address & 0x1ul;
 		SET_EPSR_T(regs, Tflag);
@@ -204,10 +226,10 @@ void BXWritePC(uint32_t address, armv7m_reg_t* regs, thumb_state* state)
 
 void armv7m_branch(uint32_t address, cpu_t* cpu)
 {
-	BXWritePC(address, (armv7m_reg_t*)cpu->regs, (thumb_state*)cpu->run_info.cpu_spec_info);
+	BXWritePC(address, cpu);
 }
 
-void armv7m_push_reg(uint32_t reg_val, cpu_t* cpu)
+void armv7m_push(uint32_t reg_val, cpu_t* cpu)
 {
 	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 
@@ -218,10 +240,12 @@ void armv7m_push_reg(uint32_t reg_val, cpu_t* cpu)
 	SET_REG_VAL(regs, SP_INDEX, SP_val);
 }
 
+
+
 /* <<ARMv7-M Architecture Reference Manual 47>> */
-inline void LoadWritePC(uint32_t address, armv7m_reg_t* regs, thumb_state* state)
+inline void LoadWritePC(uint32_t address, cpu_t *cpu)
 {
-	BXWritePC(address, regs, state);
+	BXWritePC(address, cpu);
 }
 
 /* <<ARMv7-M Architecture Reference Manual B2-694>> */
@@ -1227,7 +1251,7 @@ void _bx(uint32_t Rm, cpu_t* cpu)
 	}
 
 	uint32_t Rm_val = GET_REG_VAL(regs, Rm);
-	BXWritePC(Rm_val, regs, (thumb_state*)cpu->run_info.cpu_spec_info);
+	BXWritePC(Rm_val, cpu);
 }
 
 /***********************************
@@ -1251,7 +1275,7 @@ void _blx(uint32_t Rm, cpu_t* cpu)
 	uint32_t next_instr_addr = PC_val - 2;
 	uint32_t LR_val = next_instr_addr | 0x1ul;
 	SET_REG_VAL(regs, LR_INDEX, LR_val);
-	BXWritePC(target, regs, (thumb_state*)cpu->run_info.cpu_spec_info);
+	BXWritePC(target, cpu);
 }
 
 
@@ -1283,7 +1307,7 @@ void _ldr_literal(uint32_t imm32, uint32_t Rt, bool_t add, cpu_t* cpu)
 	MemU(address, 4, (uint8_t *)&data, MEM_READ, cpu);
 	if(Rt == 15){
 		if((address & 0x3ul) == 0){
-			LoadWritePC(data, regs, state);
+			LoadWritePC(data, cpu);
 		}else{
 			LOG(LOG_WARN, "_ldr_literal UNPREDICTABLE\n");
 			return;
@@ -1434,7 +1458,7 @@ void _ldr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, b
 	}
 	if(Rt == 15){
 		if((address & 0x3ul) == 0){
-			LoadWritePC(data, regs, state);
+			LoadWritePC(data, cpu);
 		}else{
 			LOG(LOG_WARN, "_ldr_reg UNPREDICTABLE\n");
 		}
@@ -1594,7 +1618,7 @@ void _ldr_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index,
 	}
 	if(Rt == 15){
 		if((address & 0x3ul) == 0){
-			LoadWritePC(data, regs, state);
+			LoadWritePC(data, cpu);
 		}else{
 			LOG(LOG_WARN, "_str_imm UNPREDICTABLE\n");
 		}
@@ -2031,13 +2055,15 @@ void _pop(uint32_t registers, uint32_t bitcount, cpu_t* cpu)
 			address += 4;
 		}
 	}
-	if(registers & (1ul << 15)){
-		MemA(address, 4, (uint8_t*)&data, MEM_READ, cpu);
-		LoadWritePC(data, regs, state);
-	}
 
+	/* Update SP before LoadWritePC */
 	SP_val += bitcount << 2;
 	SET_REG_VAL(regs, SP_INDEX, SP_val);
+
+	if(registers & (1ul << 15)){
+		MemA(address, 4, (uint8_t*)&data, MEM_READ, cpu);
+		LoadWritePC(data, cpu);
+	}
 }
 
 /***********************************
@@ -2129,15 +2155,18 @@ void _ldm(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_
 			address += 4;
 		}
 	}
-	if(registers & (1ul << 15)){
-		MemA(address, 4, (uint8_t*)&data, MEM_READ, cpu);
-		LoadWritePC(data, regs, ARMv7m_GET_STATE(cpu));
-	}
 
+	/* Update SP before LoadWrite PC */
 	if(wback && ((registers & (1ul << Rn)) == 0)){
 		Rn_val += bitcount << 2;
 		SET_REG_VAL(regs, Rn, Rn_val);
 	}
+	
+	if(registers & (1ul << 15)){
+		MemA(address, 4, (uint8_t*)&data, MEM_READ, cpu);
+		LoadWritePC(data, cpu);
+	}
+
 }
 
 /***********************************

@@ -27,6 +27,9 @@ typedef enum{
 #define PC_INDEX 15
 #define PC_RAW_INDEX 16
 
+#define BANK_INDEX_MSP 0
+#define BANK_INDEX_PSP 1
+
 typedef struct{
 	// general registers
 	uint32_t R[16];			// 0x00~0x0D * sizeof(uint32_t)
@@ -42,9 +45,11 @@ typedef struct{
 	uint32_t FAULTMASK;		// 0x13
 	uint32_t BASEPRI;		// 0x14
 	uint32_t CONTROL;		// 0x15
-	uint32_t SP_back;		// backup for MSP/PSP
+	uint32_t SP_bank[2];		// backup for MSP/PSP
 	uint32_t PC_return;		/* the return value of PC, it is the same as PC in 32-bit instructions
 							   and PC+2 in 16-bit instructions */
+
+	uint8_t bank_index_sp;
 }armv7m_reg_t;
 
 typedef struct thumb_state{
@@ -63,24 +68,29 @@ typedef struct thumb_state{
 #define PSR_V (0x1UL << 28)
 #define PSR_T (0x1UL << 24)
 #define CONTROL_nPRIV (0x1UL)
+#define CONTROL_SPSEL (0x1ul << 1)
 
 #define BIT_31 (0x1UL << 31)
 #define BIT_1	(0x1UL << 1)
 #define BIT_0	(0x1UL)
 
 #define SET_PSR(regs, val) ((regs)->xPSR = (val))
+#define SET_IPSR(regs, val) ((regs)->xPSR = ((regs)->xPSR & ~0x1FFul) | (val))
 #define SET_APSR_N(regs, result_reg) set_bit(&(regs)->xPSR, PSR_N, (result_reg) & BIT_31)
 #define SET_APSR_Z(regs, result_reg) set_bit(&(regs)->xPSR, PSR_Z, (result_reg) == 0 ? 1 : 0)
 #define SET_APSR_C(regs, carry) set_bit(&(regs)->xPSR, PSR_C, (carry))
 #define SET_APSR_V(regs, overflow) set_bit(&(regs)->xPSR, PSR_V, (overflow))
-#define SET_EPSR_T(regs, bit) set_bit(&(regs)->xPSR, PSR_T, (bit));
+#define SET_EPSR_T(regs, bit) set_bit(&(regs)->xPSR, PSR_T, (bit))
+#define SET_CONTROL_SPSEL(regs, bit) set_bit(&(regs)->CONTROL, CONTROL_SPSEL, (bit))
 
 #define GET_PSR(regs) ((regs)->xPSR)
+#define GET_IPSR(regs) ((regs)->xPSR & 0x1FFul) 
 #define GET_APSR_N(regs) get_bit(&(regs)->xPSR, PSR_N)
 #define GET_APSR_Z(regs) get_bit(&(regs)->xPSR, PSR_Z)
 #define GET_APSR_C(regs) get_bit(&(regs)->xPSR, PSR_C)
 #define GET_APSR_V(regs) get_bit(&(regs)->xPSR, PSR_V)
 #define GET_CONTROL_PRIV(regs) get_bit(&(regs)->CONTROL, CONTROL_nPRIV)
+#define GET_CONTROL_SPSEL(regs) get_bit(&(regs)->CONTROL, CONTROL_SPSEL)
 
 #define GET_REG_VAL_UNCON(regs, Rx) (*(&(regs)->R[0]+(Rx)))
 #define SET_REG_VAL_UNCON(regs, Rx, val) (*(&(regs)->R[0]+(Rx)) = (val))
@@ -185,8 +195,11 @@ inline uint32_t BitCount32(uint32_t bits)
 }
 
 /* directly operate registers */
+void sync_banked_register(armv7m_reg_t *regs, int reg_index);
+void restore_banked_register(armv7m_reg_t *regs, int reg_index);
+int MemA(uint32_t address, int size, _IO uint8_t* buffer, int type, cpu_t* cpu);
 void armv7m_branch(uint32_t addr, cpu_t* cpu);
-void armv7m_push_reg(uint32_t reg, cpu_t* cpu);
+void armv7m_push(uint32_t val, cpu_t* cpu);
 
 /* implementation of instructions */
 void _lsl_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs);

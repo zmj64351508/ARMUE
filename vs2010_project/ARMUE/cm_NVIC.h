@@ -6,14 +6,20 @@ extern "C"{
 
 #include "bheap.h"
 
+#define NVIC_MAX_EXCEPTION 256
+
 typedef bheap_t pending_list_t;
 
 typedef struct cm_NVIC_t
 {
-	pending_list_t* pending_list;
+	uint8_t exception_active[NVIC_MAX_EXCEPTION];
+	uint8_t nested_exception;
 	uint8_t preempt_mask;
 	uint8_t prio_mask;
+	pending_list_t* pending_list;
 }cm_NVIC_t;
+
+void ExceptionReturn(uint32_t exc_return, cpu_t *cpu);
 
 int cm_NVIC_init(cpu_t* cpu);
 int cm_NVIC_throw_exception(int vector_num, struct vector_exception_t* controller);

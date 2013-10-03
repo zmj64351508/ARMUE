@@ -30,6 +30,7 @@ int armcm3_startup(cpu_t* cpu)
 	// TODO: Following statements need to be pack in another function which should be in armv7m module
 	// reset behaviour refering to B1-642
 	regs->MSP = get_vector_value(cpu->cm_NVIC, 0);
+	regs->bank_index_sp = BANK_INDEX_MSP;
 	regs->PC = align_address(get_vector_value(cpu->cm_NVIC, 1));
 	regs->xPSR = 0x0;
 	SET_EPSR_T(regs, get_vector_value(cpu->cm_NVIC, 1) & BIT_0);
@@ -73,11 +74,13 @@ ins_t decode_armcm3_cpu(cpu_t* cpu, void* opcode)
 	if(is_16bit_code(opcode32) == TRUE){
 		ins_info.excute = thumb_parse_opcode16(opcode32, cpu);
 		ins_info.length = 16;
+		cpu->run_info.ins_type = ARM_INS_THUMB16;
 		cpu->run_info.next_ins = opcode32 >> 16;
 	}else{
 		ins_info.length = 32;
 		cpu->run_info.next_ins = 0;
-		LOG(LOG_WARN, "32bit instruction: 0x%u\n", opcode32);
+		cpu->run_info.ins_type = ARM_INS_THUMB32;
+		LOG(LOG_WARN, "32bit instruction: 0x%04X%04X\n", opcode32&0xFFFF, (opcode32>>16)&0xFFFF);
 	}
 	return ins_info;
 }

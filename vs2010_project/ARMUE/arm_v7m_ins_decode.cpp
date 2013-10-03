@@ -846,7 +846,7 @@ void _uxtb_16(uint16_t ins_code, cpu_t* cpu)
 void _push_16(uint16_t ins_code, cpu_t* cpu)
 {
 	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
-	uint32_t register_list = LOW_BIT16(ins_code, 7);
+	uint32_t register_list = LOW_BIT16(ins_code, 8);
 	uint32_t registers = LOW_BIT16(ins_code >> 8, 1) << 14 | register_list; 
 	uint32_t bitcount = BitCount32(registers);
 	if(bitcount < 1){
@@ -890,8 +890,8 @@ void _revsh_16(uint16_t ins_code, cpu_t* cpu)
 void _pop_16(uint16_t ins_code, cpu_t* cpu)
 {
 	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
-	uint32_t register_list = LOW_BIT16(ins_code, 7);
-	uint32_t registers = LOW_BIT16(ins_code >> 8, 1) << 14 | register_list; 
+	uint32_t register_list = LOW_BIT16(ins_code, 8);
+	uint32_t registers = LOW_BIT16(ins_code >> 8, 1) << 15 | register_list; 
 	uint32_t bitcount = BitCount32(registers);
 
 	if(bitcount < 1){
@@ -1162,7 +1162,7 @@ void init_instruction_table(thumb_instruct_table_t* table)
 	set_sub_table_value(table->misc_16bit_ins_table16, 0x52, 0x53, (thumb_translate16_t)_rev16_16, THUMB_EXCUTER);
 	set_sub_table_value(table->misc_16bit_ins_table16, 0x56, 0x57, (thumb_translate16_t)_revsh_16, THUMB_EXCUTER);
 	set_sub_table_value(table->misc_16bit_ins_table16, 0x58, 0x5F, (thumb_translate16_t)_cbnz_cbz_16, THUMB_EXCUTER);
-	set_sub_table_value(table->misc_16bit_ins_table16, 0x60, 0x67, (thumb_translate16_t)_pop_16, THUMB_EXCUTER);
+	set_sub_table_value(table->misc_16bit_ins_table16, 0x60, 0x6F, (thumb_translate16_t)_pop_16, THUMB_EXCUTER);
 	set_sub_table_value(table->misc_16bit_ins_table16, 0x70, 0x77, (thumb_translate16_t)_bkpt_16, THUMB_EXCUTER);
 	set_sub_table_value(table->misc_16bit_ins_table16, 0x78, 0x7F, (thumb_translate16_t)_it_hint_16, THUMB_DECODER);
 
