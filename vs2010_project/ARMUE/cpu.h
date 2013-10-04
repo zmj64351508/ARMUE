@@ -1,5 +1,8 @@
 #ifndef _CPU_H_
 #define _CPU_H_
+#ifdef __cplusplus
+extern "C"{
+#endif
 
 #include "error_code.h"
 #include "memory_map.h"
@@ -39,13 +42,12 @@ typedef struct run_info_t
 
 typedef struct cpu_t
 {
-	int cpu_id;			// cpu id not use
 	cpu_type_t type;	// cpu type
 	int cid;			// for multi-cpu soc, not use yet
-	int ins_num;		// instruction number, not use yet
 
 	run_info_t run_info;
 	void *regs;
+	void *system_info;
 	void *instruction_data;
 
 	/* For cortex-m profile, NVIC is internal with function of exception controller and 
@@ -92,11 +94,11 @@ error_code_t delete_cpu(cpu_list_t* list, cpu_t* cpu);
 error_code_t set_cpu_type(cpu_t* cpu, cpu_type_t type);
 error_code_t set_cpu_spec_info(cpu_t* cpu, void* info);
 error_code_t set_cpu_module(cpu_t* cpu, void* module);
-error_code_t set_cpu_startup_func(cpu_t* cpu, cpu_startup_func_t startup_func);
-error_code_t set_cpu_exec_func(cpu_t* cpu, cpu_exec_func_t run_func);
-error_code_t set_cpu_fetch32_func(cpu_t* cpu, cpu_fetch32_func_t fetch_func);
 
 void*	get_cpu_module(cpu_t* cpu);
 int validate_cpu(cpu_t* cpu);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

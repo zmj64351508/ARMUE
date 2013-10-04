@@ -3,6 +3,7 @@
 
 #include <tchar.h>
 #include "cpu.h"
+#include "soc.h"
 #include "peripheral.h"
 #include "error_code.h"
 
@@ -18,7 +19,7 @@ typedef enum
 
 
 typedef void* (*create_func_t)(void);
-typedef cpu_t* (*create_cpu_func_t)(void);
+typedef int (*init_cpu_func_t)(struct cpu_t *cpu, struct soc_conf_t *config);
 
 typedef void (*destory_func_t)(void** content);
 typedef void (*destory_cpu_func_t)(cpu_t** cpu);
@@ -47,7 +48,7 @@ typedef struct module_t
 	int content_count;							// not use yet
 
 	union{
-		create_cpu_func_t create_cpu;
+		init_cpu_func_t init_cpu;
 		create_func_t create_content;
 	};
 	union{

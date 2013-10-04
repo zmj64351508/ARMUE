@@ -86,6 +86,7 @@
     <ClCompile Include="bheap.cpp" />
     <ClCompile Include="bstree.cpp" />
     <ClCompile Include="cm_NVIC.cpp" />
+    <ClCompile Include="cm_system_control_space.cpp" />
     <ClCompile Include="cpu.cpp" />
     <ClCompile Include="cpu_arm_cm3.cpp" />
     <ClCompile Include="exception_interrupt.cpp" />
@@ -103,6 +104,7 @@
     <ClInclude Include="bheap.h" />
     <ClInclude Include="bstree.h" />
     <ClInclude Include="cm_NVIC.h" />
+    <ClInclude Include="cm_system_control_space.h" />
     <ClInclude Include="cpu.h" />
     <ClInclude Include="cpu_arm_cm3.h" />
     <ClInclude Include="error_code.h" />

@@ -1,10 +1,11 @@
+#include "soc.h"
 #include "cpu.h"
 #include "module_helper.h"
 #include "error_code.h"
 #include <stdlib.h>
 #include "_types.h"
 #include "arm_v7m_ins_decode.h"
-#include "cm_NVIC.h"
+#include "cm_system_control_space.h"
 
 static module_t* this_module;
 static int registered = 0;
@@ -19,7 +20,7 @@ int armcm3_startup(cpu_t* cpu)
 		return ERROR_NULL_POINTER;
 	}
 
-	if(cm_NVIC_init(cpu) < 0){
+	if(cm_NVIC_startup(cpu) < 0){
 		return -ERROR_SOC_STARTUP;
 	}
 
@@ -112,13 +113,24 @@ void excute_armcm3_cpu(cpu_t* cpu, ins_t ins_info){
 
 }
 
-/****** Create an instance of the cpu. It will set to module->create ******/
-cpu_t* create_armcm3_cpu()
+/****** Initialize an instance of the cpu. It will set to module->init_cpu ******/
+int init_armcm3_cpu(cpu_t *cpu, soc_conf_t* config)
 {	
-	cpu_t* cpu = alloc_cpu();
+	int retval;
 
-	// set cpu attributes
-	ins_thumb_init(cpu);
+	/* init thumb instrction */
+	retval = ins_thumb_init(cpu);
+	if(retval < 0){
+		goto init_ins_fail;
+	}
+
+	/* init system control space including MPU, NVIC, SYSTICK, CPUID etc. */
+	retval = cm_scs_init(cpu);
+	if(retval < 0){
+		goto init_scs_fail;
+	}
+
+	/* init interfaces */
 	cpu->startup = armcm3_startup;
 	cpu->fetch32 = fetch_armcm3_cpu;
 	cpu->decode = decode_armcm3_cpu;
@@ -128,7 +140,12 @@ cpu_t* create_armcm3_cpu()
 	// add cpu to cpu list
 	add_cpu_to_tail(this_module->cpu_list, cpu);
 
-	return cpu;
+	return SUCCESS;
+
+init_scs_fail:
+	ins_thumb_destory(cpu);
+init_ins_fail:
+	return retval;
 }
 
 error_code_t destory_armcm3_cpu(cpu_t** cpu)
@@ -185,7 +202,7 @@ error_code_t register_armcm3_module()
 
 	// initialize module methods
 	set_module_unregister(this_module, unregister_armcm3_module);
-	set_module_content_create(this_module, (create_func_t)create_armcm3_cpu);
+	set_module_content_create(this_module, (create_func_t)init_armcm3_cpu);
 	set_module_content_destory(this_module, (destory_func_t)destory_armcm3_cpu);
 	
 	// register this module

@@ -36,36 +36,6 @@ error_code_t set_cpu_spec_info(cpu_t* cpu, void* info)
 	return SUCCESS;
 }
 
-error_code_t set_cpu_startup_func(cpu_t* cpu, cpu_startup_func_t startup_func)
-{
-	if(cpu == NULL){
-		return ERROR_NULL_POINTER;
-	}
-
-	cpu->startup = startup_func;
-	return SUCCESS;
-}
-
-error_code_t set_cpu_exec_func(cpu_t* cpu, cpu_exec_func_t run_func)
-{
-	if(cpu == NULL){
-		return ERROR_NULL_POINTER;
-	}
-
-	cpu->excute = run_func;
-	return SUCCESS;
-}
-
-error_code_t set_cpu_fetch32_func(cpu_t* cpu, cpu_fetch32_func_t fetch_func)
-{
-	if(cpu == NULL){
-		return ERROR_NULL_POINTER;
-	}
-
-	cpu->fetch32 = fetch_func;
-	return SUCCESS;
-}
-
 error_code_t set_cpu_module(cpu_t* cpu, void* module)
 {
 	if(cpu == NULL || module == NULL){

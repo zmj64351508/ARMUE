@@ -1,5 +1,8 @@
 #ifndef _SOC_H_
 #define _SOC_H_
+#ifdef __cplusplus
+extern "C"{
+#endif
 
 #include "cpu.h"
 #include "memory_map.h"
@@ -32,4 +35,7 @@ error_code_t destory_soc(soc_t **soc);
 int startup_soc(soc_t* soc);
 uint32_t run_soc(soc_t* soc);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

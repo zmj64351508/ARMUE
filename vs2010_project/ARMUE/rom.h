@@ -1,5 +1,9 @@
 #ifndef _ROM_H_
 #define _ROM_H_
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 #include <stdio.h>
 #include <tchar.h>
 #include "_types.h"
@@ -34,4 +38,8 @@ uint8_t fetch_rom_data8(uint32_t addr, rom_t* rom);
 uint32_t fetch_rom_data32(uint32_t addr, rom_t* rom);
 uint16_t fetch_rom_data16(uint32_t addr, rom_t* rom);
 error_code_t fill_rom_with_zero(rom_t *rom);
+
+#ifdef __cplusplus
+}
+#endif
 #endif

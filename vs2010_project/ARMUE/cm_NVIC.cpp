@@ -305,6 +305,7 @@ inline int cm_NVIC_get_preempt_proi(int cm_prio, cm_NVIC_t* info)
 	return (cm_prio & info->prio_mask) & info->preempt_mask;
 }
 
+/* Vector table initialization */
 void cm_NVIC_vector_table_init(vector_exception_t *controller, memory_map_t *memory)
 {
 	uint32_t addr = 0;
@@ -317,6 +318,7 @@ void cm_NVIC_vector_table_init(vector_exception_t *controller, memory_map_t *mem
 	}
 }
 
+/* The fixed priority table initialization */
 void cm_NVIC_prio_table_init(vector_exception_t *controller)
 {
 	int i;
@@ -340,18 +342,27 @@ info_null:
 	return NULL;
 }
 
-int setup_cm_NVIC_info(vector_exception_t* controller)
+void destory_cm_NVIC_info(cm_NVIC_t **info)
+{
+	free(*info);
+	info = NULL;
+}
+
+int setup_cm_NVIC_info(vector_exception_t* controller, _I cpu_t *cpu)
 {
 	cm_NVIC_t* info = (cm_NVIC_t*)controller->controller_info;
 
+	/* pending list */
 	info->pending_list = bheap_create(controller->vector_table_size, sizeof(uint32_t));
 	if(info->pending_list == NULL){
 		goto pending_list_null;
 	}
 
+	/* other NVIC variable */
 	info->preempt_mask = 0xF;
 	info->prio_mask = 0xF;
 	info->nested_exception = 0;
+	info->interrupt_lines = cpu->cm_NVIC->vector_table_size / 32;
 	for(int i = 0; i < NVIC_MAX_EXCEPTION; i++){
 		info->exception_active[i] = 0;
 	}
@@ -361,7 +372,8 @@ pending_list_null:
 	return -1;
 }
 
-int cm_NVIC_init(cpu_t* cpu)
+/* startup when cpu starts */
+int cm_NVIC_startup(cpu_t *cpu)
 {
 	if(cpu == NULL || cpu->memory_map == NULL){
 		return -ERROR_NULL_POINTER;
@@ -375,29 +387,47 @@ int cm_NVIC_init(cpu_t* cpu)
 		return -ERROR_NO_START_ROM;
 	}
 
-	cpu->cm_NVIC->controller_info = create_cm_NVIC_info();
-	if(cpu->cm_NVIC->controller_info == NULL){
-		return -ERROR_CREATE;
-	}
-	if(setup_cm_NVIC_info(cpu->cm_NVIC) < 0){
-		return -ERROR_CREATE;
+	cm_NVIC_vector_table_init(cpu->cm_NVIC, memory_map);
+	cm_NVIC_prio_table_init(cpu->cm_NVIC);
+
+	return SUCCESS;
+}
+
+/* init with the cpu creation, returns the created cm_NVIC_t */
+vector_exception_t* cm_NVIC_init(cpu_t* cpu)
+{
+	if(cpu == NULL){
+		return NULL;
 	}
 
+	/* create and setup NVIC private data */
+	cm_NVIC_t *info = create_cm_NVIC_info();
+	cpu->cm_NVIC->controller_info = info;
+	if(info == NULL){
+		goto create_info_fail;
+	}
+	if(setup_cm_NVIC_info(cpu->cm_NVIC, cpu) < 0){
+		goto setup_info_fail;
+	}
+
+	/* setup exception interfaces */
 	cpu->cm_NVIC->throw_exception = cm_NVIC_throw_exception;
 	cpu->cm_NVIC->check_exception = cm_NVIC_check_exception;
 	cpu->cm_NVIC->handle_exception = cm_NVIC_handle_exception;
 
-	cm_NVIC_vector_table_init(cpu->cm_NVIC, memory_map);
-	cm_NVIC_prio_table_init(cpu->cm_NVIC);
-	
-	return SUCCESS;
+	return cpu->cm_NVIC;
+
+setup_info_fail:
+	destory_cm_NVIC_info((cm_NVIC_t**)&cpu->cm_NVIC->controller_info);
+create_info_fail:
+	return NULL;
 }
 
 int cm_NVIC_throw_exception(int vector_num, struct vector_exception_t* controller)
 {
 	cm_NVIC_t* NVIC_info = (cm_NVIC_t*)controller->controller_info;
 	int prio = controller->prio_table[vector_num];
-	int mod_prio = (prio << 8) | (vector_num & 0xFFul);
+	int mod_prio = (prio << 9) | (vector_num & 0xFFul);
 	return bheap_insert(NVIC_info->pending_list, &mod_prio, bheap_compare_int_smaller);
 }
 
@@ -405,26 +435,30 @@ int cm_NVIC_check_exception(cpu_t* cpu)
 {
 	cm_NVIC_t* NVIC_info = (cm_NVIC_t*)cpu->cm_NVIC->controller_info;
 	int mod_prio;
+
+	/* peek the first pending exception if it exsits */
 	int retval = bheap_peek_top(NVIC_info->pending_list, &mod_prio);
 	if(retval < 0){
 		return 0;
 	}
 
-	int prio = mod_prio >> 8;
+	/* mod_prio is defined as: exception number | (priority << 9)*/
+	int prio = mod_prio >> 9;
 	thumb_state* state = ARMv7m_GET_STATE(cpu);
+
 	/* If in handler, check preempt priority for the preemption */
 	if(state->mode == MODE_HANDLER){
 		int preempt_prio = cm_NVIC_get_preempt_proi(prio, NVIC_info);
 		int handling_preempt_prio = cm_NVIC_get_preempt_proi(cpu->cm_NVIC->prio_table[state->cur_exception], NVIC_info); 
 		if(preempt_prio < handling_preempt_prio){
 			bheap_delete_top(NVIC_info->pending_list, &mod_prio, bheap_compare_int_smaller);
-			retval = mod_prio & 0xFFul;
+			retval = mod_prio & 0x1FFul;
 		}else{
 			retval = 0;
 		}
 	}else{
 		bheap_delete_top(NVIC_info->pending_list, &mod_prio, bheap_compare_int_smaller);
-		retval = mod_prio & 0xFFul;
+		retval = mod_prio & 0x1FFul;
 	}
 	return retval;
 }

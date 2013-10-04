@@ -30,6 +30,12 @@ out:
 	return region;
 }
 
+void destory_memory_region(memory_region_t **region)
+{
+	free(*region);
+	region = NULL;
+}
+
 int add_memroy_region(memory_map_t* memory, memory_region_t* region)
 {
 	bstree_node_t* new_node = bstree_create_node(region);
@@ -47,34 +53,60 @@ int add_memroy_region(memory_map_t* memory, memory_region_t* region)
 	return SUCCESS;
 }
 
-memory_region_t* find_address(memory_map_t* memory, uint32_t address)
+memory_region_t* find_memory_region(memory_map_t *memory, uint32_t address, int size)
 {
 	memory_region_t region;
 	region.base_addr = address;
-	region.size = 1;
+	region.size = size;
 
-	bstree_node_t* node = bstree_find_node(memory->map, &region, memory_region_compare);
+	bstree_node_t *node = bstree_find_node(memory->map, &region, memory_region_compare);
 	if(node == NULL){
 		return NULL;
 	}
 	return (memory_region_t*)node->data;
 }
 
+memory_region_t* request_memory_region(memory_map_t *memory, uint32_t address, int size)
+{
+	memory_region_t *region = find_memory_region(memory, address, size);
+	if(region != NULL){
+		goto found_region;
+	}
+
+	region = create_memory_region(NULL);
+	if(region == NULL){
+		goto create_region_null;
+	}
+	region->base_addr = address;
+	region->size = size;
+
+	int retval = add_memroy_region(memory, region);
+	if(retval < 0){
+		goto add_region_fail;
+	}
+	return region;
+
+add_region_fail:
+	destory_memory_region(&region);
+create_region_null:
+found_region:
+	return NULL;
+}
+
 /* call back function for rom's read */
-int general_rom_read(uint32_t addr, uint8_t* buffer, int size, memory_region_t* region)
+int general_rom_read(uint32_t offset, uint8_t* buffer, int size, memory_region_t* region)
 {
 	rom_t* rom = (rom_t*)region->region_data;
-	uint32_t offset_addr = addr - region->base_addr;
 	uint32_t data32;
 	int i;
 	switch(size){
 	case 4:
-		data32 = fetch_rom_data32(addr, rom);
+		data32 = fetch_rom_data32(offset, rom);
 		memcpy(buffer, &data32, 4);
 		return 4;
 	default:
 		for(i = 0; i < size; i++){
-			buffer[i] = fetch_rom_data8(offset_addr+i, rom);
+			buffer[i] = fetch_rom_data8(offset+i, rom);
 			if(buffer[i] == EOF){
 				break;
 			}
@@ -84,13 +116,12 @@ int general_rom_read(uint32_t addr, uint8_t* buffer, int size, memory_region_t* 
 }
 
 /* call back function for rom's write */
-int general_rom_write(uint32_t addr, uint8_t *buffer, int size, memory_region_t* region)
+int general_rom_write(uint32_t offset, uint8_t *buffer, int size, memory_region_t* region)
 {
 	rom_t *rom = (rom_t*)region->region_data;
-	uint32_t offset_addr = addr - region->base_addr;
 	int retval, i;
 	for(i = 0; i < size; i++){
-		retval = send_rom_data8(offset_addr+i, buffer[i], rom);
+		retval = send_rom_data8(offset+i, buffer[i], rom);
 		if(retval == EOF){
 			break;
 		}
@@ -120,8 +151,9 @@ int write_memory(uint32_t addr, uint8_t* buffer, int size, memory_map_t* memory)
 		LOG(LOG_ERROR, "Can't access address 0x%x\n", addr);
 		return -1;
 	}
+	uint32_t offset = addr - region->base_addr;
 
-	return region->write(addr, buffer, size, region);
+	return region->write(offset, buffer, size, region);
 }
 
 /* The main memory read routine */
@@ -133,22 +165,25 @@ int read_memory(uint32_t addr, uint8_t* buffer, int size, memory_map_t* memory)
 		return -1;
 	}
 
-	return region->read(addr, buffer, size, region);
+	uint32_t offset = addr - region->base_addr;
+	int retval = region->read(offset, buffer, size, region);
+	if(retval < 0){
+		LOG(LOG_ERROR, "Can't read address 0x%x\n", addr);
+	}
+	return retval;
 }
 
-int general_ram_read(uint32_t addr, uint8_t* buffer, int size, memory_region_t* ram_region)
+int general_ram_read(uint32_t offset, uint8_t* buffer, int size, memory_region_t* ram_region)
 {
 	ram_t* ram = (ram_t*)ram_region->region_data;
-	uint32_t offset_addr = addr - ram_region->base_addr;
-	memcpy(buffer, ram->data+offset_addr, size);
+	memcpy(buffer, ram->data+offset, size);
 	return size;
 }
 
-int general_ram_write(uint32_t addr, uint8_t* buffer, int size, memory_region_t* ram_region)
+int general_ram_write(uint32_t offset, uint8_t* buffer, int size, memory_region_t* ram_region)
 {
 	ram_t* ram = (ram_t*)ram_region->region_data;
-	uint32_t offset_addr = addr - ram_region->base_addr;
-	memcpy(ram->data+offset_addr, buffer, size);
+	memcpy(ram->data+offset, buffer, size);
 	return size;
 }
 

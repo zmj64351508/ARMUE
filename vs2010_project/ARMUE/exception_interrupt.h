@@ -13,6 +13,7 @@ typedef struct vector_exception_t
 	uint32_t *vector_table;
 	int *prio_table;
 	int vector_table_size;
+	/* controller info is the controller-specific field which can be regarded as the controller's private data*/
 	void *controller_info;
 
 	int (*throw_exception)(int vector_num, struct vector_exception_t* controller);

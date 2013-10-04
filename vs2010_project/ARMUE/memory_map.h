@@ -1,5 +1,8 @@
 #ifndef _MEMORY_MAP_H_
 #define _MEMORY_MAP_H_
+#ifdef __cplusplus
+extern "C"{
+#endif
 
 #include "_types.h"
 #include "error_code.h"
@@ -10,6 +13,8 @@ typedef enum{
 	MEMORY_REGION_UNKNOW,
 	MEMORY_REGION_ROM,
 	MEMORY_REGION_RAM,
+	MEMORY_REGION_SYS,
+	MEMORY_REGION_DEV,
 }memory_region_type_t;
 
 #define MEM_MAP_CACHE_SIZE 4000
@@ -27,8 +32,8 @@ typedef struct memory_region_t{
 	uint32_t size;
 	memory_region_type_t type;
 	void *region_data;
-	int (*read)(uint32_t addr, uint8_t *buffer, int size, struct memory_region_t *region);
-	int (*write)(uint32_t addr, uint8_t *buffer, int size, struct memory_region_t *region);
+	int (*read)(uint32_t offset, uint8_t *buffer, int size, struct memory_region_t *region);
+	int (*write)(uint32_t offset, uint8_t *buffer, int size, struct memory_region_t *region);
 }memory_region_t;
 
 
@@ -39,7 +44,14 @@ error_code_t destory_memory_map(memory_map_t** map);
 
 //int addr_in_rom(uint32_t addr, memory_map_t* map);
 //int addr_in_ram(uint32_t addr, memory_map_t* map);
-memory_region_t* find_address(memory_map_t* memory, uint32_t address);
+memory_region_t* find_memory_region(memory_map_t* memory, uint32_t address, int size);
+#define find_address(memory, address) find_memory_region(memory, address, 1)
+memory_region_t* request_memory_region(memory_map_t *memory, uint32_t address, int size);
+
 int read_memory(uint32_t addr, uint8_t* buffer, int size, memory_map_t* memory);
 int write_memory(uint32_t addr, uint8_t* buffer, int size, memory_map_t* memory);
+
+#ifdef __cplusplus
+}
+#endif
 #endif

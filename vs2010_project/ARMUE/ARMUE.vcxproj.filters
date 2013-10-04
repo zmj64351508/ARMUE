@@ -66,6 +66,9 @@
     <ClCompile Include="bheap.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="cm_system_control_space.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="module_helper.h">
@@ -120,6 +123,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="bheap.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="cm_system_control_space.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -37,13 +37,16 @@ uint32_t run_soc(soc_t* soc)
 	return opcode;
 }
 
-static soc_t* create_single_mem_soc(cpu_t* cpu, memory_map_t* memory_map)
+static soc_t* create_single_cpu_soc(cpu_t* cpu, memory_map_t *memory_space, memory_map_t *io_space)
 {
 	soc_t* soc = (soc_t*)calloc(1, sizeof(soc_t));
+	if(soc == NULL){
+		return NULL;
+	}
 
 	soc->cpu[0] = cpu;
-	soc->cpu[0]->memory_space = memory_map;
-	soc->cpu[0]->io_space = memory_map;
+	soc->cpu[0]->memory_space = memory_space;
+	soc->cpu[0]->io_space = io_space;
 
 	return soc;
 }
@@ -52,15 +55,19 @@ soc_t* create_soc(soc_conf_t* config)
 {
 	soc_t* soc = NULL;
 	if(config->cpu_num != 1)
-		goto err_out;
+		return NULL;
 
 	module_t* cpu_module = find_module(config->cpu_name);
-	cpu_t* cpu = cpu_module->create_cpu();
-	if(!validate_cpu(cpu)){
-		LOG(LOG_ERROR, "create_soc: invalid cpu %s\n", cpu_module->name);
-		goto invalid_cpu;
+	if(cpu_module == NULL){
+		goto find_cpu_module_fail;
 	}
 
+	cpu_t* cpu = alloc_cpu();
+	if(cpu == NULL){
+		goto alloc_cpu_fail;
+	}
+
+	/* create internal exception controller and external GIC */
 	cpu->exceptions = create_vector_exception(config->exception_num);
 	if(cpu->exceptions == NULL){
 		goto exception_null;
@@ -75,19 +82,37 @@ soc_t* create_soc(soc_conf_t* config)
 	}
 
 	LOG(LOG_DEBUG, "create_soc: created cpu %s\n", cpu_module->name);
-	if(config->memory_map_num == 1){
-		soc = create_single_mem_soc(cpu, config->memories[0]);
-	}else{
-
+	soc = create_single_cpu_soc(cpu, config->memories[0], config->memories[0]);
+	if(soc == NULL){
+		goto create_soc_fail;
 	}
+
+	/* Before init_cpu, it must ensure exceptions and memory map are setuped. */
+	int retval = cpu_module->init_cpu(cpu, config);
+	if(retval < 0){
+		goto init_cpu_fail;
+	}
+	if(!validate_cpu(cpu)){
+		LOG(LOG_ERROR, "create_soc: invalid cpu %s\n", cpu_module->name);
+		goto invalid_cpu;
+	}
+
 	return soc;
 
+invalid_cpu:
+	cpu_module->destory_cpu(&cpu);
+init_cpu_fail:
+	destory_soc(&soc);
+create_soc_fail:
+	if(cpu->GIC){
+		destory_vector_exception(&cpu->GIC);
+	}
 GIC_null:
 	destory_vector_exception(&cpu->exceptions);
 exception_null:
-invalid_cpu:
-	cpu_module->destory_cpu(&cpu);
-err_out:
+	dealloc_cpu(&cpu);
+alloc_cpu_fail:
+find_cpu_module_fail:
 	return NULL;
 }
 

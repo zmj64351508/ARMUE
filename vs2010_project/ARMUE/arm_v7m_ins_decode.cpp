@@ -1291,7 +1291,7 @@ thumb_instruct_table_t* create_instruction_table()
 }
 
 /* create and initialize the instruction as well as the cpu state */
-error_code_t ins_thumb_init(_IO cpu_t* cpu)
+int ins_thumb_init(_IO cpu_t* cpu)
 {
 	thumb_state* state = create_thumb_state();
 	if(state == NULL){
@@ -1316,10 +1316,10 @@ table_err:
 regs_error:
 	destory_thumb_state((thumb_state**)&cpu->run_info.cpu_spec_info);
 state_error:
-	return ERROR_CREATE;
+	return -ERROR_CREATE;
 }
 
-error_code_t ins_thumb_destory(cpu_t* cpu)
+int ins_thumb_destory(cpu_t* cpu)
 {
 	destory_armv7m_regs((armv7m_reg_t**)&cpu->regs);
 	destory_thumb_state((thumb_state**)&cpu->run_info.cpu_spec_info);

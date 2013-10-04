@@ -65,6 +65,6 @@ uint32_t align_address(uint32_t address);
 thumb_translate16_t thumb_parse_opcode16(uint16_t opcode, cpu_t* cpu);
 void armv7m_next_PC(cpu_t* cpu, int ins_length);
 int armv7m_PC_modified(cpu_t* cpu);
-error_code_t ins_thumb_destory(cpu_t* cpu);
-error_code_t ins_thumb_init(cpu_t* cpu);
+int ins_thumb_destory(cpu_t* cpu);
+int ins_thumb_init(cpu_t* cpu);
 #endif
