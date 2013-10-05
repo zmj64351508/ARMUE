@@ -51,7 +51,7 @@ void ASR_C(uint32_t val, int shift, _O uint32_t* result, _O int *carry_out)
 		*carry_out = val >> (shift - 1) & BIT_0;
 	}
 // MS VC will ASR signed int
-#ifdef _MSC_VER	
+#if defined _MSC_VER || defined __GNUC__
 	*result = (int32_t)val >> shift;
 #else
 #error Unknow compiler

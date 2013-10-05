@@ -56,7 +56,7 @@ error_code_t delete_module_from_head(module_list_t* list, module_t* module)
 	if(module->list != list){
 		return ERROR_DISMATCH_LIST;
 	}
-	
+
 	if(list->count == 1){
 		list->first_module = NULL;
 		list->last_module = NULL;
@@ -80,7 +80,7 @@ error_code_t delete_module_from_tail(module_list_t* list, module_t* module)
 		return ERROR_DISMATCH_LIST;
 	}
 
-	
+
 	if(list->count == 1){
 		list->first_module = NULL;
 		list->last_module = NULL;
@@ -190,7 +190,7 @@ error_code_t set_module_unregister(module_t *module, unregister_t unregister)
 
 error_code_t register_prepare()
 {
-	
+
 	if(g_cpu_module_list == NULL){
 		g_cpu_module_list = create_module_list();
 	}
@@ -211,8 +211,8 @@ error_code_t register_module_helper(module_t* module)
 	}
 	if( module->name == NULL ||
 		module->type == MODULE_INVALID ||
-		module->create_content == NULL || 
-		module->destory_content == NULL || 
+		module->create_content == NULL ||
+		module->destory_content == NULL ||
 		module->unregister == NULL){
 		if(module->name != NULL){
 			LOG(LOG_ERROR, "register_module_helper: register module %s fail\n", module->name);
@@ -252,21 +252,21 @@ error_code_t unregister_module_helper(module_t* module)
 	if(module == NULL){
 		return ERROR_NULL_POINTER;
 	}
-	
-	
+
+
 	switch(module->type){
 	case MODULE_CPU:
 		delete_module(g_cpu_module_list, module);
 		destory_cpu_list(&module->cpu_list);
-		
+
 		break;
 	case MODULE_PERIPHERAL:
 		//destory_peripheral_list(module->peripheral_list);
-		
+
 		break;
 	default:
 		break;
-	}		
+	}
 
 	return SUCCESS;
 }
@@ -303,10 +303,10 @@ error_code_t unregister_modules_by_list(module_list_t* list)
 	if(list == NULL){
 		return ERROR_NULL_POINTER;
 	}
-	
+
 	module_t* next_module;
 	module_t* module = get_first_module(list);
-	
+
 	if(module != NULL){
 		do{
 			next_module = get_next_module(module);
@@ -319,10 +319,10 @@ error_code_t unregister_modules_by_list(module_list_t* list)
 }
 
 error_code_t unregister_all_modules()
-{	
+{
 	// unregister cpu modules
 	unregister_modules_by_list(g_cpu_module_list);
-	
+
 	// unregister peripheral modules
 	unregister_modules_by_list(g_peripheral_module_list);
 
@@ -334,7 +334,7 @@ module_t* find_module(char* module_name)
 {
 	// find cpu_module
 	module_t* next_module;
-	module_t* module = get_first_module(g_cpu_module_list);	
+	module_t* module = get_first_module(g_cpu_module_list);
 	if(module != NULL){
 		do{
 			next_module = get_next_module(module);
@@ -344,10 +344,10 @@ module_t* find_module(char* module_name)
 			module = next_module;
 		}while(module != NULL);
 	}
-	
+
 	// find peripheral modules
 	module = get_first_module(g_peripheral_module_list);
-	
+
 	if(module != NULL){
 		do{
 			next_module = get_next_module(module);

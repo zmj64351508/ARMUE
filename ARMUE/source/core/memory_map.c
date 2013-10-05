@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 
 /* If the 2 regions have overlapping area, they are regared as equal.*/
 int memory_region_compare(void* a, void* b)

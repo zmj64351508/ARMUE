@@ -31,14 +31,14 @@ typedef enum
 #include <stdio.h>
 
 
-#define LOG(debug_level, message, ...) \
+#define LOG(debug_level, message, args...) \
 	if(debug_level >= LOG_CURRENT_LEVEL){\
-		printf("[%s] "##message, #debug_level+4, __VA_ARGS__);\
+		printf("[%s] "message, #debug_level+4, ##args);\
 	}
 
 #ifdef _DEBUG
-#define LOG_INSTRUCTION(message, ...)\
-	printf("[INSTRUCTION] "##message, __VA_ARGS__);
+#define LOG_INSTRUCTION(message, args...)\
+	printf("[INSTRUCTION] "message, ##args);
 
 #define LOG_REG(regs)\
 		armv7m_print_reg_val(regs);

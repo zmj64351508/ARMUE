@@ -1,5 +1,3 @@
-// ARMUE.cpp : 定义控制台应用程序的入口点。
-//
 #include <stdio.h>
 #include <tchar.h>
 #include <stdlib.h>
@@ -8,19 +6,19 @@
 
 #include "memory_map.h"
 #include "soc.h"
-int _tmain(int argc, _TCHAR* argv[])
+int main(int argc, char **argv)
 {
 	// register all exsisted modules
 	register_all_modules();
-	
-	memory_map_t *memory_map = create_memory_map();		
+
+	memory_map_t *memory_map = create_memory_map();
 	// ROM
 	rom_t* rom = alloc_rom();
 	set_rom_size(rom, 0x1000);
-	if(SUCCESS != open_rom(_T("E:\\GitHub\\ARMUE\\vs2010_project\\test.rom"), rom)){
+	if(SUCCESS != open_rom("E:\\GitHub\\ARMUE\\test.rom", rom)){
 		return -1;
 	}
-	fill_rom_with_bin(rom, _T("E:\\GitHub\\ARMUE\\vs2010_project\\cortex_m3_test\\test.bin"));
+	fill_rom_with_bin(rom, "E:\\GitHub\\ARMUE\\cortex_m3_test\\test.bin");
 	int result = setup_memory_map_rom(memory_map, rom, 0x00);
 	if(result < 0){
 		LOG(LOG_ERROR, "Faild to setup ROM\n");

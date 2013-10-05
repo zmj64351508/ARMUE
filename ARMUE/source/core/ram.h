@@ -5,6 +5,7 @@ extern "C"{
 #endif
 
 #include "_types.h"
+#include <stddef.h>
 
 typedef struct{
 	uint32_t size;

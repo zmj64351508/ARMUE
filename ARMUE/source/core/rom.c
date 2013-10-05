@@ -1,12 +1,13 @@
 #include "rom.h"
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 rom_t* alloc_rom()
 {
 	LOG(LOG_DEBUG, "create_rom\n");
 	rom_t* rom = (rom_t *)calloc(1, sizeof(rom_t));
-	
+
 	return rom;
 }
 
@@ -44,7 +45,7 @@ void copy_whole_file(FILE* src, FILE* dst)
 	char src_c;
 
 	src_c = fgetc(src);
-	while(!feof(src)){		
+	while(!feof(src)){
 		fputc(src_c, dst);
 		src_c = fgetc(src);
 	}
@@ -67,24 +68,24 @@ error_code_t fill_rom_with_zero(rom_t *rom)
 	return SUCCESS;
 }
 
-error_code_t fill_rom_with_bin(rom_t *rom, _TCHAR* bin_path)
+error_code_t fill_rom_with_bin(rom_t *rom, char* bin_path)
 {
 	if(rom == NULL || bin_path == NULL){
 		return ERROR_NULL_POINTER;
 	}
 
-	FILE* bin_file = _wfopen(bin_path, _T("rb"));
+	FILE* bin_file = fopen(bin_path, "rb");
 
 	if(bin_file != NULL){
 		fseek(rom->rom_file, rom->content_start, SEEK_SET);
-		copy_whole_file(bin_file, rom->rom_file);	
+		copy_whole_file(bin_file, rom->rom_file);
 		rom->last_offset = ftell(rom->rom_file) - 1;
 
 		fclose(bin_file);
 		return SUCCESS;
 
 	}else{
-		LOG(LOG_ERROR, "fill_rom_with_bin: Can't open %ws\n", bin_path);
+		LOG(LOG_ERROR, "fill_rom_with_bin: Can't open %s\n", bin_path);
 		return ERROR_INVALID_PATH;
 	}
 
@@ -133,7 +134,7 @@ static error_code_t parse_rom_file_head(_IO rom_t *rom)
 	if(rom->rom_file == NULL){
 		return ERROR_NULL_POINTER;
 	}
-	
+
 	FILE *file = rom->rom_file;
 
 	uint32_t read_size;
@@ -152,24 +153,24 @@ static error_code_t parse_rom_file_head(_IO rom_t *rom)
 
 /*
  * @brief: if rom file exsists, open the rom. Else use the parameter "rom" to create the rom file
- * @parameter:	path - the path of rom file													
+ * @parameter:	path - the path of rom file
  *				rom - if the rom file exisits, this is an output value. Else, we use this
  *					  to create the rom file. In other word, this value didn't work at all
  *					  when the file exsists.
- * @return:		SUCCESS, ERROR_INVALID_PARAM, ERROR_INVALID_ROM_FILE, ERROR_CREATE			
+ * @return:		SUCCESS, ERROR_INVALID_PARAM, ERROR_INVALID_ROM_FILE, ERROR_CREATE
  */
-error_code_t open_rom(_I _TCHAR* path, _IO rom_t* rom)
+error_code_t open_rom(_I char* path, _IO rom_t* rom)
 {
-	LOG(LOG_DEBUG, "open_rom: %ws\n", path);
+	LOG(LOG_DEBUG, "open_rom: %s\n", path);
 	if(rom == NULL || path == NULL){
 		return ERROR_NULL_POINTER;
 	}
 
 	// rom file exists, open it
-	if(_waccess(path, 0) != -1){
-		rom->rom_file = _wfopen(path, _T("rb+"));
-		
-		// TODO: 
+	if(access(path, 0) != -1){
+		rom->rom_file = fopen(path, "rb+");
+
+		// TODO:
 		//if(validate_rom_file() == SUCCESS){
 		//	do something
 		//}else{
@@ -190,9 +191,9 @@ error_code_t open_rom(_I _TCHAR* path, _IO rom_t* rom)
 
 	// rom file doesn't exsist, create it
 	}else{
-		rom->rom_file = _wfopen(path, _T("wb+"));
+		rom->rom_file = fopen(path, "wb+");
 		if(rom->rom_file != NULL ){
-			
+
 			// edit the rom file and set rom attributes
 			if(validate_rom_param(rom) == SUCCESS){
 				fprintf(rom->rom_file, "size:%d\n", rom->size);
@@ -288,7 +289,7 @@ uint32_t fetch_rom_data32(uint32_t offset_addr, rom_t* rom)
 		//fgets(buf, 4, rom->rom_file);
 		rom->last_offset = cur_offset+3;
 	}
-	
+
 	return *(uint32_t*)buf;
 }
 
