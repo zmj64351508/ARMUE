@@ -1,4 +1,4 @@
-#ifndef _ARM_V7M_INS_IMPLEMENT_H_ 
+#ifndef _ARM_V7M_INS_IMPLEMENT_H_
 #define _ARM_V7M_INS_IMPLEMENT_H_
 
 #include "_types.h"
@@ -19,8 +19,8 @@ typedef enum{
 #define MEM_READ 1
 #define MEM_WRITE 2
 
-/* used in GET_REG_VAL to get register value while PC_INDEX will get current address of instruction +4 
-   which is the fact we see when read PC in program and PC_RAW_INDEX will get the address of next 
+/* used in GET_REG_VAL to get register value while PC_INDEX will get current address of instruction +4
+   which is the fact we see when read PC in program and PC_RAW_INDEX will get the address of next
    instruction which is the real PC value in ARM */
 #define SP_INDEX 13
 #define LR_INDEX 14
@@ -54,7 +54,7 @@ typedef struct{
 
 typedef struct thumb_state{
 	uint8_t excuting_IT;
-	int mode;	
+	int mode;
 	int cur_exception;
 }thumb_state;
 
@@ -84,7 +84,7 @@ typedef struct thumb_state{
 #define SET_CONTROL_SPSEL(regs, bit) set_bit(&(regs)->CONTROL, CONTROL_SPSEL, (bit))
 
 #define GET_PSR(regs) ((regs)->xPSR)
-#define GET_IPSR(regs) ((regs)->xPSR & 0x1FFul) 
+#define GET_IPSR(regs) ((regs)->xPSR & 0x1FFul)
 #define GET_APSR_N(regs) get_bit(&(regs)->xPSR, PSR_N)
 #define GET_APSR_Z(regs) get_bit(&(regs)->xPSR, PSR_Z)
 #define GET_APSR_C(regs) get_bit(&(regs)->xPSR, PSR_C)
@@ -136,7 +136,7 @@ inline uint8_t check_and_reset_excuting_IT(thumb_state* state)
 	return retval;
 }
 
-// DOWN_ALIGN(a, n) == Align(a, 2^n) 
+// DOWN_ALIGN(a, n) == Align(a, 2^n)
 #define DOWN_ALIGN(val, order) ((val) & (0xFFFFFFFFUL << order))
 #define CHECK_PC(PC_val) ((PC_val) & 0x1ul)
 inline uint32_t Align(uint32_t address, uint32_t size)

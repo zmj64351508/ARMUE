@@ -26,7 +26,7 @@ int armcm3_startup(cpu_t* cpu)
 
 	armv7m_reg_t *regs = (armv7m_reg_t *)cpu->regs;
 	memory_map_t* memory_map = cpu->memory_map;
-	
+
 	// set register initial value
 	// TODO: Following statements need to be pack in another function which should be in armv7m module
 	// reset behaviour refering to B1-642
@@ -63,8 +63,8 @@ uint32_t fetch_armcm3_cpu(cpu_t* cpu)
 /* decode instruction, return the instruction info. It will be set to cpu->decode */
 ins_t decode_armcm3_cpu(cpu_t* cpu, void* opcode)
 {
-	ins_t ins_info = {NULL, 0};
-	uint32_t opcode32 = *(uint32_t*)opcode; 
+	ins_t ins_info = {0, NULL, 0};
+	uint32_t opcode32 = *(uint32_t*)opcode;
 	armv7m_reg_t *regs = (armv7m_reg_t *)cpu->regs;
 	thumb_state *state = (thumb_state*)cpu->run_info.cpu_spec_info;
 
@@ -90,13 +90,13 @@ ins_t decode_armcm3_cpu(cpu_t* cpu, void* opcode)
 
 /****** excute the cpu. It will set to cpu->excute ******/
 void excute_armcm3_cpu(cpu_t* cpu, ins_t ins_info){
-	
+
 	armv7m_reg_t *regs = (armv7m_reg_t *)cpu->regs;
 	thumb_state *state = (thumb_state*)cpu->run_info.cpu_spec_info;
 
 	/******							IMPROTANT									*/
 	/****** PC always points to the address of next instruction.				*/
-	/****** when 16bit coded, PC += 2. when 32bit coded, PC += 4.				*/		
+	/****** when 16bit coded, PC += 2. when 32bit coded, PC += 4.				*/
 	/****** But if instruction visits PC, it always returns PC+4				*/
 	armv7m_next_PC(cpu, ins_info.length);
 	if(ins_info.length == 16){
@@ -118,7 +118,7 @@ void excute_armcm3_cpu(cpu_t* cpu, ins_t ins_info){
 
 /****** Initialize an instance of the cpu. It will set to module->init_cpu ******/
 int init_armcm3_cpu(cpu_t *cpu, soc_conf_t* config)
-{	
+{
 	int retval;
 
 	/* init thumb instrction */
@@ -170,7 +170,7 @@ error_code_t unregister_armcm3_module()
 
 	LOG(LOG_DEBUG, "unregister_armcm3_module: unregister arm cortex m3 cpu.\n");
 	unregister_module_helper(this_module);
-	
+
 	destory_module(&this_module);
 
 	/* registered is the flag for whether this module is registered or not
@@ -184,13 +184,13 @@ error_code_t unregister_armcm3_module()
 error_code_t register_armcm3_module()
 {
 	error_code_t error_code;
-	
+
 	/* Important the module can only be registered once
-	   But this is not a good way. */	
+	   But this is not a good way. */
 	if(registered == 1){
 		return ERROR_REGISTERED;
 	}
-	
+
 	LOG(LOG_DEBUG, "register_armcm3_module: register arm cortex-m3 cpu.\n");
 	// create module
 	this_module = create_module();
@@ -207,13 +207,13 @@ error_code_t register_armcm3_module()
 	set_module_unregister(this_module, unregister_armcm3_module);
 	set_module_content_create(this_module, (create_func_t)init_armcm3_cpu);
 	set_module_content_destory(this_module, (destory_func_t)destory_armcm3_cpu);
-	
+
 	// register this module
 	error_code = register_module_helper(this_module);
 	if(error_code != SUCCESS){
 		LOG(LOG_ERROR, "register_armcm3_module: can't regist module.\n");
 	}
-	
+
 	/* Well, as metioned, this should be improved. */
 	registered++;
 

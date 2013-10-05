@@ -12,7 +12,7 @@ thumb_instruct_table_t *A_translate_table; // table for ARMvX-A, implement in th
 
 /******							IMPROTANT									*/
 /****** PC always pointers to the address of next instruction.				*/
-/****** when 16bit coded, PC += 2. when 32bit coded, PC += 4.				*/		
+/****** when 16bit coded, PC += 2. when 32bit coded, PC += 4.				*/
 /****** But, when 16 bit coded instruction visit PC, it will return PC+2	*/
 error_code_t set_base_table_value(thumb_decode_t* table, int start, int end, thumb_translate_t value, uint8_t type)
 {
@@ -51,7 +51,7 @@ thumb_translate16_t shift_add_sub_mov(uint16_t ins_code, cpu_t* cpu)
 thumb_translate16_t data_process(uint16_t ins_code, cpu_t* cpu)
 {
 	// call appropriate instruction implement function by inquiring 9~6bit
-	return M_translate_table->data_process_table16[ins_code >> 6 & 0x0F].translater16;	
+	return M_translate_table->data_process_table16[ins_code >> 6 & 0x0F].translater16;
 }
 
 thumb_translate16_t spdata_branch_exchange(uint16_t ins_code, cpu_t* cpu)
@@ -101,8 +101,8 @@ void _lsr_imm_16(uint16_t ins_code, cpu_t* cpu)
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
 	uint32_t setflags = !InITBlock(regs);
-	
-	_lsr_imm(imm, Rm, Rd, setflags, regs);		
+
+	_lsr_imm(imm, Rm, Rd, setflags, regs);
 	LOG_INSTRUCTION("_lsr_imm_16, R%d,R%d,#%d\n", Rd, Rm, imm);
 }
 
@@ -114,7 +114,7 @@ void _asr_imm_16(uint16_t ins_code, cpu_t* cpu)
 	uint32_t Rd = ins_code & 0x7;
 	uint32_t setflags = !InITBlock(regs);
 
-	_asr_imm(imm, Rm, Rd, setflags, regs);	
+	_asr_imm(imm, Rm, Rd, setflags, regs);
 	LOG_INSTRUCTION("_asr_imm_16, R%d,R%d,#%d\n", Rd, Rm, imm);
 }
 
@@ -127,7 +127,7 @@ void _add_reg_16(uint16_t ins_code, cpu_t* cpu)
 	uint32_t setflags = !InITBlock(regs);
 
 	_add_reg(Rm, Rn, Rd, SRType_LSL, 0, setflags, regs);
-	LOG_INSTRUCTION("_add_reg_16, R%d,R%d,R%d\n", Rd, Rn, Rm);	
+	LOG_INSTRUCTION("_add_reg_16, R%d,R%d,R%d\n", Rd, Rn, Rm);
 }
 
 void _sub_reg_16(uint16_t ins_code, cpu_t* cpu)
@@ -139,7 +139,7 @@ void _sub_reg_16(uint16_t ins_code, cpu_t* cpu)
 	uint32_t setflags = !InITBlock(regs);
 
 	_sub_reg(Rm, Rn, Rd, SRType_LSL, 0, setflags, regs);
-	LOG_INSTRUCTION("_sub_reg_16, R%d,R%d,R%d\n", Rd, Rn, Rm);	
+	LOG_INSTRUCTION("_sub_reg_16, R%d,R%d,R%d\n", Rd, Rn, Rm);
 }
 
 void _add_imm3_16(uint16_t ins_code, cpu_t* cpu)
@@ -150,8 +150,8 @@ void _add_imm3_16(uint16_t ins_code, cpu_t* cpu)
 	uint32_t Rd = ins_code & 0x7;
 	uint32_t setflags = !InITBlock(regs);
 
-	_add_imm(imm32, Rn, Rd, setflags, regs);	
-	LOG_INSTRUCTION("_add_imm3_16, R%d,R%d,#%d\n", Rd, Rn, imm32);	
+	_add_imm(imm32, Rn, Rd, setflags, regs);
+	LOG_INSTRUCTION("_add_imm3_16, R%d,R%d,#%d\n", Rd, Rn, imm32);
 }
 
 void _sub_imm3_16(uint16_t ins_code, cpu_t* cpu)
@@ -162,8 +162,8 @@ void _sub_imm3_16(uint16_t ins_code, cpu_t* cpu)
 	uint32_t Rd = ins_code & 0x7;
 	uint32_t setflags = !InITBlock(regs);
 
-	_sub_imm(imm32, Rn, Rd, setflags, regs);	
-	LOG_INSTRUCTION("_add_imm3_16, R%d,R%d,#%d\n", Rd, Rn, imm32);		
+	_sub_imm(imm32, Rn, Rd, setflags, regs);
+	LOG_INSTRUCTION("_add_imm3_16, R%d,R%d,#%d\n", Rd, Rn, imm32);
 }
 
 void _mov_imm_16(uint16_t ins_code, cpu_t* cpu)
@@ -206,8 +206,8 @@ void _sub_imm8_16(uint16_t ins_code, cpu_t* cpu)
 	uint32_t Rn = ins_code >> 8 & 0x7;
 	uint32_t Rd = Rn;
 	uint32_t imm8 = ins_code & 0xFF;
-	int setflags = !InITBlock(regs);	
-	
+	int setflags = !InITBlock(regs);
+
 	_sub_imm(imm8, Rn, Rd, setflags, regs);
 	LOG_INSTRUCTION("_sub_imm8_16, R%d,#%d\n", Rn, imm8);
 }
@@ -339,7 +339,7 @@ void _cmn_reg_16(uint16_t ins_code, cpu_t* cpu)
 	uint32_t Rn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 
-	_cmn_reg(Rm, Rn, SRType_LSL, 0, regs); 
+	_cmn_reg(Rm, Rn, SRType_LSL, 0, regs);
 	LOG_INSTRUCTION("_cmn_reg_16 R%d,R%d\n", Rn, Rm);
 }
 
@@ -392,7 +392,7 @@ void _add_sp_reg_T1(uint16_t ins_code, cpu_t* cpu)
 	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	uint32_t DM = ins_code >> 7 & 0x1ul;
 	uint32_t Rdm = (DM << 3) | (ins_code & 0x7ul);
-	
+
 	if(Rdm == 15 && InITBlock(regs) && !LastInITBlock(regs)){
 		LOG_INSTRUCTION("_add_sp_reg_T1 R%d,SP,R%d as UNPREDICTABLE\n", Rdm, Rdm);
 	}else{
@@ -457,7 +457,7 @@ void _mov_reg_spec_16(uint16_t ins_code, cpu_t* cpu)
 	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	uint32_t DN = ins_code >> 7 & 0x1ul;
 	uint32_t Rd = (DN << 3) | (ins_code & 0x7ul);
-	uint32_t Rm = ins_code >> 3 & 0xFul;	
+	uint32_t Rm = ins_code >> 3 & 0xFul;
 	uint32_t setflag = 0;
 
 	if(Rd == 15 && InITBlock(regs) && !LastInITBlock(regs)){
@@ -472,7 +472,7 @@ void _bx_spec_16(uint16_t ins_code, cpu_t* cpu)
 {
 	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	uint32_t Rm = ins_code >> 3 & 0xFul;
-	if((ins_code & 0x7ul) != 0 || 
+	if((ins_code & 0x7ul) != 0 ||
 	   (InITBlock(regs) && !LastInITBlock(regs))){
 		LOG_INSTRUCTION("_bx_spec_16 R%d as UNPREDICTABLE\n", Rm);
 	}else{
@@ -847,7 +847,7 @@ void _push_16(uint16_t ins_code, cpu_t* cpu)
 {
 	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	uint32_t register_list = LOW_BIT16(ins_code, 8);
-	uint32_t registers = LOW_BIT16(ins_code >> 8, 1) << 14 | register_list; 
+	uint32_t registers = LOW_BIT16(ins_code >> 8, 1) << 14 | register_list;
 	uint32_t bitcount = BitCount32(registers);
 	if(bitcount < 1){
 		LOG_INSTRUCTION("UNPREDICTABLE: push_16 is treated as NOP\n");
@@ -882,7 +882,7 @@ void _revsh_16(uint16_t ins_code, cpu_t* cpu)
 	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	uint32_t Rm, Rd;
 	decode_rm_rd_16(ins_code, &Rm, &Rd);
-	
+
 	_revsh(Rm, Rd, regs);
 	LOG_INSTRUCTION("revsh_16, R%d,R%d\n", Rd, Rm);
 }
@@ -891,7 +891,7 @@ void _pop_16(uint16_t ins_code, cpu_t* cpu)
 {
 	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	uint32_t register_list = LOW_BIT16(ins_code, 8);
-	uint32_t registers = LOW_BIT16(ins_code >> 8, 1) << 15 | register_list; 
+	uint32_t registers = LOW_BIT16(ins_code >> 8, 1) << 15 | register_list;
 	uint32_t bitcount = BitCount32(registers);
 
 	if(bitcount < 1){
@@ -913,7 +913,6 @@ void _bkpt_16(uint16_t ins_code, cpu_t* cpu)
 	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	uint32_t imm32 = LOW_BIT16(ins_code, 8);
 
-	//TODO: bkpt event 
 	LOG_INSTRUCTION("_bkpt_16 #%d\n", imm32);
 }
 
@@ -1025,7 +1024,7 @@ void _con_b_16(uint16_t ins_code, cpu_t* cpu)
 	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	uint8_t imm8 = LOW_BIT16(ins_code, 8);
 	uint8_t cond = LOW_BIT16(ins_code >> 8, 4);
-	
+
 	int32_t imm32 = (int8_t)imm8 << 1;
 	if(InITBlock(regs)){
 		LOG_INSTRUCTION("UNPREDICTABLE: _con_b_16 treated as NOP\n");
@@ -1041,7 +1040,6 @@ void _svc_16(uint16_t ins_code, cpu_t* cpu)
 	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	uint32_t imm32 = LOW_BIT16(ins_code, 8);
 
-	//TODO: exception and interrupt
 	cpu->cm_NVIC->throw_exception(11, cpu->cm_NVIC);
 
 	LOG_INSTRUCTION("_svc_16, #%d\n", imm32);
@@ -1227,8 +1225,8 @@ void init_instruction_table(thumb_instruct_table_t* table)
 
 	/*************************************** 16 bit thumb instructions *******************************************************/
 	// 15~10 bit A5-156
-	set_base_table_value(table->base_table16, 0x00, 0x0F, (thumb_translate_t)shift_add_sub_mov, THUMB_DECODER);		// 00xxxx		
-	set_base_table_value(table->base_table16, 0x10, 0x10, (thumb_translate_t)data_process, THUMB_DECODER);			// 010000				
+	set_base_table_value(table->base_table16, 0x00, 0x0F, (thumb_translate_t)shift_add_sub_mov, THUMB_DECODER);		// 00xxxx
+	set_base_table_value(table->base_table16, 0x10, 0x10, (thumb_translate_t)data_process, THUMB_DECODER);			// 010000
 	set_base_table_value(table->base_table16, 0x11, 0x11, (thumb_translate_t)spdata_branch_exchange, THUMB_DECODER);	// 010001
 	// load from literal pool A7-289
 	set_base_table_value(table->base_table16, 0x12, 0x13, (thumb_translate_t)_ldr_literal_16, THUMB_EXCUTER);			// 01001x
@@ -1406,7 +1404,7 @@ void armv7m_next_PC_32(armv7m_reg_t* regs)
 
 void armv7m_next_PC(cpu_t* cpu, int ins_length)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs; 
+	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
 	if(ins_length == 16){
 		armv7m_next_PC_16(regs);
 	}else if(ins_length == 32){
@@ -1425,7 +1423,7 @@ int armv7m_PC_modified(cpu_t* cpu)
 armv7m_reg_t* create_armv7m_regs()
 {
 	armv7m_reg_t* regs = (armv7m_reg_t*)calloc(1, sizeof(armv7m_reg_t));
-	
+
 	return regs;
 }
 
