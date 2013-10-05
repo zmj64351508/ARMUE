@@ -5,10 +5,15 @@
 #define _I	const
 #define _O
 
-typedef enum bool_t{
-	FALSE = 0,
-	TRUE = 1,
-}bool_t;
+#ifdef FALSE
+#undef FALSE
+#endif
+#define FALSE 0
+#ifdef TRUE
+#undef TRUE
+#endif
+#define TRUE 1
+typedef int bool_t;
 
 
 #include <stdint.h>

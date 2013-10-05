@@ -14,11 +14,11 @@ thumb_instruct_table_t *A_translate_table; // table for ARMvX-A, implement in th
 /****** PC always pointers to the address of next instruction.				*/
 /****** when 16bit coded, PC += 2. when 32bit coded, PC += 4.				*/		
 /****** But, when 16 bit coded instruction visit PC, it will return PC+2	*/
-error_code_t set_base_table_value(thumb_decode_t* table, int start, int end, thumb_translate16_t value, uint8_t type)
+error_code_t set_base_table_value(thumb_decode_t* table, int start, int end, thumb_translate_t value, uint8_t type)
 {
 	thumb_decode_t decoder;
 	for(int i = start; i <= end; i++){
-		decoder.translater16 = value;
+		decoder.translater = value;
 		decoder.type = type;
 		table[i] = decoder;
 	}
@@ -1066,110 +1066,278 @@ void _unpredictable_16(uint16_t ins_code, cpu_t* cpu)
 	LOG(LOG_WARN, "ins_code: %x is UNPREDICTABLE, treated as NOP\n", ins_code);
 }
 
+static inline void stm_rn_registers_wback(uint32_t ins_code, uint32_t *Rn, uint32_t *registers, bool_t *wback)
+{
+	*Rn = LOW_BIT32(ins_code >> 16, 4);
+	*registers = LOW_BIT32(ins_code, 16) & ~(0x5ul << 13);
+	*wback = LOW_BIT32(ins_code >> 21, 1);
+}
+
+void _stm_32(uint32_t ins_code, cpu_t* cpu)
+{
+	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	uint32_t Rn, registers;
+	bool_t wback;
+	stm_rn_registers_wback(ins_code, &Rn, &registers, &wback);
+	uint32_t bitcout = BitCount32(registers);
+
+	if(Rn == 15 || bitcout < 2){
+		LOG_INSTRUCTION("UNPREDICTABLE: _stm_32 treated as NOP\n");
+		return;
+	}
+	if(wback && (registers & 1ul << Rn)){
+		LOG_INSTRUCTION("UNPREDICTABLE: _stm_32 treated as NOP\n");
+		return;
+
+	}
+	_stm(Rn, registers, bitcout, wback, cpu);
+	LOG_INSTRUCTION("_stm_32, R%d!,%d\n", Rn, registers);
+}
+
+static inline void ldm_rn_register_wback(uint32_t ins_code, uint32_t *Rn, uint32_t *registers, bool_t *wback)
+{
+	*Rn = LOW_BIT32(ins_code >> 16, 4);
+	*registers = LOW_BIT32(ins_code, 16) & ~(0x1ul << 13);
+	*wback = LOW_BIT32(ins_code >> 21, 1);
+}
+
+void _ldm_32(uint32_t ins_code, cpu_t* cpu)
+{
+	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	uint32_t Rn, registers;
+	bool_t wback;
+	ldm_rn_register_wback(ins_code, &Rn, &registers, &wback);
+	uint32_t bitcout = BitCount32(registers);
+
+	if(Rn == 15 || bitcout < 2 || (registers >> 14) == 0x3){
+		LOG_INSTRUCTION("UNPREDICTABLE: _ldm_32 treated as NOP\n");
+	}
+	if((registers & (1ul << 15)) && InITBlock(regs) && !LastInITBlock(regs)){
+		LOG_INSTRUCTION("UNPREDICTABLE: _ldm_32 treated as NOP\n");
+	}
+	if(wback && (registers & (1ul << Rn))){
+		LOG_INSTRUCTION("UNPREDICTABLE: _ldm_32 treated as NOP\n");
+	}
+
+	_ldm(Rn, registers, bitcout, wback, cpu);
+	LOG_INSTRUCTION("_ldm_32, R%d,%d\n", Rn, registers);
+}
+
+void _pop_32(uint32_t ins_code, cpu_t* cpu)
+{
+	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	uint32_t Rn, registers;
+	bool_t wback;
+	ldm_rn_register_wback(ins_code, &Rn, &registers, &wback);
+	uint32_t bitcount = BitCount32(registers);
+
+	if(bitcount < 2 || (registers >> 14) == 0x3){
+		LOG_INSTRUCTION("UNPREDICTABLE: _pop_32 treated as NOP\n");
+	}
+	if((registers & (1ul << 15)) && InITBlock(regs) && !LastInITBlock(regs)){
+		LOG_INSTRUCTION("UNPREDICTABLE: _pop_32 treated as NOP\n");
+	}
+
+	_pop(registers, bitcount, cpu);
+	LOG_INSTRUCTION("_pop_32, %d\n", registers);
+
+}
+
+thumb_translate32_t ldm_pop_bundle(uint32_t ins_code, cpu_t *cpu)
+{
+	uint32_t WRn = LOW_BIT32(ins_code >> 16, 4) | LOW_BIT32(ins_code >> 21, 1) << 4;
+	if(WRn == 0x1D){
+		return (thumb_translate32_t)_pop_32;
+	}else{
+		return (thumb_translate32_t)_ldm_32;
+	}
+}
+
+void _push_32(uint32_t ins_code, cpu_t* cpu)
+{
+	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	uint32_t Rn, registers;
+	bool_t wback;
+	stm_rn_registers_wback(ins_code, &Rn, &registers, &wback);
+	uint32_t bitcount = BitCount32(registers);
+	if(bitcount < 2){
+		LOG_INSTRUCTION("UNPREDICTABLE: _pop_32 treated as NOP\n");
+	}
+
+	_push(registers, bitcount, cpu);
+	LOG_INSTRUCTION("_push_32, %d\n", registers);
+}
+
+
+void _stmdb_32(uint32_t ins_code, cpu_t *cpu)
+{
+	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	uint32_t Rn, registers;
+	bool_t wback;
+	stm_rn_registers_wback(ins_code, &Rn, &registers, &wback);
+	uint32_t bitcount = BitCount32(registers);
+
+	if(Rn == 15 || bitcount < 2){
+		LOG_INSTRUCTION("UNPREDICTABLE: _stmdb_32 treated as NOP\n");
+	}
+	if(wback && (registers & (1ul << Rn))){
+		LOG_INSTRUCTION("UNPREDICTABLE: _stmdb_32 treated as NOP\n");
+	}
+
+	_stmdb(Rn, registers, bitcount, wback, cpu);
+	LOG_INSTRUCTION("_stmdb_32, R%d,%d\n", Rn, registers);
+}
+
+thumb_translate32_t stmdb_push_bundle(uint32_t ins_code, cpu_t *cpu)
+{
+	uint32_t WRn = LOW_BIT32(ins_code >> 16, 4) | LOW_BIT32(ins_code >> 21, 1) << 4;
+	if(WRn == 0x1D){
+		return (thumb_translate32_t)_push_32;
+	}else{
+		return (thumb_translate32_t)_stmdb_32;
+	}
+}
+
+void _ldmdb_32(uint32_t ins_code, cpu_t* cpu)
+{
+	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	uint32_t Rn, registers;
+	bool_t wback;
+	ldm_rn_register_wback(ins_code, &Rn, &registers, &wback);
+	uint32_t bitcout = BitCount32(registers);
+
+	if(Rn == 15 || bitcout < 2 || (registers >> 14) == 0x3){
+		LOG_INSTRUCTION("UNPREDICTABLE: _ldmdb_32 treated as NOP\n");
+	}
+	if((registers & (1ul << 15)) && InITBlock(regs) && !LastInITBlock(regs)){
+		LOG_INSTRUCTION("UNPREDICTABLE: _ldmdb_32 treated as NOP\n");
+	}
+	if(wback && (registers & (1ul << Rn))){
+		LOG_INSTRUCTION("UNPREDICTABLE: _ldmdb_32 treated as NOP\n");
+	}
+
+	_ldmdb(Rn, registers, bitcout, wback, cpu);
+	LOG_INSTRUCTION("_ldmdb_32, R%d,%d\n", Rn, registers);
+}
+
 /****** init instruction table ******/
 void init_instruction_table(thumb_instruct_table_t* table)
 {
 	LOG(LOG_DEBUG, "ARM size of instruction table is %d byte\n", sizeof(thumb_instruct_table_t));
+
+	/*************************************** 16 bit thumb instructions *******************************************************/
 	// 15~10 bit A5-156
-	set_base_table_value(table->base_table16, 0x00, 0x0F, (thumb_translate16_t)shift_add_sub_mov, THUMB_DECODER);		// 00xxxx		
-	set_base_table_value(table->base_table16, 0x10, 0x10, (thumb_translate16_t)data_process, THUMB_DECODER);			// 010000				
-	set_base_table_value(table->base_table16, 0x11, 0x11, (thumb_translate16_t)spdata_branch_exchange, THUMB_DECODER);	// 010001
+	set_base_table_value(table->base_table16, 0x00, 0x0F, (thumb_translate_t)shift_add_sub_mov, THUMB_DECODER);		// 00xxxx		
+	set_base_table_value(table->base_table16, 0x10, 0x10, (thumb_translate_t)data_process, THUMB_DECODER);			// 010000				
+	set_base_table_value(table->base_table16, 0x11, 0x11, (thumb_translate_t)spdata_branch_exchange, THUMB_DECODER);	// 010001
 	// load from literal pool A7-289
-	set_base_table_value(table->base_table16, 0x12, 0x13, (thumb_translate16_t)_ldr_literal_16, THUMB_EXCUTER);			// 01001x
-	set_base_table_value(table->base_table16, 0x14, 0x27, (thumb_translate16_t)load_store_single, THUMB_DECODER);		// 0101xx 011xxx 100xxx
+	set_base_table_value(table->base_table16, 0x12, 0x13, (thumb_translate_t)_ldr_literal_16, THUMB_EXCUTER);			// 01001x
+	set_base_table_value(table->base_table16, 0x14, 0x27, (thumb_translate_t)load_store_single, THUMB_DECODER);		// 0101xx 011xxx 100xxx
 	// pc related address A7-229
-	set_base_table_value(table->base_table16, 0x28, 0x29, (thumb_translate16_t)_adr_16, THUMB_EXCUTER);					// 10100x
+	set_base_table_value(table->base_table16, 0x28, 0x29, (thumb_translate_t)_adr_16, THUMB_EXCUTER);					// 10100x
 	// sp related address A7-225
-	set_base_table_value(table->base_table16, 0x2A, 0x2B, (thumb_translate16_t)_add_sp_imm_16, THUMB_EXCUTER);			// 10101x
-	set_base_table_value(table->base_table16, 0x2C, 0x2F, (thumb_translate16_t)misc_16bit_ins, THUMB_DECODER);			// 1011xx
-	set_base_table_value(table->base_table16, 0x30, 0x31, (thumb_translate16_t)_stm_16, THUMB_EXCUTER);					// 11000x
-	set_base_table_value(table->base_table16, 0x32, 0x33, (thumb_translate16_t)_ldm_16, THUMB_EXCUTER);					// 11001x
-	set_base_table_value(table->base_table16, 0x34, 0x37, (thumb_translate16_t)con_branch_svc, THUMB_DECODER);			// 1101xx
-	set_base_table_value(table->base_table16, 0x38, 0x39, (thumb_translate16_t)_uncon_b_16, THUMB_EXCUTER);				// 11100x
+	set_base_table_value(table->base_table16, 0x2A, 0x2B, (thumb_translate_t)_add_sp_imm_16, THUMB_EXCUTER);			// 10101x
+	set_base_table_value(table->base_table16, 0x2C, 0x2F, (thumb_translate_t)misc_16bit_ins, THUMB_DECODER);			// 1011xx
+	set_base_table_value(table->base_table16, 0x30, 0x31, (thumb_translate_t)_stm_16, THUMB_EXCUTER);					// 11000x
+	set_base_table_value(table->base_table16, 0x32, 0x33, (thumb_translate_t)_ldm_16, THUMB_EXCUTER);					// 11001x
+	set_base_table_value(table->base_table16, 0x34, 0x37, (thumb_translate_t)con_branch_svc, THUMB_DECODER);			// 1101xx
+	set_base_table_value(table->base_table16, 0x38, 0x39, (thumb_translate_t)_uncon_b_16, THUMB_EXCUTER);				// 11100x
 
 	// shift(imm) add sub mov A5-157
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x00, 0x03, (thumb_translate16_t)_lsl_imm_16, THUMB_EXCUTER);	// 000xx
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x04, 0x07, (thumb_translate16_t)_lsr_imm_16, THUMB_EXCUTER);	// 001xx
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x08, 0x0B, (thumb_translate16_t)_asr_imm_16, THUMB_EXCUTER);	// 010xx
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x0C, 0x0C, (thumb_translate16_t)_add_reg_16, THUMB_EXCUTER);	// 01100
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x0D, 0x0D, (thumb_translate16_t)_sub_reg_16, THUMB_EXCUTER);	// 01101
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x0E, 0x0E, (thumb_translate16_t)_add_imm3_16, THUMB_EXCUTER);	// 01110
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x0F, 0x0F, (thumb_translate16_t)_sub_imm3_16, THUMB_EXCUTER);	// 01111
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x10, 0x13, (thumb_translate16_t)_mov_imm_16, THUMB_EXCUTER);	// 100xx
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x14, 0x17, (thumb_translate16_t)_cmp_imm_16, THUMB_EXCUTER);	// 101xx
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x18, 0x1B, (thumb_translate16_t)_add_imm8_16, THUMB_EXCUTER);	// 110xx
-	set_sub_table_value(table->shift_add_sub_mov_table16, 0x1C, 0x1F, (thumb_translate16_t)_sub_imm8_16, THUMB_EXCUTER);	// 111xx
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x00, 0x03, (thumb_translate_t)_lsl_imm_16, THUMB_EXCUTER);	// 000xx
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x04, 0x07, (thumb_translate_t)_lsr_imm_16, THUMB_EXCUTER);	// 001xx
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x08, 0x0B, (thumb_translate_t)_asr_imm_16, THUMB_EXCUTER);	// 010xx
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x0C, 0x0C, (thumb_translate_t)_add_reg_16, THUMB_EXCUTER);	// 01100
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x0D, 0x0D, (thumb_translate_t)_sub_reg_16, THUMB_EXCUTER);	// 01101
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x0E, 0x0E, (thumb_translate_t)_add_imm3_16, THUMB_EXCUTER);	// 01110
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x0F, 0x0F, (thumb_translate_t)_sub_imm3_16, THUMB_EXCUTER);	// 01111
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x10, 0x13, (thumb_translate_t)_mov_imm_16, THUMB_EXCUTER);	// 100xx
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x14, 0x17, (thumb_translate_t)_cmp_imm_16, THUMB_EXCUTER);	// 101xx
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x18, 0x1B, (thumb_translate_t)_add_imm8_16, THUMB_EXCUTER);	// 110xx
+	set_sub_table_value(table->shift_add_sub_mov_table16, 0x1C, 0x1F, (thumb_translate_t)_sub_imm8_16, THUMB_EXCUTER);	// 111xx
 
 	// data processing A5-158
-	set_sub_table_value(table->data_process_table16, 0x00, 0x00, (thumb_translate16_t)_and_reg_16, THUMB_EXCUTER);		// 0000
-	set_sub_table_value(table->data_process_table16, 0x01, 0x01, (thumb_translate16_t)_eor_reg_16, THUMB_EXCUTER);		// 0001
-	set_sub_table_value(table->data_process_table16, 0x02, 0x02, (thumb_translate16_t)_lsl_reg_16, THUMB_EXCUTER);		// 0010
-	set_sub_table_value(table->data_process_table16, 0x03, 0x03, (thumb_translate16_t)_lsr_reg_16, THUMB_EXCUTER);		// 0011
-	set_sub_table_value(table->data_process_table16, 0x04, 0x04, (thumb_translate16_t)_asr_reg_16, THUMB_EXCUTER);		// 0100
-	set_sub_table_value(table->data_process_table16, 0x05, 0x05, (thumb_translate16_t)_adc_reg_16, THUMB_EXCUTER);		// 0101
-	set_sub_table_value(table->data_process_table16, 0x06, 0x06, (thumb_translate16_t)_sbc_reg_16, THUMB_EXCUTER);		// 0110
-	set_sub_table_value(table->data_process_table16, 0x07, 0x07, (thumb_translate16_t)_ror_reg_16, THUMB_EXCUTER);		// 0111
-	set_sub_table_value(table->data_process_table16, 0x08, 0x08, (thumb_translate16_t)_tst_reg_16, THUMB_EXCUTER);		// 1000
-	set_sub_table_value(table->data_process_table16, 0x09, 0x09, (thumb_translate16_t)_rsb_imm_16, THUMB_EXCUTER);		// 1001
-	set_sub_table_value(table->data_process_table16, 0x0A, 0x0A, (thumb_translate16_t)_cmp_reg_16, THUMB_EXCUTER);		// 1010
-	set_sub_table_value(table->data_process_table16, 0x0B, 0x0B, (thumb_translate16_t)_cmn_reg_16, THUMB_EXCUTER);		// 1011
-	set_sub_table_value(table->data_process_table16, 0x0C, 0x0C, (thumb_translate16_t)_orr_reg_16, THUMB_EXCUTER);		// 1100
-	set_sub_table_value(table->data_process_table16, 0x0D, 0x0D, (thumb_translate16_t)_mul_reg_16, THUMB_EXCUTER);		// 1101
-	set_sub_table_value(table->data_process_table16, 0x0E, 0x0E, (thumb_translate16_t)_bic_reg_16, THUMB_EXCUTER);		// 1110
-	set_sub_table_value(table->data_process_table16, 0x0F, 0x0F, (thumb_translate16_t)_mvn_reg_16, THUMB_EXCUTER);		// 1111
+	set_sub_table_value(table->data_process_table16, 0x00, 0x00, (thumb_translate_t)_and_reg_16, THUMB_EXCUTER);		// 0000
+	set_sub_table_value(table->data_process_table16, 0x01, 0x01, (thumb_translate_t)_eor_reg_16, THUMB_EXCUTER);		// 0001
+	set_sub_table_value(table->data_process_table16, 0x02, 0x02, (thumb_translate_t)_lsl_reg_16, THUMB_EXCUTER);		// 0010
+	set_sub_table_value(table->data_process_table16, 0x03, 0x03, (thumb_translate_t)_lsr_reg_16, THUMB_EXCUTER);		// 0011
+	set_sub_table_value(table->data_process_table16, 0x04, 0x04, (thumb_translate_t)_asr_reg_16, THUMB_EXCUTER);		// 0100
+	set_sub_table_value(table->data_process_table16, 0x05, 0x05, (thumb_translate_t)_adc_reg_16, THUMB_EXCUTER);		// 0101
+	set_sub_table_value(table->data_process_table16, 0x06, 0x06, (thumb_translate_t)_sbc_reg_16, THUMB_EXCUTER);		// 0110
+	set_sub_table_value(table->data_process_table16, 0x07, 0x07, (thumb_translate_t)_ror_reg_16, THUMB_EXCUTER);		// 0111
+	set_sub_table_value(table->data_process_table16, 0x08, 0x08, (thumb_translate_t)_tst_reg_16, THUMB_EXCUTER);		// 1000
+	set_sub_table_value(table->data_process_table16, 0x09, 0x09, (thumb_translate_t)_rsb_imm_16, THUMB_EXCUTER);		// 1001
+	set_sub_table_value(table->data_process_table16, 0x0A, 0x0A, (thumb_translate_t)_cmp_reg_16, THUMB_EXCUTER);		// 1010
+	set_sub_table_value(table->data_process_table16, 0x0B, 0x0B, (thumb_translate_t)_cmn_reg_16, THUMB_EXCUTER);		// 1011
+	set_sub_table_value(table->data_process_table16, 0x0C, 0x0C, (thumb_translate_t)_orr_reg_16, THUMB_EXCUTER);		// 1100
+	set_sub_table_value(table->data_process_table16, 0x0D, 0x0D, (thumb_translate_t)_mul_reg_16, THUMB_EXCUTER);		// 1101
+	set_sub_table_value(table->data_process_table16, 0x0E, 0x0E, (thumb_translate_t)_bic_reg_16, THUMB_EXCUTER);		// 1110
+	set_sub_table_value(table->data_process_table16, 0x0F, 0x0F, (thumb_translate_t)_mvn_reg_16, THUMB_EXCUTER);		// 1111
 
 	// special data instructions and branch and exchange A5-159
-	set_sub_table_value(table->spdata_branch_exchange_table16, 0x00, 0x03, (thumb_translate16_t)_add_reg_spec_16, THUMB_EXCUTER);	// 00xx
-	set_sub_table_value(table->spdata_branch_exchange_table16, 0x04, 0x04, (thumb_translate16_t)_unpredictable_16, THUMB_EXCUTER);	// 0100(*)
-	set_sub_table_value(table->spdata_branch_exchange_table16, 0x05, 0x07, (thumb_translate16_t)_cmp_reg_spec_16, THUMB_EXCUTER);	// 0101,011x
-	set_sub_table_value(table->spdata_branch_exchange_table16, 0x08, 0x0B, (thumb_translate16_t)_mov_reg_spec_16, THUMB_EXCUTER);	// 10xx
-	set_sub_table_value(table->spdata_branch_exchange_table16, 0x0C, 0x0D, (thumb_translate16_t)_bx_spec_16, THUMB_EXCUTER);		// 110x
-	set_sub_table_value(table->spdata_branch_exchange_table16, 0x0E, 0x0F, (thumb_translate16_t)_blx_spec_16, THUMB_EXCUTER);		// 111x
+	set_sub_table_value(table->spdata_branch_exchange_table16, 0x00, 0x03, (thumb_translate_t)_add_reg_spec_16, THUMB_EXCUTER);	// 00xx
+	set_sub_table_value(table->spdata_branch_exchange_table16, 0x04, 0x04, (thumb_translate_t)_unpredictable_16, THUMB_EXCUTER);	// 0100(*)
+	set_sub_table_value(table->spdata_branch_exchange_table16, 0x05, 0x07, (thumb_translate_t)_cmp_reg_spec_16, THUMB_EXCUTER);	// 0101,011x
+	set_sub_table_value(table->spdata_branch_exchange_table16, 0x08, 0x0B, (thumb_translate_t)_mov_reg_spec_16, THUMB_EXCUTER);	// 10xx
+	set_sub_table_value(table->spdata_branch_exchange_table16, 0x0C, 0x0D, (thumb_translate_t)_bx_spec_16, THUMB_EXCUTER);		// 110x
+	set_sub_table_value(table->spdata_branch_exchange_table16, 0x0E, 0x0F, (thumb_translate_t)_blx_spec_16, THUMB_EXCUTER);		// 111x
 
 	// load store single data item A5-160
-	set_sub_table_value(table->load_store_single_table16, 0x00, 0x27, (thumb_translate16_t)_unpredictable_16, THUMB_EXCUTER);		// 0000 000 ~ 0010 011
-	set_sub_table_value(table->load_store_single_table16, 0x28, 0x28, (thumb_translate16_t)_str_reg_16, THUMB_EXCUTER);				// 0101 000
-	set_sub_table_value(table->load_store_single_table16, 0x29, 0x29, (thumb_translate16_t)_strh_reg_16, THUMB_EXCUTER);			// 0101 001
-	set_sub_table_value(table->load_store_single_table16, 0x2A, 0x2A, (thumb_translate16_t)_strb_reg_16, THUMB_EXCUTER);			// 0101 010
-	set_sub_table_value(table->load_store_single_table16, 0x2B, 0x2B, (thumb_translate16_t)_ldrsb_reg_16, THUMB_EXCUTER);			// 0101 011
-	set_sub_table_value(table->load_store_single_table16, 0x2C, 0x2C, (thumb_translate16_t)_ldr_reg_16, THUMB_EXCUTER);				// 0101	100
-	set_sub_table_value(table->load_store_single_table16, 0x2D, 0x2D, (thumb_translate16_t)_ldrh_reg_16, THUMB_EXCUTER);			// 0101 101
-	set_sub_table_value(table->load_store_single_table16, 0x2E, 0x2E, (thumb_translate16_t)_ldrb_reg_16, THUMB_EXCUTER);			// 0101 110
-	set_sub_table_value(table->load_store_single_table16, 0x2F, 0x2F, (thumb_translate16_t)_ldrsh_reg_16, THUMB_EXCUTER);			// 0101 111
-	set_sub_table_value(table->load_store_single_table16, 0x2F, 0x2F, (thumb_translate16_t)_ldrsh_reg_16, THUMB_EXCUTER);			// 0101 111
-	set_sub_table_value(table->load_store_single_table16, 0x30, 0x33, (thumb_translate16_t)_str_imm_16, THUMB_EXCUTER);				// 0110 0xx
-	set_sub_table_value(table->load_store_single_table16, 0x34, 0x37, (thumb_translate16_t)_ldr_imm_16, THUMB_EXCUTER);				// 0110 1xx
-	set_sub_table_value(table->load_store_single_table16, 0x38, 0x3B, (thumb_translate16_t)_strb_imm_16, THUMB_EXCUTER);			// 0111 0xx
-	set_sub_table_value(table->load_store_single_table16, 0x3C, 0x3F, (thumb_translate16_t)_ldrb_imm_16, THUMB_EXCUTER);			// 0111 1xx
-	set_sub_table_value(table->load_store_single_table16, 0x40, 0x43, (thumb_translate16_t)_strh_imm_16, THUMB_EXCUTER);			// 1000 0xx
-	set_sub_table_value(table->load_store_single_table16, 0x44, 0x47, (thumb_translate16_t)_ldrh_imm_16, THUMB_EXCUTER);			// 1000 1xx
-	set_sub_table_value(table->load_store_single_table16, 0x48, 0x4B, (thumb_translate16_t)_str_sp_imm_16, THUMB_EXCUTER);			// 1001 0xx
-	set_sub_table_value(table->load_store_single_table16, 0x4C, 0x4F, (thumb_translate16_t)_ldr_sp_imm_16, THUMB_EXCUTER);			// 1001 1xx
+	set_sub_table_value(table->load_store_single_table16, 0x00, 0x27, (thumb_translate_t)_unpredictable_16, THUMB_EXCUTER);		// 0000 000 ~ 0010 011
+	set_sub_table_value(table->load_store_single_table16, 0x28, 0x28, (thumb_translate_t)_str_reg_16, THUMB_EXCUTER);				// 0101 000
+	set_sub_table_value(table->load_store_single_table16, 0x29, 0x29, (thumb_translate_t)_strh_reg_16, THUMB_EXCUTER);			// 0101 001
+	set_sub_table_value(table->load_store_single_table16, 0x2A, 0x2A, (thumb_translate_t)_strb_reg_16, THUMB_EXCUTER);			// 0101 010
+	set_sub_table_value(table->load_store_single_table16, 0x2B, 0x2B, (thumb_translate_t)_ldrsb_reg_16, THUMB_EXCUTER);			// 0101 011
+	set_sub_table_value(table->load_store_single_table16, 0x2C, 0x2C, (thumb_translate_t)_ldr_reg_16, THUMB_EXCUTER);				// 0101	100
+	set_sub_table_value(table->load_store_single_table16, 0x2D, 0x2D, (thumb_translate_t)_ldrh_reg_16, THUMB_EXCUTER);			// 0101 101
+	set_sub_table_value(table->load_store_single_table16, 0x2E, 0x2E, (thumb_translate_t)_ldrb_reg_16, THUMB_EXCUTER);			// 0101 110
+	set_sub_table_value(table->load_store_single_table16, 0x2F, 0x2F, (thumb_translate_t)_ldrsh_reg_16, THUMB_EXCUTER);			// 0101 111
+	set_sub_table_value(table->load_store_single_table16, 0x2F, 0x2F, (thumb_translate_t)_ldrsh_reg_16, THUMB_EXCUTER);			// 0101 111
+	set_sub_table_value(table->load_store_single_table16, 0x30, 0x33, (thumb_translate_t)_str_imm_16, THUMB_EXCUTER);				// 0110 0xx
+	set_sub_table_value(table->load_store_single_table16, 0x34, 0x37, (thumb_translate_t)_ldr_imm_16, THUMB_EXCUTER);				// 0110 1xx
+	set_sub_table_value(table->load_store_single_table16, 0x38, 0x3B, (thumb_translate_t)_strb_imm_16, THUMB_EXCUTER);			// 0111 0xx
+	set_sub_table_value(table->load_store_single_table16, 0x3C, 0x3F, (thumb_translate_t)_ldrb_imm_16, THUMB_EXCUTER);			// 0111 1xx
+	set_sub_table_value(table->load_store_single_table16, 0x40, 0x43, (thumb_translate_t)_strh_imm_16, THUMB_EXCUTER);			// 1000 0xx
+	set_sub_table_value(table->load_store_single_table16, 0x44, 0x47, (thumb_translate_t)_ldrh_imm_16, THUMB_EXCUTER);			// 1000 1xx
+	set_sub_table_value(table->load_store_single_table16, 0x48, 0x4B, (thumb_translate_t)_str_sp_imm_16, THUMB_EXCUTER);			// 1001 0xx
+	set_sub_table_value(table->load_store_single_table16, 0x4C, 0x4F, (thumb_translate_t)_ldr_sp_imm_16, THUMB_EXCUTER);			// 1001 1xx
 
 	// misc 16-bit instructions A5-161
-	set_sub_table_value(table->misc_16bit_ins_table16, 0x00, MISC_16BIT_INS_SIZE-1, (thumb_translate16_t)_unpredictable_16, THUMB_EXCUTER);
-	set_sub_table_value(table->misc_16bit_ins_table16, 0x00, 0x03, (thumb_translate16_t)_add_sp_sp_imm_16, THUMB_EXCUTER);
-	set_sub_table_value(table->misc_16bit_ins_table16, 0x04, 0x07, (thumb_translate16_t)_sub_sp_sp_imm_16, THUMB_EXCUTER);
-	set_sub_table_value(table->misc_16bit_ins_table16, 0x08, 0x0F, (thumb_translate16_t)_cbnz_cbz_16, THUMB_EXCUTER);
-	set_sub_table_value(table->misc_16bit_ins_table16, 0x10, 0x11, (thumb_translate16_t)_sxth_16, THUMB_EXCUTER);
-	set_sub_table_value(table->misc_16bit_ins_table16, 0x12, 0x13, (thumb_translate16_t)_sxtb_16, THUMB_EXCUTER);
-	set_sub_table_value(table->misc_16bit_ins_table16, 0x14, 0x15, (thumb_translate16_t)_uxth_16, THUMB_EXCUTER);
-	set_sub_table_value(table->misc_16bit_ins_table16, 0x16, 0x17, (thumb_translate16_t)_uxtb_16, THUMB_EXCUTER);
-	set_sub_table_value(table->misc_16bit_ins_table16, 0x18, 0x1F, (thumb_translate16_t)_cbnz_cbz_16, THUMB_EXCUTER);
-	set_sub_table_value(table->misc_16bit_ins_table16, 0x20, 0x2F, (thumb_translate16_t)_push_16, THUMB_EXCUTER);
-	set_sub_table_value(table->misc_16bit_ins_table16, 0x48, 0x4F, (thumb_translate16_t)_cbnz_cbz_16, THUMB_EXCUTER);
-	set_sub_table_value(table->misc_16bit_ins_table16, 0x50, 0x51, (thumb_translate16_t)_rev_16, THUMB_EXCUTER);
-	set_sub_table_value(table->misc_16bit_ins_table16, 0x52, 0x53, (thumb_translate16_t)_rev16_16, THUMB_EXCUTER);
-	set_sub_table_value(table->misc_16bit_ins_table16, 0x56, 0x57, (thumb_translate16_t)_revsh_16, THUMB_EXCUTER);
-	set_sub_table_value(table->misc_16bit_ins_table16, 0x58, 0x5F, (thumb_translate16_t)_cbnz_cbz_16, THUMB_EXCUTER);
-	set_sub_table_value(table->misc_16bit_ins_table16, 0x60, 0x6F, (thumb_translate16_t)_pop_16, THUMB_EXCUTER);
-	set_sub_table_value(table->misc_16bit_ins_table16, 0x70, 0x77, (thumb_translate16_t)_bkpt_16, THUMB_EXCUTER);
-	set_sub_table_value(table->misc_16bit_ins_table16, 0x78, 0x7F, (thumb_translate16_t)_it_hint_16, THUMB_DECODER);
+	set_sub_table_value(table->misc_16bit_ins_table16, 0x00, MISC_16BIT_INS_SIZE-1, (thumb_translate_t)_unpredictable_16, THUMB_EXCUTER);
+	set_sub_table_value(table->misc_16bit_ins_table16, 0x00, 0x03, (thumb_translate_t)_add_sp_sp_imm_16, THUMB_EXCUTER);
+	set_sub_table_value(table->misc_16bit_ins_table16, 0x04, 0x07, (thumb_translate_t)_sub_sp_sp_imm_16, THUMB_EXCUTER);
+	set_sub_table_value(table->misc_16bit_ins_table16, 0x08, 0x0F, (thumb_translate_t)_cbnz_cbz_16, THUMB_EXCUTER);
+	set_sub_table_value(table->misc_16bit_ins_table16, 0x10, 0x11, (thumb_translate_t)_sxth_16, THUMB_EXCUTER);
+	set_sub_table_value(table->misc_16bit_ins_table16, 0x12, 0x13, (thumb_translate_t)_sxtb_16, THUMB_EXCUTER);
+	set_sub_table_value(table->misc_16bit_ins_table16, 0x14, 0x15, (thumb_translate_t)_uxth_16, THUMB_EXCUTER);
+	set_sub_table_value(table->misc_16bit_ins_table16, 0x16, 0x17, (thumb_translate_t)_uxtb_16, THUMB_EXCUTER);
+	set_sub_table_value(table->misc_16bit_ins_table16, 0x18, 0x1F, (thumb_translate_t)_cbnz_cbz_16, THUMB_EXCUTER);
+	set_sub_table_value(table->misc_16bit_ins_table16, 0x20, 0x2F, (thumb_translate_t)_push_16, THUMB_EXCUTER);
+	set_sub_table_value(table->misc_16bit_ins_table16, 0x48, 0x4F, (thumb_translate_t)_cbnz_cbz_16, THUMB_EXCUTER);
+	set_sub_table_value(table->misc_16bit_ins_table16, 0x50, 0x51, (thumb_translate_t)_rev_16, THUMB_EXCUTER);
+	set_sub_table_value(table->misc_16bit_ins_table16, 0x52, 0x53, (thumb_translate_t)_rev16_16, THUMB_EXCUTER);
+	set_sub_table_value(table->misc_16bit_ins_table16, 0x56, 0x57, (thumb_translate_t)_revsh_16, THUMB_EXCUTER);
+	set_sub_table_value(table->misc_16bit_ins_table16, 0x58, 0x5F, (thumb_translate_t)_cbnz_cbz_16, THUMB_EXCUTER);
+	set_sub_table_value(table->misc_16bit_ins_table16, 0x60, 0x6F, (thumb_translate_t)_pop_16, THUMB_EXCUTER);
+	set_sub_table_value(table->misc_16bit_ins_table16, 0x70, 0x77, (thumb_translate_t)_bkpt_16, THUMB_EXCUTER);
+	set_sub_table_value(table->misc_16bit_ins_table16, 0x78, 0x7F, (thumb_translate_t)_it_hint_16, THUMB_DECODER);
 
 	// conditional branch and supervisor call
-	set_sub_table_value(table->con_branch_svc_table16, 0x00, 0x0D, (thumb_translate16_t)_con_b_16, THUMB_EXCUTER);
-	set_sub_table_value(table->con_branch_svc_table16, 0x0E, 0x0E, (thumb_translate16_t)_unpredictable_16, THUMB_EXCUTER);
-	set_sub_table_value(table->con_branch_svc_table16, 0x0F, 0x0F, (thumb_translate16_t)_svc_16, THUMB_EXCUTER);
+	set_sub_table_value(table->con_branch_svc_table16, 0x00, 0x0D, (thumb_translate_t)_con_b_16, THUMB_EXCUTER);
+	set_sub_table_value(table->con_branch_svc_table16, 0x0E, 0x0E, (thumb_translate_t)_unpredictable_16, THUMB_EXCUTER);
+	set_sub_table_value(table->con_branch_svc_table16, 0x0F, 0x0F, (thumb_translate_t)_svc_16, THUMB_EXCUTER);
+
+
+	/*************************************** 32 bit thumb instructions *******************************************************/
+	// load multiple and store multiple A5-171
+	set_base_table_value(table->main_table32, 0x088, 0x088, (thumb_translate_t)_stm_32, THUMB_EXCUTER);
+	set_base_table_value(table->main_table32, 0x08A, 0x08A, (thumb_translate_t)_stm_32, THUMB_EXCUTER);
+	set_base_table_value(table->main_table32, 0x089, 0x089, (thumb_translate_t)ldm_pop_bundle, THUMB_DECODER);
+	set_base_table_value(table->main_table32, 0x08B, 0x08B, (thumb_translate_t)ldm_pop_bundle, THUMB_DECODER);
+	set_base_table_value(table->main_table32, 0x090, 0x090, (thumb_translate_t)stmdb_push_bundle, THUMB_DECODER);
+	set_base_table_value(table->main_table32, 0x092, 0x092, (thumb_translate_t)stmdb_push_bundle, THUMB_DECODER);
+	set_base_table_value(table->main_table32, 0x091, 0x091, (thumb_translate_t)_ldmdb_32, THUMB_EXCUTER);
+	set_base_table_value(table->main_table32, 0x093, 0x093, (thumb_translate_t)_ldmdb_32, THUMB_EXCUTER);
 }
 
 bool_t is_16bit_code(uint16_t opcode)
@@ -1214,9 +1382,14 @@ thumb_translate16_t thumb_parse_opcode16(uint16_t opcode, cpu_t* cpu)
 	}
 }
 
-void parse_opcode32(uint32_t opcode, armv7m_instruct_t* ins)
+thumb_translate32_t thumb_parse_opcode32(uint32_t opcode, cpu_t *cpu)
 {
-//	ins->ins_table->base_table32[opcode >> 13](opcode, ins);
+	thumb_decode_t decode = M_translate_table->main_table32[(opcode >> 20) & 0x1FF];
+	if(decode.type == THUMB_DECODER){
+		return (thumb_translate32_t)decode.translater32(opcode, cpu);
+	}else{
+		return decode.translater32;
+	}
 }
 
 void armv7m_next_PC_16(armv7m_reg_t* regs)

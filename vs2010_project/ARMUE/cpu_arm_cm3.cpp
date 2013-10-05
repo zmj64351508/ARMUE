@@ -48,11 +48,11 @@ int armcm3_startup(cpu_t* cpu)
 uint32_t fetch_armcm3_cpu(cpu_t* cpu)
 {
 	/* needn't fetch from memory */
-	if(cpu->run_info.next_ins != 0){
-		return (uint32_t)cpu->run_info.next_ins;
-	}
+	//if(cpu->run_info.next_ins != 0){
+	//	return (uint32_t)cpu->run_info.next_ins;
+	//}
 
-	/* fetch opcode according to PC */
+	/* always fetch opcode according to PC */
 	memory_map_t* memory_map = cpu->memory_map;
 	uint32_t addr = ((armv7m_reg_t*)cpu->regs)->PC;
 	uint32_t opcode;
@@ -71,17 +71,19 @@ ins_t decode_armcm3_cpu(cpu_t* cpu, void* opcode)
 	/* decode the opcode. If opcode is 16bit coded, next_ins will store the next 16bit of this 32bit opcode
 	   so that we don't need to read memory again to fetch opcode. When next_ins = 0, it indicates that no
 	   more opcode is available and need to fetch code from memory */
-	ins_info.opcode = opcode32;
 	if(is_16bit_code(opcode32) == TRUE){
+		ins_info.opcode = opcode32;
 		ins_info.excute = thumb_parse_opcode16(opcode32, cpu);
 		ins_info.length = 16;
 		cpu->run_info.ins_type = ARM_INS_THUMB16;
 		cpu->run_info.next_ins = opcode32 >> 16;
 	}else{
+		/* exchange low and high 16bit */
+		ins_info.opcode = ((opcode32 >> 16) & 0x0000FFFF) | ((opcode32 << 16) & 0xFFFF0000);
+		ins_info.excute = thumb_parse_opcode32((uint32_t)ins_info.opcode, cpu);
 		ins_info.length = 32;
 		cpu->run_info.next_ins = 0;
 		cpu->run_info.ins_type = ARM_INS_THUMB32;
-		LOG(LOG_WARN, "32bit instruction: 0x%04X%04X\n", opcode32&0xFFFF, (opcode32>>16)&0xFFFF);
 	}
 	return ins_info;
 }
@@ -104,6 +106,7 @@ void excute_armcm3_cpu(cpu_t* cpu, ins_t ins_info){
 		}
 	}else{
 		// 32bit insturction
+		((thumb_translate32_t)ins_info.excute)((uint32_t)ins_info.opcode, cpu);
 		return;
 	}
 

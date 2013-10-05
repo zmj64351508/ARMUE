@@ -16,16 +16,20 @@ enum ARM_INS_TYPE{
 
 // 16bit thumb-2 instruction type
 struct armv7m_instruct_t;
+typedef void (*_armv7m_translate_t)(uint32_t opcode, struct cpu_t* cpu);
+typedef _armv7m_translate_t (*thumb_translate_t)(uint32_t opcode, struct cpu_t* cpu);
+
 typedef void (*_armv7m_translate16_t)(uint16_t opcode, struct cpu_t* cpu);
 typedef _armv7m_translate16_t (*thumb_translate16_t)(uint16_t opcode, struct cpu_t* cpu);
 
-typedef void (*_armv7m_translate32_t)(uint16_t opcode, struct cpu_t* cpu);
-typedef _armv7m_translate32_t (*thumb_translate32_t)(uint16_t opcode, struct cpu_t* cpu);
+typedef void (*_armv7m_translate32_t)(uint32_t opcode, struct cpu_t* cpu);
+typedef _armv7m_translate32_t (*thumb_translate32_t)(uint32_t opcode, struct cpu_t* cpu);
 
 #define THUMB_DECODER 1
 #define THUMB_EXCUTER 2
 typedef struct thumb_decode_t{
 	union{
+		thumb_translate_t translater;
 		thumb_translate16_t translater16;
 		thumb_translate32_t translater32;
 	};
@@ -40,7 +44,7 @@ typedef struct thumb_decode_t{
 #define MISC_16BIT_INS_SIZE				128
 #define CON_BRANCH_SVC_SIZE_16			16
 
-#define BASE_TABLE_SIZE_32				256
+#define MAIN_TABLE_SIZE_32				512
 
 // all the classifictions are followed by the definition of "ARMv7-m Architecture Reference manual A5-156"
 typedef struct {
@@ -55,7 +59,8 @@ typedef struct {
 	thumb_decode_t		misc_16bit_ins_table16[MISC_16BIT_INS_SIZE];
 	thumb_decode_t		con_branch_svc_table16[CON_BRANCH_SVC_SIZE_16];
 
-	thumb_decode_t		base_table32[BASE_TABLE_SIZE_32];
+	// the main 32 bit thumb decode table
+	thumb_decode_t		main_table32[MAIN_TABLE_SIZE_32];
 }thumb_instruct_table_t;
 
 void armv7m_print_reg_val(armv7m_reg_t* regs);
@@ -63,6 +68,7 @@ void armv7m_print_reg_val(armv7m_reg_t* regs);
 bool_t is_16bit_code(uint16_t opcode);
 uint32_t align_address(uint32_t address);
 thumb_translate16_t thumb_parse_opcode16(uint16_t opcode, cpu_t* cpu);
+thumb_translate32_t thumb_parse_opcode32(uint32_t opcode, cpu_t *cpu);
 void armv7m_next_PC(cpu_t* cpu, int ins_length);
 int armv7m_PC_modified(cpu_t* cpu);
 int ins_thumb_destory(cpu_t* cpu);

@@ -261,6 +261,8 @@ void _revsh(uint32_t Rm, uint32_t Rd, armv7m_reg_t* regs);
 void _pop(uint32_t registers, uint32_t bitcount, cpu_t* cpu);
 void _it(uint32_t firstcond, uint32_t mask, armv7m_reg_t* regs, thumb_state* state);
 void _stm(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_t* cpu);
+void _stmdb(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_t* cpu);
 void _ldm(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_t* cpu);
+void _ldmdb(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_t* cpu);
 void _b(int32_t imm32, uint8_t cond, cpu_t* cpu);
 #endif

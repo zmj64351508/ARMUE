@@ -2124,6 +2124,44 @@ void _stm(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_
 }
 
 /***********************************
+<<ARMv7-M Architecture Reference Manual A7-471>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+	address = R[n] - 4*BitCount(registers);
+
+	for i = 0 to 14
+		if registers<i> == ¡®1¡¯ then
+			MemA[address,4] = R[i];
+			address = address + 4;
+
+	if wback then R[n] = R[n] - 4*BitCount(registers);
+**************************************/
+void _stmdb(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_t* cpu)
+{
+	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+	uint32_t address = Rn_val - (bitcount << 2);
+
+	uint32_t data;
+	int i;
+	for(i = 0; i < 15; i++){
+		if(registers & (1ul << i)){
+			data = GET_REG_VAL(regs, i);
+			MemA(address, 4, (uint8_t*)&data, MEM_WRITE, cpu);
+			address += 4;
+		}
+	}
+
+	if(wback){
+		Rn_val -= bitcount << 2;
+		SET_REG_VAL(regs, Rn, Rn_val);
+	}
+}
+
+/***********************************
 <<ARMv7-M Architecture Reference Manual A7-283>>
 if ConditionPassed() then
 	EncodingSpecificOperations();
@@ -2169,6 +2207,51 @@ void _ldm(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_
 
 }
 
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-285>>
+if ConditionPassed() then
+	EncodingSpecificOperations();
+	address = R[n] - 4*BitCount(registers);
+
+	for i = 0 to 14
+		if registers<i> == ¡®1¡¯ then
+			R[i] = MemA[address,4]; address = address + 4;
+	if registers<15> == ¡®1¡¯ then
+		LoadWritePC(MemA[address,4]);
+
+	if wback && registers<n> == ¡®0¡¯ then R[n] = R[n] - 4*BitCount(registers);
+**************************************/
+void _ldmdb(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_t* cpu)
+{
+	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+	uint32_t address = Rn_val - (bitcount << 2);
+
+	uint32_t data;
+	int i;
+	for(i = 0; i < 15; i++){
+		if(registers & (1ul << i)){
+			MemA(address, 4, (uint8_t*)&data, MEM_READ, cpu);
+			SET_REG_VAL(regs, i, data);
+			address += 4;
+		}
+	}
+
+	/* Update SP before LoadWrite PC */
+	if(wback && ((registers & (1ul << Rn)) == 0)){
+		Rn_val -= bitcount << 2;
+		SET_REG_VAL(regs, Rn, Rn_val);
+	}
+	
+	if(registers & (1ul << 15)){
+		MemA(address, 4, (uint8_t*)&data, MEM_READ, cpu);
+		LoadWritePC(data, cpu);
+	}
+
+}
 /***********************************
 <<ARMv7-M Architecture Reference Manual A7-239>>
 if ConditionPassed() then
