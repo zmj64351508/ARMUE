@@ -1,0 +1,177 @@
+<html>
+<body>
+<pre>
+<h1>µVision Build Log</h1>
+<h2>Project:</h2>
+E:\GitHub\ARMUE\vs2010_project\cortex_m3_test\cortex_m3_test.uvproj
+Project File Date:  10/04/2013
+
+<h2>Output:</h2>
+Build target 'Target 1'
+assembling start.s...
+start.s(181): error: A1244E: Missing '!'
+start.s(186): error: A1816E: Unknown opcode 'SVC' in CODE16, but exists in THUMB
+Target not created
+Build target 'Target 1'
+assembling start.s...
+start.s(218): warning: A1608W: MOV pc,<rn> instruction used, but BX <rn> is preferred
+linking...
+cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+Program Size: Code=324 RO-data=192 RW-data=4 ZI-data=500  
+FromELF: creating hex file...
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
+"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
+Build target 'Target 1'
+assembling start.s...
+start.s(222): warning: A1608W: MOV pc,<rn> instruction used, but BX <rn> is preferred
+linking...
+cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+Program Size: Code=336 RO-data=192 RW-data=4 ZI-data=500  
+FromELF: creating hex file...
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
+"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
+Build target 'Target 1'
+assembling start.s...
+start.s(222): warning: A1608W: MOV pc,<rn> instruction used, but BX <rn> is preferred
+linking...
+cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+Program Size: Code=332 RO-data=192 RW-data=4 ZI-data=500  
+FromELF: creating hex file...
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
+"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
+assembling start.s...
+start.s(222): warning: A1608W: MOV pc,<rn> instruction used, but BX <rn> is preferred
+start.s - 0 Error(s), 1 Warning(s).
+Build target 'Target 1'
+linking...
+cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+Program Size: Code=332 RO-data=192 RW-data=4 ZI-data=500  
+FromELF: creating hex file...
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
+"cortex_m3_test.axf" - 0 Error(s), 1 Warning(s).
+Build target 'Target 1'
+assembling start.s...
+start.s(222): warning: A1608W: MOV pc,<rn> instruction used, but BX <rn> is preferred
+start.s(309): warning: A1581W: Added 2 bytes of padding at address 0x142
+linking...
+cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+Program Size: Code=332 RO-data=192 RW-data=4 ZI-data=500  
+FromELF: creating hex file...
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
+"cortex_m3_test.axf" - 0 Error(s), 3 Warning(s).
+Build target 'Target 1'
+assembling start.s...
+start.s(222): warning: A1608W: MOV pc,<rn> instruction used, but BX <rn> is preferred
+linking...
+cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+Program Size: Code=328 RO-data=192 RW-data=4 ZI-data=500  
+FromELF: creating hex file...
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
+"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
+Build target 'Target 1'
+assembling start.s...
+start.s(185): error: A1215E: Bad register list symbol
+Target not created
+Build target 'Target 1'
+assembling start.s...
+start.s(222): warning: A1608W: MOV pc,<rn> instruction used, but BX <rn> is preferred
+start.s(309): warning: A1581W: Added 2 bytes of padding at address 0x142
+linking...
+cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+Program Size: Code=332 RO-data=192 RW-data=4 ZI-data=500  
+FromELF: creating hex file...
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
+"cortex_m3_test.axf" - 0 Error(s), 3 Warning(s).
+Build target 'Target 1'
+assembling start.s...
+start.s(222): warning: A1608W: MOV pc,<rn> instruction used, but BX <rn> is preferred
+linking...
+cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+Program Size: Code=332 RO-data=192 RW-data=4 ZI-data=500  
+FromELF: creating hex file...
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
+"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
+Build target 'Target 1'
+assembling start.s...
+start.s(223): warning: A1608W: MOV pc,<rn> instruction used, but BX <rn> is preferred
+linking...
+cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+Program Size: Code=332 RO-data=192 RW-data=4 ZI-data=500  
+FromELF: creating hex file...
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
+"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
+assembling start.s...
+start.s(223): warning: A1608W: MOV pc,<rn> instruction used, but BX <rn> is preferred
+start.s(310): warning: A1581W: Added 2 bytes of padding at address 0x142
+start.s - 0 Error(s), 2 Warning(s).
+Rebuild target 'Target 1'
+assembling start.s...
+start.s(223): warning: A1608W: MOV pc,<rn> instruction used, but BX <rn> is preferred
+start.s(310): warning: A1581W: Added 2 bytes of padding at address 0x142
+linking...
+cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+Program Size: Code=332 RO-data=192 RW-data=4 ZI-data=500  
+FromELF: creating hex file...
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
+"cortex_m3_test.axf" - 0 Error(s), 3 Warning(s).
+Rebuild target 'Target 1'
+assembling start.s...
+start.s(223): warning: A1608W: MOV pc,<rn> instruction used, but BX <rn> is preferred
+linking...
+cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+Program Size: Code=332 RO-data=192 RW-data=4 ZI-data=500  
+FromELF: creating hex file...
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
+"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
+Build target 'Target 1'
+assembling start.s...
+start.s(223): warning: A1608W: MOV pc,<rn> instruction used, but BX <rn> is preferred
+start.s(310): warning: A1581W: Added 2 bytes of padding at address 0x142
+linking...
+cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+Program Size: Code=332 RO-data=192 RW-data=4 ZI-data=500  
+FromELF: creating hex file...
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
+"cortex_m3_test.axf" - 0 Error(s), 3 Warning(s).
+Build target 'Target 1'
+assembling start.s...
+start.s(223): warning: A1608W: MOV pc,<rn> instruction used, but BX <rn> is preferred
+linking...
+cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+Program Size: Code=332 RO-data=192 RW-data=4 ZI-data=500  
+FromELF: creating hex file...
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
+"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
+Build target 'Target 1'
+assembling start.s...
+start.s(225): warning: A1608W: MOV pc,<rn> instruction used, but BX <rn> is preferred
+linking...
+cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+Program Size: Code=336 RO-data=192 RW-data=4 ZI-data=500  
+FromELF: creating hex file...
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
+"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
+Build target 'Target 1'
+assembling start.s...
+start.s(225): warning: A1608W: MOV pc,<rn> instruction used, but BX <rn> is preferred
+linking...
+cortex_m3_test.axf: Warning: L6305W: Image does not have an entry point. (Not specified or not set due to multiple choices.)
+Program Size: Code=332 RO-data=192 RW-data=4 ZI-data=500  
+FromELF: creating hex file...
+User command #1: C:\Keil\ARM\BIN40\fromelf.exe --bin -o ./test.bin ./cortex_m3_test.axf
+User command #2: C:\Keil\ARM\BIN40\fromelf.exe -c -o ./test.txt ./cortex_m3_test.axf
+"cortex_m3_test.axf" - 0 Error(s), 2 Warning(s).
