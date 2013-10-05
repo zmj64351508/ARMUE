@@ -163,10 +163,9 @@ pip-log.txt
 .DS_Store
 
 # Document
-vs2010_project/reference
+reference
 
 # tests
-vs2010_project/cortex_m3_test
-vs2010_project/test.rom
-vs2010_project/SourceMonitor.smproj
-
+cortex_m3_test
+test.rom
+ARMUE/build
