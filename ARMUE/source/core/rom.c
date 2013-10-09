@@ -60,7 +60,8 @@ error_code_t fill_rom_with_zero(rom_t *rom)
 		return ERROR_NULL_POINTER;
 	}
 
-	for(uint32_t i = 0; i < rom->size; i++){
+    int i;
+	for(i = 0; i < rom->size; i++){
 		fputc(0, rom->rom_file);
 	}
 
@@ -275,15 +276,16 @@ uint32_t fetch_rom_data32(uint32_t offset_addr, rom_t* rom)
 
 	switch_rom_rw(rom, ROM_READ);
 
+    int i;
 	if(cur_offset == rom->last_offset + 1){
-		for(int i = 0; i < 4; i++){
+		for(i = 0; i < 4; i++){
 			buf[i] = fgetc(rom->rom_file);
 		}
 		//fgets(buf, 4, rom->rom_file);
 		rom->last_offset += 4;
 	}else{
 		fseek(rom->rom_file, cur_offset, SEEK_SET);
-		for(int i = 0; i < 4; i++){
+		for(i = 0; i < 4; i++){
 			buf[i] = fgetc(rom->rom_file);
 		}
 		//fgets(buf, 4, rom->rom_file);
@@ -299,15 +301,16 @@ uint16_t fetch_rom_data16(uint32_t offset_addr, rom_t* rom)
 	int8_t buf[2] = {0};
 	switch_rom_rw(rom, ROM_READ);
 
+    int i;
 	if(cur_offset == rom->last_offset + 1){
-		for(int i = 0; i < 2; i++){
+		for(i = 0; i < 2; i++){
 			buf[i] = getc(rom->rom_file);
 		}
 		//fgets(buf, 4, rom->rom_file);
 		rom->last_offset += 2;
 	}else{
 		fseek(rom->rom_file, cur_offset, SEEK_SET);
-		for(int i = 0; i < 2; i++){
+		for(i = 0; i < 2; i++){
 			buf[i] = getc(rom->rom_file);
 		}
 		//fgets(buf, 4, rom->rom_file);

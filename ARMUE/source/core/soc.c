@@ -4,7 +4,7 @@
 
 
 int startup_soc(soc_t* soc)
-{	
+{
 	if(soc == NULL || soc->cpu == NULL || soc->cpu[0]->memory_map == NULL){
 		return ERROR_NULL_POINTER;
 	}
@@ -12,7 +12,7 @@ int startup_soc(soc_t* soc)
 
 	cpu_t *cpu = soc->cpu[0];
 
-	if(cpu->startup != NULL){	
+	if(cpu->startup != NULL){
 		retval = cpu->startup(cpu);
 	}
 
@@ -122,7 +122,8 @@ error_code_t destory_soc(soc_t **soc)
 		return ERROR_NULL_POINTER;
 	}
 
-	for(int i = 0; i < SOC_CPU_MAX; i++){
+    int i;
+	for(i = 0; i < SOC_CPU_MAX; i++){
 		module_t* cpu_module = (module_t*)get_cpu_module((*soc)->cpu[i]);
 		if(cpu_module != NULL){
 			cpu_module->destory_cpu(&(*soc)->cpu[i]);

@@ -103,19 +103,19 @@ do{\
 	regs->xPSR |= ((value_8bit) & 0x3) << 25; \
 }while(0)
 
-inline uint32_t InITBlock(armv7m_reg_t* regs)
+static inline uint32_t InITBlock(armv7m_reg_t* regs)
 {
 	uint8_t ITstate = GET_ITSTATE(regs);
 	return (ITstate & 0xF) != 0;
 }
 
-inline uint32_t LastInITBlock(armv7m_reg_t* regs)
+static inline uint32_t LastInITBlock(armv7m_reg_t* regs)
 {
 	uint8_t ITstate = GET_ITSTATE(regs);
 	return (ITstate & 0xF) == 0x8;
 }
 
-inline void ITAdvance(armv7m_reg_t* regs)
+static inline void ITAdvance(armv7m_reg_t* regs)
 {
 	uint8_t itstat =  GET_ITSTATE(regs);
 	uint8_t low4bit = itstat & 0xF;
@@ -129,7 +129,7 @@ inline void ITAdvance(armv7m_reg_t* regs)
 	}
 }
 
-inline uint8_t check_and_reset_excuting_IT(thumb_state* state)
+static inline uint8_t check_and_reset_excuting_IT(thumb_state* state)
 {
 	uint8_t retval = state->excuting_IT;
 	state->excuting_IT = 0;
@@ -139,12 +139,12 @@ inline uint8_t check_and_reset_excuting_IT(thumb_state* state)
 // DOWN_ALIGN(a, n) == Align(a, 2^n)
 #define DOWN_ALIGN(val, order) ((val) & (0xFFFFFFFFUL << order))
 #define CHECK_PC(PC_val) ((PC_val) & 0x1ul)
-inline uint32_t Align(uint32_t address, uint32_t size)
+static inline uint32_t Align(uint32_t address, uint32_t size)
 {
 	return address-address%size;
 }
 
-inline uint32_t GET_REG_VAL(armv7m_reg_t* regs, uint32_t Rx){
+static inline uint32_t GET_REG_VAL(armv7m_reg_t* regs, uint32_t Rx){
 	uint32_t val = 0;
 	/* PC is special, it always return the value aligned to 4*/
 	if(Rx == PC_INDEX){
@@ -157,7 +157,7 @@ inline uint32_t GET_REG_VAL(armv7m_reg_t* regs, uint32_t Rx){
 	return val;
 }
 
-inline void SET_REG_VAL(armv7m_reg_t* regs, uint32_t Rx, uint32_t val){
+static inline void SET_REG_VAL(armv7m_reg_t* regs, uint32_t Rx, uint32_t val){
 	uint32_t modified = val;
 	switch(Rx){
 	case SP_INDEX:
@@ -169,13 +169,13 @@ inline void SET_REG_VAL(armv7m_reg_t* regs, uint32_t Rx, uint32_t val){
 	SET_REG_VAL_UNCON(regs, Rx, modified);
 }
 
-inline uint8_t get_bit(uint32_t* reg, uint32_t bit_pos)
+static inline uint8_t get_bit(uint32_t* reg, uint32_t bit_pos)
 {
 	return (*reg & bit_pos) == 0 ? 0: 1;
 }
 
 // if bit_val != 0 then set bit to 1. bit_pos is defined above
-inline void set_bit(uint32_t* reg, uint32_t bit_pos,int bit_val)
+static inline void set_bit(uint32_t* reg, uint32_t bit_pos,int bit_val)
 {
 	if(bit_val == 0){
 		*reg &= ~bit_pos;
@@ -184,7 +184,7 @@ inline void set_bit(uint32_t* reg, uint32_t bit_pos,int bit_val)
 	}
 }
 
-inline uint32_t BitCount32(uint32_t bits)
+static inline uint32_t BitCount32(uint32_t bits)
 {
 	uint32_t count = 0;
 	while(bits != 0){

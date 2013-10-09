@@ -17,7 +17,8 @@ thumb_instruct_table_t *A_translate_table; // table for ARMvX-A, implement in th
 error_code_t set_base_table_value(thumb_decode_t* table, int start, int end, thumb_translate_t value, uint8_t type)
 {
 	thumb_decode_t decoder;
-	for(int i = start; i <= end; i++){
+	int i;
+	for(i = start; i <= end; i++){
 		decoder.translater = value;
 		decoder.type = type;
 		table[i] = decoder;
@@ -29,7 +30,8 @@ error_code_t set_base_table_value(thumb_decode_t* table, int start, int end, thu
 
 void armv7m_print_reg_val(armv7m_reg_t* regs)
 {
-	for(int i = 0; i < 13; i++){
+    int i;
+	for(i = 0; i < 13; i++){
 		printf("R%-3d=0x%08x\n", i, regs->R[i]);
 	}
 

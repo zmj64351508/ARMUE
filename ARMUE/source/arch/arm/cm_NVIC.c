@@ -50,11 +50,11 @@ uint32_t ReturnAddress(int excep_num, cpu_t *cpu)
 	}
 }
 
-void PushStack(int excep_num, cpu_t *cpu) 
+void PushStack(int excep_num, cpu_t *cpu)
 {
 	armv7m_reg_t *regs = ARMv7m_GET_REGS(cpu);
 	thumb_state *state = ARMv7m_GET_STATE(cpu);
-	
+
 	int framesize;
 	uint32_t forcealign = 0;
 	/*
@@ -84,7 +84,7 @@ void PushStack(int excep_num, cpu_t *cpu)
 	frameptralign = (regs->SP_bank[banked_sp] >> 2) & forcealign;
 	regs->SP_bank[banked_sp] = (regs->SP_bank[banked_sp] - framesize) & spmask;
 	frameptr = regs->SP_bank[banked_sp];
-	
+
 	uint32_t regval;
 	regval = GET_REG_VAL(regs, 0);
 	MemA(frameptr, 4, (uint8_t*)&regval, MEM_WRITE, cpu);
@@ -139,7 +139,7 @@ void ExceptionTaken(int excep_num, cpu_t *cpu)
 	SET_CONTROL_SPSEL(regs, 0);
 	NVIC_info->exception_active[excep_num] = 1;
 	NVIC_info->nested_exception++;
-	
+
 	// SCS_UpdateStatusRegs
 	// ClearExclusiveLocal
 	// SetEventRegister
@@ -213,7 +213,7 @@ void ExceptionReturn(uint32_t exc_return, cpu_t *cpu)
 
 	cpu->run_info.next_ins = 0;
 
-	/* 
+	/*
 	if HaveFPExt(){
 		if((exc_return & 0x00FFFFE0) != 0x00FFFFE0) unpredictable
 	}else{
@@ -297,7 +297,7 @@ rom_t* find_startup_rom(memory_map_t* memory)
 	if(region == NULL || region->type != MEMORY_REGION_ROM){
 		return NULL;
 	}
-	return (rom_t*)region->region_data;	
+	return (rom_t*)region->region_data;
 }
 
 inline int cm_NVIC_get_preempt_proi(int cm_prio, cm_NVIC_t* info)
@@ -311,7 +311,8 @@ void cm_NVIC_vector_table_init(vector_exception_t *controller, memory_map_t *mem
 	uint32_t addr = 0;
 	uint32_t interrput_vector = 0;
 	int inpterrupt_table_size = controller->vector_table_size;
-	for(int i = 0; i < inpterrupt_table_size; i++){
+	int i;
+	for(i = 0; i < inpterrupt_table_size; i++){
 		read_memory(addr, (uint8_t*)&interrput_vector, 4, memory);
 		set_vector_table(controller, interrput_vector, i);
 		addr += 4;
@@ -363,7 +364,8 @@ int setup_cm_NVIC_info(vector_exception_t* controller, _I cpu_t *cpu)
 	info->prio_mask = 0xF;
 	info->nested_exception = 0;
 	info->interrupt_lines = cpu->cm_NVIC->vector_table_size / 32;
-	for(int i = 0; i < NVIC_MAX_EXCEPTION; i++){
+	int i;
+	for(i = 0; i < NVIC_MAX_EXCEPTION; i++){
 		info->exception_active[i] = 0;
 	}
 	return 0;
@@ -449,7 +451,7 @@ int cm_NVIC_check_exception(cpu_t* cpu)
 	/* If in handler, check preempt priority for the preemption */
 	if(state->mode == MODE_HANDLER){
 		int preempt_prio = cm_NVIC_get_preempt_proi(prio, NVIC_info);
-		int handling_preempt_prio = cm_NVIC_get_preempt_proi(cpu->cm_NVIC->prio_table[state->cur_exception], NVIC_info); 
+		int handling_preempt_prio = cm_NVIC_get_preempt_proi(cpu->cm_NVIC->prio_table[state->cur_exception], NVIC_info);
 		if(preempt_prio < handling_preempt_prio){
 			bheap_delete_top(NVIC_info->pending_list, &mod_prio, bheap_compare_int_smaller);
 			retval = mod_prio & 0x1FFul;

@@ -41,7 +41,7 @@ int bheap_insert(bheap_t *heap, void *data_in, bheap_compare_t compare)
 	int data_size = heap->data_size;
 	// data[cur_len] = data_in
 
-	int child_index, parent_index;
+	int child_index = 0, parent_index;
 	int i = cur_len;
 	uint8_t *parent;
 	while(i > 0){
@@ -74,7 +74,7 @@ int bheap_peek_top(bheap_t *heap, void *data_out)
 	return 0;
 }
 
-int bheap_delete_top(bheap_t *heap, void *data_out, bheap_compare_t compare) 
+int bheap_delete_top(bheap_t *heap, void *data_out, bheap_compare_t compare)
 {
 	if(heap->current_length == 0){
 		return -1;
@@ -86,7 +86,7 @@ int bheap_delete_top(bheap_t *heap, void *data_out, bheap_compare_t compare)
 	memcpy(data_out, data, data_size);
 
 	int i = 0;
-	uint8_t *lchild, *rchild, *parent, *smaller;
+	uint8_t *lchild, *rchild, *parent, *smaller = NULL;
 	uint8_t *last = data + data_size * (cur_len - 1);
 	while(i < cur_len / 2){
 		parent = data + data_size * i;
