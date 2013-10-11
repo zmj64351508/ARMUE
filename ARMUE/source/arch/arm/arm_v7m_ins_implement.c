@@ -5,22 +5,22 @@
 #include "cm_NVIC.h"
 #include <assert.h>
 
-void sync_banked_register(armv7m_reg_t *regs, int reg_index)
+void sync_banked_register(arm_reg_t *regs, int reg_index)
 {
 	switch(reg_index){
 	case SP_INDEX:
-		regs->SP_bank[regs->bank_index_sp] = regs->R[reg_index];
+		regs->SP_bank[regs->sp_in_use] = regs->R[reg_index];
 		break;
 	default:
 		break;
 	}
 }
 
-void restore_banked_register(armv7m_reg_t *regs, int reg_index)
+void restore_banked_register(arm_reg_t *regs, int reg_index)
 {
 	switch(reg_index){
 	case SP_INDEX:
-		regs->R[reg_index] = regs->SP_bank[regs->bank_index_sp];
+		regs->R[reg_index] = regs->SP_bank[regs->sp_in_use];
 	}
 }
 
@@ -100,12 +100,12 @@ inline void Shift(uint32_t val, SRType type, int amount, int carry_in, _O uint32
 	Shift_C(val, type, amount, carry_in, result, &carry_out);
 }
 
-inline uint8_t CurrentCond(armv7m_reg_t* regs)
+inline uint8_t CurrentCond(arm_reg_t* regs)
 {
 	return (GET_ITSTATE(regs)>>4) & 0xF;
 }
 
-uint8_t ConditionPassed(uint8_t branch_cond, armv7m_reg_t* regs)
+uint8_t ConditionPassed(uint8_t branch_cond, arm_reg_t* regs)
 {
 	if(!InITBlock(regs)){
 		return 1;
@@ -166,7 +166,7 @@ inline void AddWithCarry(uint32_t op1, uint32_t op2, uint32_t carry_in, uint32_t
 		uint16_t op1_high = (uint32_t)op1 >> 16;
 		uint16_t op2_low = op2 & 0xFFFF;
 		uint16_t op2_high = (op2) >> 16;
-		
+
 		// calculate low 16 bit carry
 		int low_carry;
 		uint32_t ulow_sum = (uint32_t)op1_low + (uint32_t)op2_low + (uint32_t)carry_in;
@@ -186,19 +186,19 @@ inline void AddWithCarry(uint32_t op1, uint32_t op2, uint32_t carry_in, uint32_t
 }
 
 /* <<ARMv7-M Architecture Reference Manual 630>> */
-inline void BranchTo(uint32_t address, armv7m_reg_t* regs)
+inline void BranchTo(uint32_t address, arm_reg_t* regs)
 {
 	SET_REG_VAL(regs, PC_INDEX, address);
 }
 
 /* <<ARMv7-M Architecture Reference Manual 47>> */
-inline void BranchWritePC(uint32_t address, armv7m_reg_t* regs)
+inline void BranchWritePC(uint32_t address, arm_reg_t* regs)
 {
 	BranchTo(DOWN_ALIGN(address, 1), regs);
 }
 
 /* <<ARMv7-M Architecture Reference Manual 48>> */
-inline void ALUWritePC(uint32_t address, armv7m_reg_t* regs)
+inline void ALUWritePC(uint32_t address, arm_reg_t* regs)
 {
 	BranchWritePC(address, regs);
 }
@@ -206,7 +206,7 @@ inline void ALUWritePC(uint32_t address, armv7m_reg_t* regs)
 /* <<ARMv7-M Architecture Reference Manual 47>> */
 void BXWritePC(uint32_t address, cpu_t* cpu)
 {
-	armv7m_reg_t *regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t *regs = ARMv7m_GET_REGS(cpu);
 	thumb_state *state = ARMv7m_GET_STATE(cpu);
 	uint32_t Tflag;
 	int CurrentMode = state->mode;
@@ -231,7 +231,7 @@ void armv7m_branch(uint32_t address, cpu_t* cpu)
 
 void armv7m_push(uint32_t reg_val, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 
 	uint32_t SP_val = GET_REG_VAL(regs, SP_INDEX);
 	SP_val -= 4;
@@ -249,7 +249,7 @@ inline void LoadWritePC(uint32_t address, cpu_t *cpu)
 }
 
 /* <<ARMv7-M Architecture Reference Manual B2-694>> */
-bool_t FindPriv(armv7m_reg_t* regs, thumb_state* state)
+bool_t FindPriv(arm_reg_t* regs, thumb_state* state)
 {
 	bool_t ispriv;
 	if(state->mode == MODE_HANDLER ||
@@ -290,7 +290,7 @@ int MemU_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv,
 /* <<ARMv7-M Architecture Reference Manual B2-696>> */
 int MemU(uint32_t address, int size, _IO uint8_t* buffer, int type, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
 	return MemU_with_priv(address, size, buffer, FindPriv(regs, state), type, cpu);
 }
@@ -300,7 +300,7 @@ int MemA_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv,
 	memory_map_t* memory = cpu->memory_map;
 	int retval;
 	if(address != Align(address, size)){
-		//TODO: These registers are memory mapped. So they need to be treated like peripherals. 
+		//TODO: These registers are memory mapped. So they need to be treated like peripherals.
 		/* UFSR.UNALIGENED = '1'
 		   ExceptionTaken(UsageFault)
 		 */
@@ -320,8 +320,8 @@ int MemA_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv,
 }
 
 int MemA(uint32_t address, int size, _IO uint8_t* buffer, int type, cpu_t* cpu)
-{	
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+{
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
 	return MemA_with_priv(address, size, buffer, FindPriv(regs, state), type, cpu);
 }
@@ -338,11 +338,11 @@ if ConditionPassed() then
 		APSR.C = carry;
 		// APSR.V unchanged
 *************************************/
-void _lsl_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
+void _lsl_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, arm_reg_t* regs)
 {
 	int carry = 0;
 	uint32_t result;
-	
+
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -369,7 +369,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 		// APSR.V unchanged
 *************************************/
-void _lsr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
+void _lsr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, arm_reg_t* regs)
 {
 	int carry = 0;
 	uint32_t result;
@@ -384,7 +384,7 @@ void _lsr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_
 	if(setflags != 0){
 		SET_APSR_N(regs, result);
 		SET_APSR_Z(regs, result);
-		SET_APSR_C(regs, carry);	
+		SET_APSR_C(regs, carry);
 	}
 }
 
@@ -400,7 +400,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 		// APSR.V unchanged
 *************************************/
-void _asr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
+void _asr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, arm_reg_t* regs)
 {
 
 	int carry = 0;
@@ -436,7 +436,7 @@ if ConditionPassed() then
 			APSR.C = carry;
 			APSR.V = overflow;
 *************************************/
-void _add_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
+void _add_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -446,11 +446,11 @@ void _add_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t sh
 	uint32_t overflow;
 	uint32_t shifted;
 	Shift(GET_REG_VAL(regs, Rm), shift_t, shift_n, carry, &shifted);
-	
+
 	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
 	uint32_t result;
 	AddWithCarry(Rn_val, shifted, 0, &result, &carry, &overflow);
-	
+
 	// software won't distinguish PC and other registers like hardware did. Just disable setflags.
 	if(Rd == 15){
 		ALUWritePC(result, regs);
@@ -464,7 +464,7 @@ void _add_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t sh
 		}
 	}
 }
-	
+
 /***********************************
 <<ARMv7-M Architecture Reference Manual A7-227>>
 if ConditionPassed() then
@@ -481,7 +481,7 @@ if ConditionPassed() then
 			APSR.C = carry;
 			APSR.V = overflow;
 *************************************/
-void _add_sp_reg(uint32_t Rm, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
+void _add_sp_reg(uint32_t Rm, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -491,11 +491,11 @@ void _add_sp_reg(uint32_t Rm, uint32_t Rd, SRType shift_t, uint32_t shift_n, uin
 	uint32_t overflow;
 	uint32_t shifted;
 	Shift(GET_REG_VAL(regs, Rm), shift_t, shift_n, carry, &shifted);
-	
+
 	uint32_t SP_val = GET_REG_VAL(regs, SP_INDEX);
 	uint32_t result;
 	AddWithCarry(SP_val, shifted, 0, &result, &carry, &overflow);
-	
+
 	// software won't distinguish PC and other registers like hardware did. Just disable setflags.
 	if(Rd == 15){
 		ALUWritePC(result, regs);
@@ -524,7 +524,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 		APSR.V = overflow;
 *************************************/
-void _sub_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
+void _sub_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -560,7 +560,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 		APSR.V = overflow;
 *************************************/
-void _add_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
+void _add_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -594,7 +594,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 		APSR.V = overflow;
 *************************************/
-void _sub_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
+void _sub_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -627,7 +627,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 		// APSR.V unchanged
 *************************************/
-void _mov_imm(uint32_t Rd, uint32_t imm32, uint32_t setflags, int carry, armv7m_reg_t* regs)
+void _mov_imm(uint32_t Rd, uint32_t imm32, uint32_t setflags, int carry, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -652,7 +652,7 @@ if ConditionPassed() then
 	APSR.C = carry;
 	APSR.V = overflow;
 *************************************/
-void _cmp_imm(uint32_t imm32, uint32_t Rn, armv7m_reg_t* regs)
+void _cmp_imm(uint32_t imm32, uint32_t Rn, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -683,7 +683,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 	// APSR.V unchanged
 *************************************/
-void _and_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
+void _and_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -717,7 +717,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 		// APSR.V unchanged
 **************************************/
-void _eor_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
+void _eor_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -749,7 +749,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 	// APSR.V unchanged
 **************************************/
-void _lsl_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
+void _lsl_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -783,7 +783,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 		// APSR.V unchanged
 **************************************/
-void _lsr_reg(uint32_t Rm, uint32_t Rn ,uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
+void _lsr_reg(uint32_t Rm, uint32_t Rn ,uint32_t Rd, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -816,7 +816,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 		// APSR.V unchanged
 **************************************/
-void _asr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
+void _asr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -849,7 +849,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 		APSR.V = overflow;
 **************************************/
-void _adc_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
+void _adc_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -884,7 +884,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 		APSR.V = overflow;
 **************************************/
-void _sbc_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
+void _sbc_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -920,7 +920,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 		// APSR.V unchanged
 **************************************/
-void _ror_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
+void _ror_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -951,7 +951,7 @@ if ConditionPassed() then
 	APSR.C = carry;
 	// APSR.V unchanged
 **************************************/
-void _tst_reg(uint32_t Rm, uint32_t Rn, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs)
+void _tst_reg(uint32_t Rm, uint32_t Rn, SRType shift_t, uint32_t shift_n, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -981,7 +981,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 		APSR.V = overflow;
 **************************************/
-void _rsb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
+void _rsb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -1013,7 +1013,7 @@ if ConditionPassed() then
 	APSR.C = carry;
 	APSR.V = overflow;
 **************************************/
-void _cmp_reg(uint32_t Rm, uint32_t Rn, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs)
+void _cmp_reg(uint32_t Rm, uint32_t Rn, SRType shift_t, uint32_t shift_n, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -1045,7 +1045,7 @@ if ConditionPassed() then
 	APSR.C = carry;
 	APSR.V = overflow;
 **************************************/
-void _cmn_reg(uint32_t Rm, uint32_t Rn, SRType shift_t, uint32_t shift_n, armv7m_reg_t* regs)
+void _cmn_reg(uint32_t Rm, uint32_t Rn, SRType shift_t, uint32_t shift_n, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -1079,7 +1079,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 		// APSR.V unchanged
 **************************************/
-void _orr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
+void _orr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -1115,7 +1115,7 @@ if ConditionPassed() then
 		// APSR.C unchanged
 		// APSR.V unchanged
 **************************************/
-void _mul_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
+void _mul_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -1146,7 +1146,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 		// APSR.V unchanged
 **************************************/
-void _bic_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
+void _bic_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -1181,7 +1181,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 		// APSR.V unchanged
 **************************************/
-void _mvn_reg(uint32_t Rm, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, armv7m_reg_t* regs)
+void _mvn_reg(uint32_t Rm, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -1217,7 +1217,7 @@ if ConditionPassed() then
 		// APSR.C unchanged
 		// APSR.V unchanged
 **************************************/
-void _mov_reg(uint32_t Rm, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
+void _mov_reg(uint32_t Rm, uint32_t Rd, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -1245,7 +1245,7 @@ if ConditionPassed() then
 **************************************/
 void _bx(uint32_t Rm, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1265,7 +1265,7 @@ if ConditionPassed() then
 **************************************/
 void _blx(uint32_t Rm, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1293,7 +1293,7 @@ if ConditionPassed() then
 **************************************/
 void _ldr_literal(uint32_t imm32, uint32_t Rt, bool_t add, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -1328,7 +1328,7 @@ if ConditionPassed() then
 **************************************/
 void _str_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1338,7 +1338,7 @@ void _str_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t sh
 	uint32_t offset;
 	Shift(Rm_val, shift_t, shift_n, carry, &offset);
 	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
-	uint32_t address = Rn_val + offset; 
+	uint32_t address = Rn_val + offset;
 	uint32_t data = GET_REG_VAL(regs, Rt);
 	MemU(address, 4, (uint8_t*)&data, MEM_WRITE, cpu);
 }
@@ -1353,8 +1353,8 @@ if ConditionPassed() then
 	MemU[address,2] = R[t]<15:0>;
 **************************************/
 void _strh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, cpu_t* cpu)
-{	
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+{
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1364,7 +1364,7 @@ void _strh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t s
 	uint32_t offset;
 	Shift(Rm_val, shift_t, shift_n, carry, &offset);
 	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
-	uint32_t address = Rn_val + offset; 
+	uint32_t address = Rn_val + offset;
 	uint32_t data = GET_REG_VAL(regs, Rt);
 	MemU(address, 2, (uint8_t*)&data, MEM_WRITE, cpu);
 }
@@ -1378,8 +1378,8 @@ if ConditionPassed() then
 	MemU[address,1] = R[t]<7:0>;
 **************************************/
 void _strb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t shift_n, cpu_t* cpu)
-{	
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+{
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1389,7 +1389,7 @@ void _strb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, SRType shift_t, uint32_t s
 	uint32_t offset;
 	Shift(Rm_val, shift_t, shift_n, carry, &offset);
 	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
-	uint32_t address = Rn_val + offset; 
+	uint32_t address = Rn_val + offset;
 	uint32_t data = GET_REG_VAL(regs, Rt);
 	MemU(address, 1, (uint8_t*)&data, MEM_WRITE, cpu);
 }
@@ -1404,8 +1404,8 @@ if ConditionPassed() then
 	R[t] = SignExtend(MemU[address,1], 32);
 **************************************/
 void _ldrsb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, SRType shift_t, uint32_t shift_n, cpu_t* cpu)
-{	
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+{
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1437,8 +1437,8 @@ if ConditionPassed() then
 		R[t] = data;
 **************************************/
 void _ldr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, cpu_t* cpu)
-{	
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+{
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -1479,8 +1479,8 @@ if ConditionPassed() then
 	R[t] = ZeroExtend(data, 32);
 **************************************/
 void _ldrh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, cpu_t* cpu)
-{	
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+{
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1510,8 +1510,8 @@ if ConditionPassed() then
 	R[t] = ZeroExtend(MemU[address,1],32);
 **************************************/
 void _ldrb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, SRType shift_t, uint32_t shift_n, cpu_t* cpu)
-{	
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+{
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1540,8 +1540,8 @@ if ConditionPassed() then
 	R[t] = SignExtend(data, 32);
 **************************************/
 void _ldrsh_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, cpu_t* cpu)
-{	
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+{
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1571,8 +1571,8 @@ if ConditionPassed() then
 	if wback then R[n] = offset_addr;
 **************************************/
 void _str_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu)
-{	
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+{
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1602,7 +1602,7 @@ if ConditionPassed() then
 **************************************/
 void _ldr_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -1638,7 +1638,7 @@ if ConditionPassed() then
 **************************************/
 void _strb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1664,7 +1664,7 @@ if ConditionPassed() then
 **************************************/
 void _ldrb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1691,7 +1691,7 @@ if ConditionPassed() then
 **************************************/
 void _strh_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1718,7 +1718,7 @@ if ConditionPassed() then
 **************************************/
 void _ldrh_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1741,7 +1741,7 @@ if ConditionPassed() then
 	result = if add then (Align(PC,4) + imm32) else (Align(PC,4) - imm32);
 	R[d] = result;
 **************************************/
-void _adr(uint32_t imm32, uint32_t Rd, bool_t add, armv7m_reg_t* regs)
+void _adr(uint32_t imm32, uint32_t Rd, bool_t add, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -1764,7 +1764,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 		APSR.V = overflow;
 **************************************/
-void _add_sp_imm(uint32_t imm32, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
+void _add_sp_imm(uint32_t imm32, uint32_t Rd, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -1794,7 +1794,7 @@ if ConditionPassed() then
 		APSR.C = carry;
 		APSR.V = overflow;
 **************************************/
-void _sub_sp_imm(uint32_t imm32, uint32_t Rd, uint32_t setflags, armv7m_reg_t* regs)
+void _sub_sp_imm(uint32_t imm32, uint32_t Rd, uint32_t setflags, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -1818,7 +1818,7 @@ EncodingSpecificOperations();
 	if nonzero ^ IsZero(R[n]) then
 	BranchWritePC(PC + imm32);
 **************************************/
-void _cbnz_cbz(uint32_t imm32, uint32_t Rn, uint32_t nonzero, armv7m_reg_t* regs)
+void _cbnz_cbz(uint32_t imm32, uint32_t Rn, uint32_t nonzero, arm_reg_t* regs)
 {
 	uint32_t Rn_val = GET_REG_VAL(regs, Rn);
 	uint32_t PC_val = GET_REG_VAL(regs, PC_INDEX);
@@ -1834,7 +1834,7 @@ if ConditionPassed() then
 	rotated = ROR(R[m], rotation);
 	R[d] = SignExtend(rotated<15:0>, 32);
 **************************************/
-void _sxth(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs)
+void _sxth(uint32_t Rm, uint32_t Rd, uint32_t rotation, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -1854,7 +1854,7 @@ EncodingSpecificOperations();
 	rotated = ROR(R[m], rotation);
 	R[d] = SignExtend(rotated<7:0>, 32);
 **************************************/
-void _sxtb(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs)
+void _sxtb(uint32_t Rm, uint32_t Rd, uint32_t rotation, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -1874,7 +1874,7 @@ if ConditionPassed() then
 	rotated = ROR(R[m], rotation);
 	R[d] = ZeroExtend(rotated<15:0>, 32);
 **************************************/
-void _uxth(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs)
+void _uxth(uint32_t Rm, uint32_t Rd, uint32_t rotation, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -1894,7 +1894,7 @@ if ConditionPassed() then
 	rotated = ROR(R[m], rotation);
 	R[d] = ZeroExtend(rotated<7:0>, 32);
 **************************************/
-void _uxtb(uint32_t Rm, uint32_t Rd, uint32_t rotation, armv7m_reg_t* regs)
+void _uxtb(uint32_t Rm, uint32_t Rd, uint32_t rotation, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -1922,7 +1922,7 @@ if ConditionPassed() then
 **************************************/
 void _push(uint32_t registers, uint32_t bitcount, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1956,7 +1956,7 @@ if ConditionPassed() then
 	result<7:0> = R[m]<31:24>;
 	R[d] = result;
 **************************************/
-void _rev(uint32_t Rm, uint32_t Rd, armv7m_reg_t* regs)
+void _rev(uint32_t Rm, uint32_t Rd, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -1984,7 +1984,7 @@ if ConditionPassed() then
 	result<7:0> = R[m]<15:8>;
 	R[d] = result;
 **************************************/
-void _rev16(uint32_t Rm, uint32_t Rd, armv7m_reg_t* regs)
+void _rev16(uint32_t Rm, uint32_t Rd, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -2006,7 +2006,7 @@ if ConditionPassed() then
 	result<7:0> = R[m]<15:8>;
 	R[d] = result;
 **************************************/
-void _revsh(uint32_t Rm, uint32_t Rd, armv7m_reg_t* regs)
+void _revsh(uint32_t Rm, uint32_t Rd, arm_reg_t* regs)
 {
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -2036,7 +2036,7 @@ if ConditionPassed() then
 **************************************/
 void _pop(uint32_t registers, uint32_t bitcount, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
 	if(!ConditionPassed(0, regs)){
 		return;
@@ -2071,7 +2071,7 @@ void _pop(uint32_t registers, uint32_t bitcount, cpu_t* cpu)
 EncodingSpecificOperations();
 ITSTATE.IT<7:0> = firstcond:mask;
 **************************************/
-void _it(uint32_t firstcond, uint32_t mask, armv7m_reg_t* regs, thumb_state* state)
+void _it(uint32_t firstcond, uint32_t mask, arm_reg_t* regs, thumb_state* state)
 {
 	// EncodingSpecificOperations();
 	uint8_t value = (firstcond << 4) | mask;
@@ -2096,7 +2096,7 @@ if ConditionPassed() then
 **************************************/
 void _stm(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -2138,7 +2138,7 @@ if ConditionPassed() then
 **************************************/
 void _stmdb(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -2177,7 +2177,7 @@ if ConditionPassed() then
 **************************************/
 void _ldm(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -2199,7 +2199,7 @@ void _ldm(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_
 		Rn_val += bitcount << 2;
 		SET_REG_VAL(regs, Rn, Rn_val);
 	}
-	
+
 	if(registers & (1ul << 15)){
 		MemA(address, 4, (uint8_t*)&data, MEM_READ, cpu);
 		LoadWritePC(data, cpu);
@@ -2223,7 +2223,7 @@ if ConditionPassed() then
 **************************************/
 void _ldmdb(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -2245,7 +2245,7 @@ void _ldmdb(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cp
 		Rn_val -= bitcount << 2;
 		SET_REG_VAL(regs, Rn, Rn_val);
 	}
-	
+
 	if(registers & (1ul << 15)){
 		MemA(address, 4, (uint8_t*)&data, MEM_READ, cpu);
 		LoadWritePC(data, cpu);
@@ -2260,7 +2260,7 @@ if ConditionPassed() then
 **************************************/
 void _b(int32_t imm32, uint8_t cond, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	if(!ConditionPassed(cond, regs)){
 		return;
 	}

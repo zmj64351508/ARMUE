@@ -38,7 +38,7 @@ typedef struct thumb_decode_t{
 
 #define BASE_TABLE_SIZE_16				64
 #define SHIFT_ADD_SUB_MOV_SIZE_16		64
-#define DATA_PROCESS_SIZE_16			32	
+#define DATA_PROCESS_SIZE_16			32
 #define SPDATA_BRANCH_EXCHANGE_SIZE_16	16
 #define LOAD_STORE_SINGLE_SIZE_16		128
 #define MISC_16BIT_INS_SIZE				128
@@ -63,7 +63,7 @@ typedef struct {
 	thumb_decode_t		main_table32[MAIN_TABLE_SIZE_32];
 }thumb_instruct_table_t;
 
-void armv7m_print_reg_val(armv7m_reg_t* regs);
+void armv7m_print_reg_val(arm_reg_t* regs);
 
 bool_t is_16bit_code(uint16_t opcode);
 uint32_t align_address(uint32_t address);
@@ -72,5 +72,5 @@ thumb_translate32_t thumb_parse_opcode32(uint32_t opcode, cpu_t *cpu);
 void armv7m_next_PC(cpu_t* cpu, int ins_length);
 int armv7m_PC_modified(cpu_t* cpu);
 int ins_thumb_destory(cpu_t* cpu);
-int ins_thumb_init(cpu_t* cpu);
+int ins_thumb_init(_IO cpu_t* cpu);
 #endif

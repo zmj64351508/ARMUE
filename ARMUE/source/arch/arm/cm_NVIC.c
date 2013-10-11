@@ -27,7 +27,7 @@ enum cm_NVIC_vector{
 inline void DeActivate(int exc_num, cpu_t *cpu)
 {
 	cm_NVIC_t *NVIC_info = (cm_NVIC_t *)cpu->cm_NVIC->controller_info;
-	armv7m_reg_t *regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t *regs = ARMv7m_GET_REGS(cpu);
 	NVIC_info->exception_active[exc_num] = 0;
 	NVIC_info->nested_exception--;
 	if(GET_IPSR(regs) != 0x2ul){
@@ -37,7 +37,7 @@ inline void DeActivate(int exc_num, cpu_t *cpu)
 
 uint32_t ReturnAddress(int excep_num, cpu_t *cpu)
 {
-	armv7m_reg_t *regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t *regs = ARMv7m_GET_REGS(cpu);
 	switch(excep_num){
 	case CM_NVIC_VEC_HARDFAULT:
 	case CM_NVIC_VEC_BUSFAULT:
@@ -52,7 +52,7 @@ uint32_t ReturnAddress(int excep_num, cpu_t *cpu)
 
 void PushStack(int excep_num, cpu_t *cpu)
 {
-	armv7m_reg_t *regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t *regs = ARMv7m_GET_REGS(cpu);
 	thumb_state *state = ARMv7m_GET_STATE(cpu);
 
 	int framesize;
@@ -76,10 +76,10 @@ void PushStack(int excep_num, cpu_t *cpu)
 
 	if(GET_CONTROL_SPSEL(regs) == 1 && state->mode == MODE_THREAD){
 		banked_sp = BANK_INDEX_PSP;
-		regs->bank_index_sp = BANK_INDEX_PSP;
+		regs->sp_in_use = BANK_INDEX_PSP;
 	}else{
 		banked_sp = BANK_INDEX_MSP;
-		regs->bank_index_sp = BANK_INDEX_MSP;
+		regs->sp_in_use = BANK_INDEX_MSP;
 	}
 	frameptralign = (regs->SP_bank[banked_sp] >> 2) & forcealign;
 	regs->SP_bank[banked_sp] = (regs->SP_bank[banked_sp] - framesize) & spmask;
@@ -118,7 +118,7 @@ void PushStack(int excep_num, cpu_t *cpu)
 
 void ExceptionTaken(int excep_num, cpu_t *cpu)
 {
-	armv7m_reg_t *regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t *regs = ARMv7m_GET_REGS(cpu);
 	thumb_state *state = ARMv7m_GET_STATE(cpu);
 	cm_NVIC_t *NVIC_info = (cm_NVIC_t *)cpu->cm_NVIC->controller_info;
 
@@ -148,7 +148,7 @@ void ExceptionTaken(int excep_num, cpu_t *cpu)
 
 void PopStack(uint32_t frameptr, int exc_return, cpu_t* cpu)
 {
-	armv7m_reg_t *regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t *regs = ARMv7m_GET_REGS(cpu);
 
 	int framesize;
 	uint8_t forcealign;
@@ -208,7 +208,7 @@ void PopStack(uint32_t frameptr, int exc_return, cpu_t* cpu)
 void ExceptionReturn(uint32_t exc_return, cpu_t *cpu)
 {
 	thumb_state *state = ARMv7m_GET_STATE(cpu);
-	armv7m_reg_t *regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t *regs = ARMv7m_GET_REGS(cpu);
 	cm_NVIC_t *NVIC_info = (cm_NVIC_t *)cpu->cm_NVIC->controller_info;
 
 	cpu->run_info.next_ins = 0;
@@ -234,7 +234,7 @@ void ExceptionReturn(uint32_t exc_return, cpu_t *cpu)
 	switch(exc_return & 0xFul){
 	case 0x1:
 		framptr = regs->SP_bank[BANK_INDEX_MSP];
-		regs->bank_index_sp = BANK_INDEX_MSP;
+		regs->sp_in_use = BANK_INDEX_MSP;
 		state->mode = MODE_HANDLER;
 		SET_CONTROL_SPSEL(regs, 0);
 		break;
@@ -244,7 +244,7 @@ void ExceptionReturn(uint32_t exc_return, cpu_t *cpu)
 			goto usage_fault;
 		}else{
 			framptr = regs->SP_bank[BANK_INDEX_MSP];
-			regs->bank_index_sp = BANK_INDEX_MSP;
+			regs->sp_in_use = BANK_INDEX_MSP;
 			state->mode = MODE_THREAD;
 			SET_CONTROL_SPSEL(regs, 0);
 		}
@@ -256,7 +256,7 @@ void ExceptionReturn(uint32_t exc_return, cpu_t *cpu)
 			return;
 		}else{
 			framptr = regs->SP_bank[BANK_INDEX_PSP];
-			regs->bank_index_sp = BANK_INDEX_PSP;
+			regs->sp_in_use = BANK_INDEX_PSP;
 			state->mode = MODE_THREAD;
 			SET_CONTROL_SPSEL(regs, 1);
 		}

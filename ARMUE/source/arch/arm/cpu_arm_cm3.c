@@ -24,14 +24,14 @@ int armcm3_startup(cpu_t* cpu)
 		return -ERROR_SOC_STARTUP;
 	}
 
-	armv7m_reg_t *regs = (armv7m_reg_t *)cpu->regs;
+	arm_reg_t *regs = (arm_reg_t *)cpu->regs;
 	memory_map_t* memory_map = cpu->memory_map;
 
 	// set register initial value
 	// TODO: Following statements need to be pack in another function which should be in armv7m module
 	// reset behaviour refering to B1-642
 	regs->MSP = get_vector_value(cpu->cm_NVIC, 0);
-	regs->bank_index_sp = BANK_INDEX_MSP;
+	regs->sp_in_use = BANK_INDEX_MSP;
 	regs->PC = align_address(get_vector_value(cpu->cm_NVIC, 1));
 	regs->xPSR = 0x0;
 	SET_EPSR_T(regs, get_vector_value(cpu->cm_NVIC, 1) & BIT_0);
@@ -54,7 +54,7 @@ uint32_t fetch_armcm3_cpu(cpu_t* cpu)
 
 	/* always fetch opcode according to PC */
 	memory_map_t* memory_map = cpu->memory_map;
-	uint32_t addr = ((armv7m_reg_t*)cpu->regs)->PC;
+	uint32_t addr = ((arm_reg_t*)cpu->regs)->PC;
 	uint32_t opcode;
 	read_memory(addr, (uint8_t*)&opcode, 4, memory_map);
 	return opcode;
@@ -65,13 +65,15 @@ ins_t decode_armcm3_cpu(cpu_t* cpu, void* opcode)
 {
 	ins_t ins_info = {0, NULL, 0};
 	uint32_t opcode32 = *(uint32_t*)opcode;
-	armv7m_reg_t *regs = (armv7m_reg_t *)cpu->regs;
+	arm_reg_t *regs = (arm_reg_t *)cpu->regs;
 	thumb_state *state = (thumb_state*)cpu->run_info.cpu_spec_info;
+
 
 	/* decode the opcode. If opcode is 16bit coded, next_ins will store the next 16bit of this 32bit opcode
 	   so that we don't need to read memory again to fetch opcode. When next_ins = 0, it indicates that no
 	   more opcode is available and need to fetch code from memory */
 	if(is_16bit_code(opcode32) == TRUE){
+        LOG(LOG_DEBUG, "decode_armcm3_cpu: 16 bit opcode 0x%0x\n", (uint16_t)opcode32);
 		ins_info.opcode = opcode32;
 		ins_info.excute = thumb_parse_opcode16(opcode32, cpu);
 		ins_info.length = 16;
@@ -80,6 +82,7 @@ ins_t decode_armcm3_cpu(cpu_t* cpu, void* opcode)
 	}else{
 		/* exchange low and high 16bit */
 		ins_info.opcode = ((opcode32 >> 16) & 0x0000FFFF) | ((opcode32 << 16) & 0xFFFF0000);
+        LOG(LOG_DEBUG, "decode_armcm3_cpu: 32 bit opcode 0x%0x\n", ins_info.opcode);
 		ins_info.excute = thumb_parse_opcode32((uint32_t)ins_info.opcode, cpu);
 		ins_info.length = 32;
 		cpu->run_info.next_ins = 0;
@@ -91,7 +94,7 @@ ins_t decode_armcm3_cpu(cpu_t* cpu, void* opcode)
 /****** excute the cpu. It will set to cpu->excute ******/
 void excute_armcm3_cpu(cpu_t* cpu, ins_t ins_info){
 
-	armv7m_reg_t *regs = (armv7m_reg_t *)cpu->regs;
+	arm_reg_t *regs = (arm_reg_t *)cpu->regs;
 	thumb_state *state = (thumb_state*)cpu->run_info.cpu_spec_info;
 
 	/******							IMPROTANT									*/

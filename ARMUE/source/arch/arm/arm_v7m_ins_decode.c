@@ -28,7 +28,7 @@ error_code_t set_base_table_value(thumb_decode_t* table, int start, int end, thu
 }
 #define set_sub_table_value set_base_table_value
 
-void armv7m_print_reg_val(armv7m_reg_t* regs)
+void armv7m_print_reg_val(arm_reg_t* regs)
 {
     int i;
 	for(i = 0; i < 13; i++){
@@ -86,7 +86,7 @@ thumb_translate16_t con_branch_svc(uint16_t ins_code, cpu_t* cpu)
 /****** Here are the final decoders of 16bit instructions ******/
 void _lsl_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm = ins_code >> 6 & 0x1F;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
@@ -98,7 +98,7 @@ void _lsl_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _lsr_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm = ins_code >> 6 & 0x1F;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
@@ -110,7 +110,7 @@ void _lsr_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _asr_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm = ins_code >> 6 & 0x1F;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
@@ -122,7 +122,7 @@ void _asr_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _add_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rm = ins_code >> 6 & 0x7;
 	uint32_t Rn = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
@@ -134,7 +134,7 @@ void _add_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _sub_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rm = ins_code >> 6 & 0x7;
 	uint32_t Rn = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
@@ -146,7 +146,7 @@ void _sub_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _add_imm3_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm32 = ins_code >> 6 & 0x7;
 	uint32_t Rn = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
@@ -158,7 +158,7 @@ void _add_imm3_16(uint16_t ins_code, cpu_t* cpu)
 
 void _sub_imm3_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm32 = ins_code >> 6 & 0x7;
 	uint32_t Rn = ins_code >> 3 & 0x7;
 	uint32_t Rd = ins_code & 0x7;
@@ -170,7 +170,7 @@ void _sub_imm3_16(uint16_t ins_code, cpu_t* cpu)
 
 void _mov_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rd = ins_code >> 8 & 0x7;
 	uint32_t imm = ins_code & 0xFF;
 	uint32_t setflags = !InITBlock(regs);
@@ -182,7 +182,7 @@ void _mov_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _cmp_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rn = ins_code >> 8 & 0x7;
 	uint32_t imm8 = ins_code & 0xFF;
 
@@ -192,7 +192,7 @@ void _cmp_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _add_imm8_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rn = ins_code >> 8 & 0x7;
 	uint32_t Rd = Rn;
 	uint32_t imm8 = ins_code & 0xFF;
@@ -204,7 +204,7 @@ void _add_imm8_16(uint16_t ins_code, cpu_t* cpu)
 
 void _sub_imm8_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rn = ins_code >> 8 & 0x7;
 	uint32_t Rd = Rn;
 	uint32_t imm8 = ins_code & 0xFF;
@@ -217,7 +217,7 @@ void _sub_imm8_16(uint16_t ins_code, cpu_t* cpu)
 /************************/
 void _and_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -228,7 +228,7 @@ void _and_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _eor_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -239,7 +239,7 @@ void _eor_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _lsl_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -250,7 +250,7 @@ void _lsl_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _lsr_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -261,7 +261,7 @@ void _lsr_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _asr_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -272,7 +272,7 @@ void _asr_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _adc_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -283,7 +283,7 @@ void _adc_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _sbc_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -294,7 +294,7 @@ void _sbc_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ror_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -305,7 +305,7 @@ void _ror_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _tst_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 
@@ -315,7 +315,7 @@ void _tst_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _rsb_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rd = ins_code & 0x7;
 	uint32_t Rn = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -327,7 +327,7 @@ void _rsb_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _cmp_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 
@@ -337,7 +337,7 @@ void _cmp_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _cmn_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 
@@ -347,7 +347,7 @@ void _cmn_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _orr_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -358,7 +358,7 @@ void _orr_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _mul_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rdm = ins_code & 0x7;
 	uint32_t Rn = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -369,7 +369,7 @@ void _mul_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _bic_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rdn = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -380,7 +380,7 @@ void _bic_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _mvn_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rd = ins_code & 0x7;
 	uint32_t Rm = ins_code >> 3 & 0x7;
 	int setflags = !InITBlock(regs);
@@ -391,7 +391,7 @@ void _mvn_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _add_sp_reg_T1(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t DM = ins_code >> 7 & 0x1ul;
 	uint32_t Rdm = (DM << 3) | (ins_code & 0x7ul);
 
@@ -405,7 +405,7 @@ void _add_sp_reg_T1(uint16_t ins_code, cpu_t* cpu)
 
 void _add_sp_reg_T2(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rm = ins_code >> 3 & 0xFul;
 	uint32_t Rd = SP_INDEX;
 	assert(Rm != 13);
@@ -416,7 +416,7 @@ void _add_sp_reg_T2(uint16_t ins_code, cpu_t* cpu)
 
 void _add_reg_spec_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t DN = ins_code >> 7 & 0x1ul;
 	uint32_t Rdn = (DN << 3) | (ins_code & 0x7ul);
 	uint32_t Rm = ins_code >> 3 & 0xFul;
@@ -439,7 +439,7 @@ void _add_reg_spec_16(uint16_t ins_code, cpu_t* cpu)
 
 void _cmp_reg_spec_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t DN = ins_code >> 7 & 0x1ul;
 	uint32_t Rn = (DN << 3) | (ins_code & 0x7ul);
 	uint32_t Rm = ins_code >> 3 & 0xFul;
@@ -456,7 +456,7 @@ void _cmp_reg_spec_16(uint16_t ins_code, cpu_t* cpu)
 
 void _mov_reg_spec_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t DN = ins_code >> 7 & 0x1ul;
 	uint32_t Rd = (DN << 3) | (ins_code & 0x7ul);
 	uint32_t Rm = ins_code >> 3 & 0xFul;
@@ -472,7 +472,7 @@ void _mov_reg_spec_16(uint16_t ins_code, cpu_t* cpu)
 
 void _bx_spec_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rm = ins_code >> 3 & 0xFul;
 	if((ins_code & 0x7ul) != 0 ||
 	   (InITBlock(regs) && !LastInITBlock(regs))){
@@ -485,7 +485,7 @@ void _bx_spec_16(uint16_t ins_code, cpu_t* cpu)
 
 void _blx_spec_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rm = ins_code >> 3 & 0xFul;
 	if((ins_code & 0x7ul) != 0 ||
 	   (InITBlock(regs) && !LastInITBlock(regs))){
@@ -498,7 +498,7 @@ void _blx_spec_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldr_literal_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm8 = (ins_code & 0xFFul) << 2;
 	uint32_t Rt = ins_code >> 8 & 0x7ul;
 	bool_t add = TRUE;
@@ -516,7 +516,7 @@ inline void decode_ldr_str_reg_16(uint16_t ins_code, _O uint32_t* Rm, _O uint32_
 
 void _str_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 	_str_reg(Rm, Rn, Rt, SRType_LSL, 0, cpu);
@@ -525,7 +525,7 @@ void _str_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _strh_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 
@@ -535,7 +535,7 @@ void _strh_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _strb_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 
@@ -545,7 +545,7 @@ void _strb_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldrsb_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 
@@ -557,7 +557,7 @@ void _ldrsb_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldr_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 	bool_t index = TRUE;
@@ -570,7 +570,7 @@ void _ldr_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldrh_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 	bool_t index = TRUE;
@@ -583,7 +583,7 @@ void _ldrh_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldrb_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 	bool_t index = TRUE;
@@ -595,7 +595,7 @@ void _ldrb_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldrsh_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 	bool_t index = TRUE;
@@ -615,7 +615,7 @@ inline void decode_ldr_str_imm_16(uint16_t ins_code, _O uint32_t* imm, _O uint32
 
 void _str_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm5, Rt, Rn;
 	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
 	bool_t add = TRUE;
@@ -628,7 +628,7 @@ void _str_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldr_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm5, Rt, Rn;
 	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
 	bool_t add = TRUE;
@@ -641,7 +641,7 @@ void _ldr_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _strb_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm5, Rt, Rn;
 	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
 	bool_t add = TRUE;
@@ -654,7 +654,7 @@ void _strb_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldrb_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm5, Rt, Rn;
 	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
 	bool_t add = TRUE;
@@ -667,7 +667,7 @@ void _ldrb_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _strh_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm5, Rt, Rn;
 	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
 	bool_t add = TRUE;
@@ -680,7 +680,7 @@ void _strh_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldrh_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm5, Rt, Rn;
 	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
 	bool_t add = TRUE;
@@ -699,7 +699,7 @@ inline void decode_ldr_str_sp_imm_16(uint16_t ins_code, _O uint32_t* imm, _O uin
 
 void _str_sp_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm8, Rt;
 	uint32_t Rn = 13;
 	decode_ldr_str_sp_imm_16(ins_code, &imm8, &Rt);
@@ -714,7 +714,7 @@ void _str_sp_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldr_sp_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm8, Rt;
 	uint32_t Rn = 13;
 	decode_ldr_str_sp_imm_16(ins_code, &imm8, &Rt);
@@ -729,7 +729,7 @@ void _ldr_sp_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _adr_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm8 = LOW_BIT16(ins_code, 8) << 2;
 	uint32_t Rd = LOW_BIT16(ins_code>>8, 3);
 	bool_t add = TRUE;
@@ -740,7 +740,7 @@ void _adr_16(uint16_t ins_code, cpu_t* cpu)
 
 void _add_sp_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm8 = LOW_BIT16(ins_code, 8) << 2;
 	uint32_t Rd = LOW_BIT16(ins_code>>8, 3);
 	uint32_t setflags = FALSE;
@@ -751,7 +751,7 @@ void _add_sp_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _add_sp_sp_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm7 = LOW_BIT16(ins_code, 7) << 2;
 	uint32_t Rd = 13;
 	uint32_t setflags = FALSE;
@@ -762,7 +762,7 @@ void _add_sp_sp_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _sub_sp_sp_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm7 = LOW_BIT16(ins_code, 7) << 2;
 	uint32_t Rd = 13;
 	uint32_t setflags = FALSE;
@@ -773,7 +773,7 @@ void _sub_sp_sp_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _cbnz_cbz_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rn = LOW_BIT16(ins_code, 3);
 
 	uint32_t i = LOW_BIT16(ins_code >> 9, 1);
@@ -803,7 +803,7 @@ inline void decode_rm_rd_16(uint16_t ins_code, uint32_t *Rm, uint32_t *Rd)
 
 void _sxth_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rd, Rm;
 	decode_rm_rd_16(ins_code, &Rm, &Rd);
 	uint32_t rotation = 0;
@@ -814,7 +814,7 @@ void _sxth_16(uint16_t ins_code, cpu_t* cpu)
 
 void _sxtb_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rd, Rm;
 	decode_rm_rd_16(ins_code, &Rm, &Rd);
 	uint32_t rotation = 0;
@@ -825,7 +825,7 @@ void _sxtb_16(uint16_t ins_code, cpu_t* cpu)
 
 void _uxth_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rd, Rm;
 	decode_rm_rd_16(ins_code, &Rm, &Rd);
 	uint32_t rotation = 0;
@@ -836,7 +836,7 @@ void _uxth_16(uint16_t ins_code, cpu_t* cpu)
 
 void _uxtb_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rd, Rm;
 	decode_rm_rd_16(ins_code, &Rm, &Rd);
 	uint32_t rotation = 0;
@@ -847,7 +847,7 @@ void _uxtb_16(uint16_t ins_code, cpu_t* cpu)
 
 void _push_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t register_list = LOW_BIT16(ins_code, 8);
 	uint32_t registers = LOW_BIT16(ins_code >> 8, 1) << 14 | register_list;
 	uint32_t bitcount = BitCount32(registers);
@@ -861,7 +861,7 @@ void _push_16(uint16_t ins_code, cpu_t* cpu)
 
 void _rev_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rm, Rd;
 	decode_rm_rd_16(ins_code, &Rm, &Rd);
 
@@ -871,7 +871,7 @@ void _rev_16(uint16_t ins_code, cpu_t* cpu)
 
 void _rev16_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rm, Rd;
 	decode_rm_rd_16(ins_code, &Rm, &Rd);
 
@@ -881,7 +881,7 @@ void _rev16_16(uint16_t ins_code, cpu_t* cpu)
 
 void _revsh_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rm, Rd;
 	decode_rm_rd_16(ins_code, &Rm, &Rd);
 
@@ -891,7 +891,7 @@ void _revsh_16(uint16_t ins_code, cpu_t* cpu)
 
 void _pop_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t register_list = LOW_BIT16(ins_code, 8);
 	uint32_t registers = LOW_BIT16(ins_code >> 8, 1) << 15 | register_list;
 	uint32_t bitcount = BitCount32(registers);
@@ -912,7 +912,7 @@ void _pop_16(uint16_t ins_code, cpu_t* cpu)
 
 void _bkpt_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm32 = LOW_BIT16(ins_code, 8);
 
 	LOG_INSTRUCTION("_bkpt_16 #%d\n", imm32);
@@ -920,7 +920,7 @@ void _bkpt_16(uint16_t ins_code, cpu_t* cpu)
 
 void _it_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
 	uint32_t mask = LOW_BIT16(ins_code, 4);
 	uint32_t firstcond = LOW_BIT16(ins_code>>4, 4);
@@ -986,7 +986,7 @@ thumb_translate16_t _it_hint_16(uint16_t ins_code, cpu_t* cpu)
 
 void _stm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 
 	uint32_t registers = LOW_BIT16(ins_code, 8);
 	uint32_t Rn = LOW_BIT16(ins_code>>8, 3);
@@ -1003,7 +1003,7 @@ void _stm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 
 	uint32_t registers = LOW_BIT16(ins_code, 8);
 	uint32_t Rn = LOW_BIT16(ins_code>>8, 3);
@@ -1023,7 +1023,7 @@ void _ldm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _con_b_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	uint8_t imm8 = LOW_BIT16(ins_code, 8);
 	uint8_t cond = LOW_BIT16(ins_code >> 8, 4);
 
@@ -1039,7 +1039,7 @@ void _con_b_16(uint16_t ins_code, cpu_t* cpu)
 
 void _svc_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	uint32_t imm32 = LOW_BIT16(ins_code, 8);
 
 	cpu->cm_NVIC->throw_exception(11, cpu->cm_NVIC);
@@ -1049,7 +1049,7 @@ void _svc_16(uint16_t ins_code, cpu_t* cpu)
 
 void _uncon_b_16(uint16_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	uint8_t imm8 = LOW_BIT16(ins_code>>3, 8);
 	int32_t imm32 = (int8_t)imm8 << 4 | LOW_BIT16(ins_code, 3) << 1;
 	if(InITBlock(regs)){
@@ -1075,7 +1075,7 @@ static inline void stm_rn_registers_wback(uint32_t ins_code, uint32_t *Rn, uint3
 
 void _stm_32(uint32_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	uint32_t Rn, registers;
 	bool_t wback;
 	stm_rn_registers_wback(ins_code, &Rn, &registers, &wback);
@@ -1103,7 +1103,7 @@ static inline void ldm_rn_register_wback(uint32_t ins_code, uint32_t *Rn, uint32
 
 void _ldm_32(uint32_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	uint32_t Rn, registers;
 	bool_t wback;
 	ldm_rn_register_wback(ins_code, &Rn, &registers, &wback);
@@ -1125,7 +1125,7 @@ void _ldm_32(uint32_t ins_code, cpu_t* cpu)
 
 void _pop_32(uint32_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	uint32_t Rn, registers;
 	bool_t wback;
 	ldm_rn_register_wback(ins_code, &Rn, &registers, &wback);
@@ -1155,7 +1155,7 @@ thumb_translate32_t ldm_pop_bundle(uint32_t ins_code, cpu_t *cpu)
 
 void _push_32(uint32_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	uint32_t Rn, registers;
 	bool_t wback;
 	stm_rn_registers_wback(ins_code, &Rn, &registers, &wback);
@@ -1171,7 +1171,7 @@ void _push_32(uint32_t ins_code, cpu_t* cpu)
 
 void _stmdb_32(uint32_t ins_code, cpu_t *cpu)
 {
-	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	uint32_t Rn, registers;
 	bool_t wback;
 	stm_rn_registers_wback(ins_code, &Rn, &registers, &wback);
@@ -1200,7 +1200,7 @@ thumb_translate32_t stmdb_push_bundle(uint32_t ins_code, cpu_t *cpu)
 
 void _ldmdb_32(uint32_t ins_code, cpu_t* cpu)
 {
-	armv7m_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	uint32_t Rn, registers;
 	bool_t wback;
 	ldm_rn_register_wback(ins_code, &Rn, &registers, &wback);
@@ -1392,13 +1392,13 @@ thumb_translate32_t thumb_parse_opcode32(uint32_t opcode, cpu_t *cpu)
 	}
 }
 
-void armv7m_next_PC_16(armv7m_reg_t* regs)
+void armv7m_next_PC_16(arm_reg_t* regs)
 {
 	regs->PC += 2;
 	regs->PC_return = regs->PC + 2;
 }
 
-void armv7m_next_PC_32(armv7m_reg_t* regs)
+void armv7m_next_PC_32(arm_reg_t* regs)
 {
 	regs->PC += 4;
 	regs->PC_return = regs->PC;
@@ -1406,7 +1406,7 @@ void armv7m_next_PC_32(armv7m_reg_t* regs)
 
 void armv7m_next_PC(cpu_t* cpu, int ins_length)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	if(ins_length == 16){
 		armv7m_next_PC_16(regs);
 	}else if(ins_length == 32){
@@ -1418,18 +1418,18 @@ void armv7m_next_PC(cpu_t* cpu, int ins_length)
 
 int armv7m_PC_modified(cpu_t* cpu)
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)cpu->regs;
+	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	return (uint32_t)cpu->run_info.last_pc != regs->PC;
 }
 
-armv7m_reg_t* create_armv7m_regs()
+arm_reg_t* create_arm_regs()
 {
-	armv7m_reg_t* regs = (armv7m_reg_t*)calloc(1, sizeof(armv7m_reg_t));
+	arm_reg_t* regs = (arm_reg_t*)calloc(1, sizeof(arm_reg_t));
 
 	return regs;
 }
 
-error_code_t destory_armv7m_regs(armv7m_reg_t** regs)
+error_code_t destory_arm_regs(arm_reg_t** regs)
 {
 	if(regs == NULL || *regs == NULL){
 		return ERROR_NULL_POINTER;
@@ -1463,6 +1463,12 @@ thumb_instruct_table_t* create_instruction_table()
 	return (thumb_instruct_table_t*)malloc(sizeof(thumb_instruct_table_t));
 }
 
+void desotry_instruction_table(thumb_instruct_table_t **table)
+{
+    free(*table);
+    table = NULL;
+}
+
 /* create and initialize the instruction as well as the cpu state */
 int ins_thumb_init(_IO cpu_t* cpu)
 {
@@ -1472,12 +1478,15 @@ int ins_thumb_init(_IO cpu_t* cpu)
 	}
 	set_cpu_spec_info(cpu, state);
 
-	cpu->regs = create_armv7m_regs();
+	cpu->regs = create_arm_regs();
 	if(cpu->regs == NULL){
 		goto regs_error;
 	}
 
-	M_translate_table = create_instruction_table();
+    /* translate table will init only once when needed */
+    if(M_translate_table == NULL){
+        M_translate_table = create_instruction_table();
+    }
 	if(M_translate_table == NULL){
 		goto table_err;
 	}
@@ -1485,7 +1494,7 @@ int ins_thumb_init(_IO cpu_t* cpu)
 	return SUCCESS;
 
 table_err:
-	destory_armv7m_regs((armv7m_reg_t**)&cpu->regs);
+	destory_arm_regs((arm_reg_t**)&cpu->regs);
 regs_error:
 	destory_thumb_state((thumb_state**)&cpu->run_info.cpu_spec_info);
 state_error:
@@ -1494,7 +1503,8 @@ state_error:
 
 int ins_thumb_destory(cpu_t* cpu)
 {
-	destory_armv7m_regs((armv7m_reg_t**)&cpu->regs);
+    desotry_instruction_table(&M_translate_table);
+	destory_arm_regs((arm_reg_t**)&cpu->regs);
 	destory_thumb_state((thumb_state**)&cpu->run_info.cpu_spec_info);
 	cpu->instruction_data = NULL;
 
