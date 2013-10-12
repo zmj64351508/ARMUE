@@ -1,1 +1,0 @@
---cpu Cortex-M3 --li -g --16 --apcs=interwork -I C:\Keil\ARM\RV31\Inc -I C:\Keil\ARM\CMSIS\Include --list "startup_MPS_CM3.lst" --xref -o "startup_MPS_CM3.o" --depend "startup_MPS_CM3.d" "startup_MPS_CM3.s"
