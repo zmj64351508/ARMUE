@@ -4,6 +4,7 @@
 #include "cpu.h"
 #include "cm_NVIC.h"
 #include <assert.h>
+#include <stdlib.h>
 
 void sync_banked_register(arm_reg_t *regs, int reg_index)
 {
@@ -116,7 +117,7 @@ uint8_t ConditionPassed(uint8_t branch_cond, arm_reg_t* regs)
 	}else{
 		cond = CurrentCond(regs);
 	}
-	uint8_t result;
+	uint8_t result = FALSE;
 	switch(cond>>1){
 	case 0:
 		result = GET_APSR_Z(regs) == 1;	break;
@@ -298,7 +299,7 @@ int MemU(uint32_t address, int size, _IO uint8_t* buffer, int type, cpu_t* cpu)
 int MemA_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv, int type, cpu_t* cpu)
 {
 	memory_map_t* memory = cpu->memory_map;
-	int retval;
+	int retval = -1;
 	if(address != Align(address, size)){
 		//TODO: These registers are memory mapped. So they need to be treated like peripherals.
 		/* UFSR.UNALIGENED = '1'
@@ -1294,7 +1295,6 @@ if ConditionPassed() then
 void _ldr_literal(uint32_t imm32, uint32_t Rt, bool_t add, cpu_t* cpu)
 {
 	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
-	thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1439,7 +1439,6 @@ if ConditionPassed() then
 void _ldr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, SRType shift_t, uint32_t shift_n, cpu_t* cpu)
 {
 	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
-	thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -1603,7 +1602,6 @@ if ConditionPassed() then
 void _ldr_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index, bool_t wback, cpu_t* cpu)
 {
 	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
-	thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -2037,7 +2035,6 @@ if ConditionPassed() then
 void _pop(uint32_t registers, uint32_t bitcount, cpu_t* cpu)
 {
 	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
-	thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
 	if(!ConditionPassed(0, regs)){
 		return;
 	}
@@ -2253,7 +2250,23 @@ void _ldmdb(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cp
 
 }
 
-int IsExclusiveLocal(uint32_t address, int cpuid, int size, cpu_t *cpu)
+arm_exclusive_t *create_arm_exlusive(uint32_t low_addr, uint32_t high_addr, int cpuid)
+{
+    arm_exclusive_t *ex = (arm_exclusive_t*)malloc(sizeof(arm_exclusive_t));
+    if(ex == NULL){
+        goto ex_null;
+    }
+
+    ex->cpuid = cpuid;
+    ex->low_addr = low_addr;
+    ex->high_addr = high_addr;
+    return ex;
+
+ex_null:
+    return NULL;
+}
+
+static int IsExclusiveLocal(uint32_t address, int cpuid, int size, cpu_t *cpu)
 {
     thumb_global_state* gstate = ARMv7m_GET_GLOBAL_STATE(cpu);
 
@@ -2262,6 +2275,8 @@ int IsExclusiveLocal(uint32_t address, int cpuid, int size, cpu_t *cpu)
     for_each_list_node(cur, gstate->local_exclusive){
         record = (arm_exclusive_t*)cur->data.pdata;
         if(IN_RANGE(address, record->low_addr, record->high_addr) && record->cpuid == cpuid){
+            free(record);
+            list_delete(cur);
             return TRUE;
         }
     }
@@ -2269,8 +2284,40 @@ int IsExclusiveLocal(uint32_t address, int cpuid, int size, cpu_t *cpu)
     return FALSE;
 }
 
+static int MarkExclusiveLocal(uint32_t address, int cpuid, int size, cpu_t *cpu)
+{
+    thumb_global_state* gstate = ARMv7m_GET_GLOBAL_STATE(cpu);
+
+    /* find if the address is already makred exlusive */
+    list_t *cur;
+    arm_exclusive_t *record;
+    for_each_list_node(cur, gstate->local_exclusive){
+        record = (arm_exclusive_t*)cur->data.pdata;
+        if(IN_RANGE(address, record->low_addr, record->high_addr && record->cpuid == cpuid)){
+            return SUCCESS;
+        }
+    }
+
+    /* add the exclusive mark */
+    arm_exclusive_t *exdata = create_arm_exlusive(address, address, cpuid);
+    if(exdata == NULL){
+        goto exdata_null;
+    }
+    list_t *new_node = list_create_node_ptr(exdata);
+    if(new_node == NULL){
+        goto node_null;
+    }
+    list_append(gstate->local_exclusive, new_node);
+    return SUCCESS;
+
+node_null:
+    free(exdata);
+exdata_null:
+    return -1;
+}
+
 /* B2-698 */
-static inline int ExclusiveMonitorPass(uint32_t address, int size, cpu_t *cpu)
+static int ExclusiveMonitorPass(uint32_t address, int size, cpu_t *cpu)
 {
     if(address != Align(address, size)){
         return FALSE;
@@ -2285,6 +2332,18 @@ static inline int ExclusiveMonitorPass(uint32_t address, int size, cpu_t *cpu)
     // TODO: the rest check;
 
     return passed;
+}
+
+static int SetExclusiveMonitor(uint32_t address, int size, cpu_t *cpu)
+{
+    // TODO: MPU
+    // memaddrdesc = memaddrdesc = ValidateAddress(address, FindPriv(), FALSE);
+    // if memaddrdesc.memattrs.shareable then
+    //      MarkExclusiveGlobal(memaddrdesc.physicaladdress, ProcessorID(), size);
+
+    // TODO: int cpuid = ProcessorID();
+    int cpuid = 0;
+    return MarkExclusiveLocal(address, cpuid, size, cpu);
 }
 
 /***********************************
@@ -2308,11 +2367,122 @@ void _strex(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t Rt, cpu_t* cpu)
     uint32_t address = GET_REG_VAL(regs, Rn) + imm32;
     if(ExclusiveMonitorPass(address, 4, cpu)){
         uint32_t Rt_val = GET_REG_VAL(regs, Rt);
-        MemA(address, 4, &Rt_val, MEM_WRITE, cpu);
+        MemA(address, 4, (uint8_t*)&Rt_val, MEM_WRITE, cpu);
         SET_REG_VAL(regs, Rd, 0);
     }else{
         SET_REG_VAL(regs, Rd, 1);
     }
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-305>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    address = R[n] + imm32;
+    SetExclusiveMonitors(address,4);
+    R[t] = MemA[address,4];
+**************************************/
+void _ldrex(uint32_t imm32, uint32_t Rn, uint32_t Rt, cpu_t* cpu)
+{
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
+    uint32_t address = GET_REG_VAL(regs, Rn) + imm32;
+    SetExclusiveMonitor(address, 4, cpu);
+    uint32_t data;
+    MemA(address, 4, (uint8_t*)&data, MEM_READ, cpu);
+    SET_REG_VAL(regs, Rt, data);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-483>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    offset_addr = if add then (R[n] + imm32) else (R[n] - imm32);
+    address = if index then offset_addr else R[n];
+    MemA[address,4] = R[t];
+    MemA[address+4,4] = R[t2];
+    if wback then R[n] = offset_addr;
+**************************************/
+void _strd(uint32_t imm32, uint32_t Rn, uint32_t Rt, uint32_t Rt2, int add, int wback, int index, cpu_t* cpu)
+{
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t offset_addr = add ? Rn_val + imm32 : Rn_val - imm32;
+    uint32_t address = index ? offset_addr : Rn_val;
+    uint32_t data = GET_REG_VAL(regs, Rt);
+    MemA(address, 4, (uint8_t*)&data, MEM_WRITE, cpu);
+    data = GET_REG_VAL(regs, Rt2);
+    MemA(address + 4, 4, (uint8_t*)&data, MEM_WRITE, cpu);
+    if(wback){
+        SET_REG_VAL(regs, Rn, offset_addr);
+    }
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-301>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    offset_addr = if add then (R[n] + imm32) else (R[n] - imm32);
+    address = if index then offset_addr else R[n];
+    R[t] = MemA[address,4];
+    R[t2] = MemA[address+4,4];
+    if wback then R[n] = offset_addr;
+**************************************/
+void _ldrd_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt, uint32_t Rt2, int add, int wback, int index, cpu_t* cpu)
+{
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t offset_addr = add ? Rn_val + imm32 : Rn_val - imm32;
+    uint32_t address = index ? offset_addr : Rn_val;
+    uint32_t data;
+    MemA(address, 4, (uint8_t*)&data, MEM_READ, cpu);
+    SET_REG_VAL(regs, Rt, data);
+    MemA(address + 4, 4, (uint8_t*)&data, MEM_READ, cpu);
+    SET_REG_VAL(regs, Rt2, data);
+    if(wback){
+        SET_REG_VAL(regs, Rn, offset_addr);
+    }
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-303>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    if PC<1:0> != ¡®00¡¯ then UNPREDICTABLE;
+    address = if add then (PC + imm32) else (PC - imm32);
+    R[t] = MemA[address,4];
+    R[t2] = MemA[address+4,4];
+**************************************/
+void _ldrd_literal(uint32_t imm32,  uint32_t Rt, uint32_t Rt2, int add, cpu_t* cpu)
+{
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
+    uint32_t PC_val = GET_REG_VAL(regs, PC_INDEX);
+    if((PC_val & 0x03) != 0){
+        LOG(LOG_WARN, "UNPREDICTABLE: _ldrd_literal treated as NOP\n");
+        return;
+    }
+
+    uint32_t address = add ? PC_val + imm32 : PC_val - imm32;
+    uint32_t data;
+    MemA(address, 4, (uint8_t*)&data, MEM_READ, cpu);
+    SET_REG_VAL(regs, Rt, data);
+    MemA(address + 4, 4, (uint8_t*)&data, MEM_READ, cpu);
+    SET_REG_VAL(regs, Rt2, data);
 }
 
 /***********************************

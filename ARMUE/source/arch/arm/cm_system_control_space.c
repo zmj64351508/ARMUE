@@ -26,7 +26,7 @@ int STIR(uint8_t *data, int rw_flag, cm_scs_t *scs)
 {
 	uint32_t excep_num = *(uint32_t*)data;
 	scs->NVIC->throw_exception(excep_num & 0x1FF, scs->NVIC);
-	return 0;	
+	return 0;
 }
 
 cm_scs_t* create_cm_scs()
@@ -87,7 +87,7 @@ int cm_scs_read(uint32_t offset, uint8_t *buffer, int size, memory_region_t *reg
 		// ...
 	case 0x7EC:
 		// NVIC_IPR123
-	
+
 	/* SCB */
 	case 0xD00:
 		// CPUID
@@ -154,7 +154,7 @@ int cm_scs_read(uint32_t offset, uint8_t *buffer, int size, memory_region_t *reg
 		// MPU_RBAR_A3
 	case 0xDB8:
 		// MPU_RASR_A3
-	
+
 	/* Debug register */
 	case 0xDF0:
 		// DHCSR
@@ -168,7 +168,7 @@ int cm_scs_read(uint32_t offset, uint8_t *buffer, int size, memory_region_t *reg
 	/* software trigger interrupt not in SCB */
 	case 0xF00:
 		// STIR
-	
+
 	/* FP extension */
 	case 0xF34:
 		// FPCCR
@@ -227,6 +227,7 @@ int cm_scs_init(cpu_t *cpu) //,soc_conf_t* config)
 	/* memory map must be initialed before calling this function */
 	memory_map_t *memory = cpu->memory_map;
 	if(memory == NULL){
+        retval = -ERROR_MEMORY_MAP;
 		goto no_memory;
 	}
 
@@ -238,7 +239,7 @@ int cm_scs_init(cpu_t *cpu) //,soc_conf_t* config)
 
 	/* Now we can setup the scs fields */
 	cm_scs_t *scs = create_cm_scs();
-	//scs->user_defined_data = 
+	//scs->user_defined_data =
 	//scs->user_defined_read
 	//scs->user_defined_write
 	scs->NVIC = cm_NVIC_init(cpu);

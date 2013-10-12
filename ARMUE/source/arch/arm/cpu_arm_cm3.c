@@ -25,7 +25,6 @@ int armcm3_startup(cpu_t* cpu)
 	}
 
 	arm_reg_t *regs = (arm_reg_t *)cpu->regs;
-	memory_map_t* memory_map = cpu->memory_map;
 
 	// set register initial value
 	// TODO: Following statements need to be pack in another function which should be in armv7m module
@@ -65,8 +64,6 @@ ins_t decode_armcm3_cpu(cpu_t* cpu, void* opcode)
 {
 	ins_t ins_info = {0, NULL, 0};
 	uint32_t opcode32 = *(uint32_t*)opcode;
-	arm_reg_t *regs = (arm_reg_t *)cpu->regs;
-	thumb_state *state = (thumb_state*)cpu->run_info.cpu_spec_info;
 
 
 	/* decode the opcode. If opcode is 16bit coded, next_ins will store the next 16bit of this 32bit opcode

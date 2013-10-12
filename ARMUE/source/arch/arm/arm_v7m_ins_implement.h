@@ -288,5 +288,9 @@ void _stmdb(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cp
 void _ldm(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_t* cpu);
 void _ldmdb(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_t* cpu);
 void _strex(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t Rt, cpu_t* cpu);
+void _ldrex(uint32_t imm32, uint32_t Rn, uint32_t Rt, cpu_t* cpu);
+void _strd(uint32_t imm32, uint32_t Rn, uint32_t Rt, uint32_t Rt2, int add, int wback, int index, cpu_t* cpu);
+void _ldrd_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt, uint32_t Rt2, int add, int wback, int index, cpu_t* cpu);
+void _ldrd_literal(uint32_t imm32,  uint32_t Rt, uint32_t Rt2, int add, cpu_t* cpu);
 void _b(int32_t imm32, uint8_t cond, cpu_t* cpu);
 #endif
