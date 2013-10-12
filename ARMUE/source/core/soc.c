@@ -97,6 +97,10 @@ soc_t* create_soc(soc_conf_t* config)
 		goto invalid_cpu;
 	}
 
+    /* global info is created when the first core of the cpu is initialized */
+    if(cpu->run_info.global_info != NULL){
+        soc->global_info = cpu->run_info.global_info;
+    }
 	return soc;
 
 invalid_cpu:

@@ -4,6 +4,7 @@
 #include "_types.h"
 #include "cpu.h"
 #include "memory_map.h"
+#include "list.h"
 
 typedef enum{
 	SRType_LSL,
@@ -67,9 +68,22 @@ typedef struct thumb_state{
 	int cur_exception;
 }thumb_state;
 
+typedef struct arm_exclusive_t{
+    uint32_t low_addr;
+    uint32_t high_addr;
+    int cpuid;
+}arm_exclusive_t;
+
+typedef struct thumb_global_state{
+    list_t *local_exclusive;    // stores arm_exclusive_t
+    list_t *global_exclusive;   // stores arm_exclusive_t
+}thumb_global_state;
+
+#define IN_RANGE(value, low, high) ((value) > (low)-1 && (value) < (high)+1)
 
 #define ARMv7m_GET_REGS(cpu) ((arm_reg_t*)(cpu)->regs)
 #define ARMv7m_GET_STATE(cpu) ((thumb_state*)(cpu)->run_info.cpu_spec_info)
+#define ARMv7m_GET_GLOBAL_STATE(cpu) ((thumb_global_state*)(cpu)->run_info.global_info)
 
 #define PSR_N (0x1UL << 31)
 #define PSR_Z (0x1UL << 30)
@@ -273,5 +287,6 @@ void _stm(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_
 void _stmdb(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_t* cpu);
 void _ldm(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_t* cpu);
 void _ldmdb(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_t* cpu);
+void _strex(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t Rt, cpu_t* cpu);
 void _b(int32_t imm32, uint8_t cond, cpu_t* cpu);
 #endif

@@ -1193,6 +1193,27 @@ void _ldmdb_32(uint32_t ins_code, cpu_t* cpu)
 	LOG_INSTRUCTION("_ldmdb_32, R%d,%d\n", Rn, registers);
 }
 
+
+void _strex_32(uint32_t ins_code, cpu_t* cpu)
+{
+    uint32_t imm8 = LOW_BIT32(ins_code, 8);
+    uint32_t imm32 = imm8 << 2;
+    uint32_t Rd = LOW_BIT32(ins_code >> 8, 4);
+    uint32_t Rt = LOW_BIT32(ins_code >> 12, 4);
+    uint32_t Rn = LOW_BIT32(ins_code >> 16, 4);
+
+    if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rt, 13, 15) || Rn == 15){
+		LOG_INSTRUCTION("UNPREDICTABLE: _strex_32 treated as NOP\n");
+    }
+
+    if(Rd == Rn || Rd == Rt){
+		LOG_INSTRUCTION("UNPREDICTABLE: _strex_32 treated as NOP\n");
+    }
+
+	_strex(imm32, Rn, Rd, Rt, cpu);
+	LOG_INSTRUCTION("_strex_32, R%d,R%d,[R%d,#%d]\n", Rd, Rt, Rn, imm8);
+}
+
 /****** init instruction table ******/
 void init_instruction_table(thumb_instruct_table_t* table)
 {
@@ -1302,6 +1323,7 @@ void init_instruction_table(thumb_instruct_table_t* table)
 
 
 	/*************************************** 32 bit thumb instructions *******************************************************/
+	// bit 20~28
 	// load multiple and store multiple A5-171
 	set_base_table_value(table->main_table32, 0x088, 0x088, (thumb_translate_t)_stm_32, THUMB_EXCUTER);
 	set_base_table_value(table->main_table32, 0x08A, 0x08A, (thumb_translate_t)_stm_32, THUMB_EXCUTER);
@@ -1311,6 +1333,9 @@ void init_instruction_table(thumb_instruct_table_t* table)
 	set_base_table_value(table->main_table32, 0x092, 0x092, (thumb_translate_t)stmdb_push_bundle, THUMB_DECODER);
 	set_base_table_value(table->main_table32, 0x091, 0x091, (thumb_translate_t)_ldmdb_32, THUMB_EXCUTER);
 	set_base_table_value(table->main_table32, 0x093, 0x093, (thumb_translate_t)_ldmdb_32, THUMB_EXCUTER);
+
+    // load store dual or exclusive, table brach A5-172
+	set_base_table_value(table->main_table32, 0x084, 0x084, (thumb_translate_t)_strex_32, THUMB_EXCUTER);
 }
 
 bool_t is_16bit_code(uint16_t opcode)
@@ -1419,16 +1444,53 @@ thumb_state* create_thumb_state()
 	return (thumb_state*)malloc(sizeof(thumb_state))	;
 }
 
-error_code_t destory_thumb_state(thumb_state** state)
+int destory_thumb_state(thumb_state** state)
 {
 	if(state == NULL || *state == NULL){
-		return ERROR_NULL_POINTER;
+		return -ERROR_NULL_POINTER;
 	}
 
 	free(*state);
 	*state = NULL;
 
 	return SUCCESS;
+}
+
+thumb_global_state* create_thumb_global_state()
+{
+    thumb_global_state *gstate = (thumb_global_state*)calloc(1, sizeof(thumb_global_state));
+    if(gstate == NULL){
+        goto gstate_null;
+    }
+
+    gstate->local_exclusive = list_create_empty();
+    if(gstate->local_exclusive == NULL){
+        goto local_exclusive_null;
+    }
+    gstate->global_exclusive = list_create_empty();
+    if(gstate->global_exclusive == NULL){
+        goto gloabl_exclusive_null;
+    }
+
+    return gstate;
+
+gloabl_exclusive_null:
+    list_delete(gstate->local_exclusive);
+local_exclusive_null:
+    free(gstate);
+gstate_null:
+    return NULL;
+}
+
+int destory_thumb_global_state(thumb_global_state **state)
+{
+    if(state == NULL || *state == NULL){
+        return -ERROR_NULL_POINTER;
+    }
+    free(*state);
+    *state = NULL;
+
+    return SUCCESS;
 }
 
 thumb_instruct_table_t* create_instruction_table()
@@ -1451,6 +1513,12 @@ int ins_thumb_init(_IO cpu_t* cpu)
 	}
 	set_cpu_spec_info(cpu, state);
 
+	thumb_global_state *global_state = create_thumb_global_state();
+	if(global_state == NULL){
+        goto global_state_error;
+	}
+	cpu->run_info.global_info = global_state;
+
 	cpu->regs = create_arm_regs();
 	if(cpu->regs == NULL){
 		goto regs_error;
@@ -1469,6 +1537,8 @@ int ins_thumb_init(_IO cpu_t* cpu)
 table_err:
 	destory_arm_regs((arm_reg_t**)&cpu->regs);
 regs_error:
+    destory_thumb_global_state((thumb_global_state**)&cpu->run_info.global_info);
+global_state_error:
 	destory_thumb_state((thumb_state**)&cpu->run_info.cpu_spec_info);
 state_error:
 	return -ERROR_CREATE;

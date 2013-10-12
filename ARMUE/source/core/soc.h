@@ -12,7 +12,8 @@ extern "C"{
 #define MEMORY_NUM_MAX 2
 
 typedef struct {
-	cpu_t* cpu[SOC_CPU_MAX];
+	cpu_t *cpu[SOC_CPU_MAX];
+	void *global_info;
 }soc_t;
 
 typedef struct soc_conf_t{

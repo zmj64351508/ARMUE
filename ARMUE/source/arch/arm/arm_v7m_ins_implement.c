@@ -2252,6 +2252,69 @@ void _ldmdb(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cp
 	}
 
 }
+
+int IsExclusiveLocal(uint32_t address, int cpuid, int size, cpu_t *cpu)
+{
+    thumb_global_state* gstate = ARMv7m_GET_GLOBAL_STATE(cpu);
+
+    list_t *cur;
+    arm_exclusive_t *record;
+    for_each_list_node(cur, gstate->local_exclusive){
+        record = (arm_exclusive_t*)cur->data.pdata;
+        if(IN_RANGE(address, record->low_addr, record->high_addr) && record->cpuid == cpuid){
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+/* B2-698 */
+static inline int ExclusiveMonitorPass(uint32_t address, int size, cpu_t *cpu)
+{
+    if(address != Align(address, size)){
+        return FALSE;
+    }else{
+        // TODO: MPU
+        // memaddresc = ValidateAddress()
+    }
+
+   // TODO: int cpuid = ProcessorID();
+    int cpuid = 0;
+    int passed = IsExclusiveLocal(address, cpuid, size, cpu);
+    // TODO: the rest check;
+
+    return passed;
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-285>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    address = R[n] + imm32;
+    if ExclusiveMonitorsPass(address,4) then
+        MemA[address,4] = R[t];
+        R[d] = 0;
+    else
+        R[d] = 1;
+**************************************/
+void _strex(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t Rt, cpu_t* cpu)
+{
+	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
+	if(!ConditionPassed(0, regs)){
+		return;
+	}
+
+    uint32_t address = GET_REG_VAL(regs, Rn) + imm32;
+    if(ExclusiveMonitorPass(address, 4, cpu)){
+        uint32_t Rt_val = GET_REG_VAL(regs, Rt);
+        MemA(address, 4, &Rt_val, MEM_WRITE, cpu);
+        SET_REG_VAL(regs, Rd, 0);
+    }else{
+        SET_REG_VAL(regs, Rd, 1);
+    }
+}
+
 /***********************************
 <<ARMv7-M Architecture Reference Manual A7-239>>
 if ConditionPassed() then
