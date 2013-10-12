@@ -21,7 +21,7 @@ typedef struct soc_conf_t{
 
 	int exception_num;
 	int nested_level;
-	
+
 	int has_GIC;
 	int GIC_interrupt_num;
 	int GIC_nested_level;

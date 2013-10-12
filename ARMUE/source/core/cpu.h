@@ -50,7 +50,7 @@ typedef struct cpu_t
 	void *system_info;
 	void *instruction_data;
 
-	/* For cortex-m profile, NVIC is internal with function of exception controller and 
+	/* For cortex-m profile, NVIC is internal with function of exception controller and
 	   general interrupt controller, while other profile like A, R and classical ARM cpu
 	   has an internal exception controller and an external interrupt controller. */
 	union{
@@ -60,7 +60,7 @@ typedef struct cpu_t
 	vector_interrupt_t* GIC;
 
 	/* for some architecture with seperated io and memory space.
-	   If the architecture has only single io and memory space, 
+	   If the architecture has only single io and memory space,
 	   these 2 pointer should pointer to the same memory map*/
 	union{
 		memory_map_t* memory_space;

@@ -498,7 +498,6 @@ void _blx_spec_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldr_literal_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm8 = (ins_code & 0xFFul) << 2;
 	uint32_t Rt = ins_code >> 8 & 0x7ul;
 	bool_t add = TRUE;
@@ -516,7 +515,6 @@ inline void decode_ldr_str_reg_16(uint16_t ins_code, _O uint32_t* Rm, _O uint32_
 
 void _str_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 	_str_reg(Rm, Rn, Rt, SRType_LSL, 0, cpu);
@@ -525,7 +523,6 @@ void _str_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _strh_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 
@@ -535,7 +532,6 @@ void _strh_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _strb_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 
@@ -545,7 +541,6 @@ void _strb_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldrsb_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 
@@ -557,7 +552,6 @@ void _ldrsb_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldr_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 	bool_t index = TRUE;
@@ -570,7 +564,6 @@ void _ldr_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldrh_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 	bool_t index = TRUE;
@@ -583,7 +576,6 @@ void _ldrh_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldrb_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 	bool_t index = TRUE;
@@ -595,7 +587,6 @@ void _ldrb_reg_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldrsh_reg_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t Rt, Rn, Rm;
 	decode_ldr_str_reg_16(ins_code, &Rm, &Rt, &Rn);
 	bool_t index = TRUE;
@@ -615,7 +606,6 @@ inline void decode_ldr_str_imm_16(uint16_t ins_code, _O uint32_t* imm, _O uint32
 
 void _str_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm5, Rt, Rn;
 	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
 	bool_t add = TRUE;
@@ -628,7 +618,6 @@ void _str_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldr_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm5, Rt, Rn;
 	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
 	bool_t add = TRUE;
@@ -641,7 +630,6 @@ void _ldr_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _strb_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm5, Rt, Rn;
 	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
 	bool_t add = TRUE;
@@ -654,7 +642,6 @@ void _strb_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldrb_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm5, Rt, Rn;
 	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
 	bool_t add = TRUE;
@@ -667,7 +654,6 @@ void _ldrb_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _strh_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm5, Rt, Rn;
 	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
 	bool_t add = TRUE;
@@ -680,7 +666,6 @@ void _strh_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldrh_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm5, Rt, Rn;
 	decode_ldr_str_imm_16(ins_code, &imm5, &Rt, &Rn);
 	bool_t add = TRUE;
@@ -699,7 +684,6 @@ inline void decode_ldr_str_sp_imm_16(uint16_t ins_code, _O uint32_t* imm, _O uin
 
 void _str_sp_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm8, Rt;
 	uint32_t Rn = 13;
 	decode_ldr_str_sp_imm_16(ins_code, &imm8, &Rt);
@@ -714,7 +698,6 @@ void _str_sp_imm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldr_sp_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm8, Rt;
 	uint32_t Rn = 13;
 	decode_ldr_str_sp_imm_16(ins_code, &imm8, &Rt);
@@ -847,7 +830,6 @@ void _uxtb_16(uint16_t ins_code, cpu_t* cpu)
 
 void _push_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t register_list = LOW_BIT16(ins_code, 8);
 	uint32_t registers = LOW_BIT16(ins_code >> 8, 1) << 14 | register_list;
 	uint32_t bitcount = BitCount32(registers);
@@ -912,7 +894,6 @@ void _pop_16(uint16_t ins_code, cpu_t* cpu)
 
 void _bkpt_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = (arm_reg_t*)cpu->regs;
 	uint32_t imm32 = LOW_BIT16(ins_code, 8);
 
 	LOG_INSTRUCTION("_bkpt_16 #%d\n", imm32);
@@ -986,8 +967,6 @@ thumb_translate16_t _it_hint_16(uint16_t ins_code, cpu_t* cpu)
 
 void _stm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
-
 	uint32_t registers = LOW_BIT16(ins_code, 8);
 	uint32_t Rn = LOW_BIT16(ins_code>>8, 3);
 	bool_t wback = TRUE;
@@ -1003,8 +982,6 @@ void _stm_16(uint16_t ins_code, cpu_t* cpu)
 
 void _ldm_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
-
 	uint32_t registers = LOW_BIT16(ins_code, 8);
 	uint32_t Rn = LOW_BIT16(ins_code>>8, 3);
 	bool_t wback = FALSE;
@@ -1039,7 +1016,6 @@ void _con_b_16(uint16_t ins_code, cpu_t* cpu)
 
 void _svc_16(uint16_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	uint32_t imm32 = LOW_BIT16(ins_code, 8);
 
 	cpu->cm_NVIC->throw_exception(11, cpu->cm_NVIC);
@@ -1075,7 +1051,6 @@ static inline void stm_rn_registers_wback(uint32_t ins_code, uint32_t *Rn, uint3
 
 void _stm_32(uint32_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	uint32_t Rn, registers;
 	bool_t wback;
 	stm_rn_registers_wback(ins_code, &Rn, &registers, &wback);
@@ -1155,7 +1130,6 @@ thumb_translate32_t ldm_pop_bundle(uint32_t ins_code, cpu_t *cpu)
 
 void _push_32(uint32_t ins_code, cpu_t* cpu)
 {
-	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	uint32_t Rn, registers;
 	bool_t wback;
 	stm_rn_registers_wback(ins_code, &Rn, &registers, &wback);
@@ -1171,7 +1145,6 @@ void _push_32(uint32_t ins_code, cpu_t* cpu)
 
 void _stmdb_32(uint32_t ins_code, cpu_t *cpu)
 {
-	arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
 	uint32_t Rn, registers;
 	bool_t wback;
 	stm_rn_registers_wback(ins_code, &Rn, &registers, &wback);
