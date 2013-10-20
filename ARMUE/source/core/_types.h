@@ -2,7 +2,7 @@
 #define __TYPES_H_
 
 #define _IO
-#define _I	const
+#define _I    const
 #define _O
 
 #ifdef FALSE

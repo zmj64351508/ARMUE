@@ -12,23 +12,23 @@ extern "C"{
 #define MEMORY_NUM_MAX 2
 
 typedef struct {
-	cpu_t *cpu[SOC_CPU_MAX];
-	void *global_info;
+    cpu_t *cpu[SOC_CPU_MAX];
+    void *global_info;
 }soc_t;
 
 typedef struct soc_conf_t{
-	int cpu_num;
-	char* cpu_name;
+    int cpu_num;
+    char* cpu_name;
 
-	int exception_num;
-	int nested_level;
+    int exception_num;
+    int nested_level;
 
-	int has_GIC;
-	int GIC_interrupt_num;
-	int GIC_nested_level;
+    int has_GIC;
+    int GIC_interrupt_num;
+    int GIC_nested_level;
 
-	int memory_map_num;
-	memory_map_t* memories[MEMORY_NUM_MAX];
+    int memory_map_num;
+    memory_map_t* memories[MEMORY_NUM_MAX];
 }soc_conf_t;
 
 soc_t* create_soc(soc_conf_t* config);

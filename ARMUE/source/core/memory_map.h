@@ -10,11 +10,11 @@ extern "C"{
 #include "rom.h"
 
 typedef enum{
-	MEMORY_REGION_UNKNOW,
-	MEMORY_REGION_ROM,
-	MEMORY_REGION_RAM,
-	MEMORY_REGION_SYS,
-	MEMORY_REGION_DEV,
+    MEMORY_REGION_UNKNOW,
+    MEMORY_REGION_ROM,
+    MEMORY_REGION_RAM,
+    MEMORY_REGION_SYS,
+    MEMORY_REGION_DEV,
 }memory_region_type_t;
 
 #define MEM_MAP_CACHE_SIZE 4000
@@ -23,17 +23,17 @@ typedef enum{
 
 #include "bstree.h"
 typedef struct{
-	uint32_t size_total;
-	bstree_node_t *map;	
+    uint32_t size_total;
+    bstree_node_t *map;    
 }memory_map_t;
 
 typedef struct memory_region_t{
-	uint32_t base_addr;	
-	uint32_t size;
-	memory_region_type_t type;
-	void *region_data;
-	int (*read)(uint32_t offset, uint8_t *buffer, int size, struct memory_region_t *region);
-	int (*write)(uint32_t offset, uint8_t *buffer, int size, struct memory_region_t *region);
+    uint32_t base_addr;    
+    uint32_t size;
+    memory_region_type_t type;
+    void *region_data;
+    int (*read)(uint32_t offset, uint8_t *buffer, int size, struct memory_region_t *region);
+    int (*write)(uint32_t offset, uint8_t *buffer, int size, struct memory_region_t *region);
 }memory_region_t;
 
 

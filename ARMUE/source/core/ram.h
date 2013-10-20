@@ -8,8 +8,8 @@ extern "C"{
 #include <stddef.h>
 
 typedef struct{
-	uint32_t size;
-	uint8_t* data;
+    uint32_t size;
+    uint8_t* data;
 }ram_t;
 
 ram_t* create_ram(size_t size);

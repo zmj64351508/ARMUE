@@ -5,12 +5,12 @@ extern "C"{
 #endif
 
 typedef struct fifo_t{
-	void *data;
-	size_t data_size;
-	size_t length;
-	int empty;
-	int in_index;
-	int out_index;
+    void *data;
+    size_t data_size;
+    size_t length;
+    int empty;
+    int in_index;
+    int out_index;
 }fifo_t;
 
 #define fifo_empty(fifo_ptr) ((fifo_ptr)->empty)

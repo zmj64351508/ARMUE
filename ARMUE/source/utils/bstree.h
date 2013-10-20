@@ -6,13 +6,13 @@ extern "C"{
 
 /* return -1 when data1 < data2
            0 when data1 = data2
-		   1 when data1 > data2 */
+           1 when data1 > data2 */
 typedef int (*bstree_cmp_t)(void* data1, void* data2);
 
 typedef struct bstree_node_t{
-	void* data;
-	struct bstree_node_t* lchild;	
-	struct bstree_node_t* rchild;	
+    void* data;
+    struct bstree_node_t* lchild;    
+    struct bstree_node_t* rchild;    
 }bstree_node_t;
 
 bstree_node_t* bstree_create_node(void* data);

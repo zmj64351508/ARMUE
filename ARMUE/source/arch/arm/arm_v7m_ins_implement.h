@@ -7,15 +7,15 @@
 #include "list.h"
 
 typedef enum{
-	SRType_LSL,
-	SRType_LSR,
-	SRType_ASR,
-	SRType_ROR,
-	SRType_RRX,
+    SRType_LSL,
+    SRType_LSR,
+    SRType_ASR,
+    SRType_ROR,
+    SRType_RRX,
 }SRType;
 
-#define MODE_THREAD		1
-#define MODE_HANDLER	2
+#define MODE_THREAD        1
+#define MODE_HANDLER    2
 
 #define MEM_READ 1
 #define MEM_WRITE 2
@@ -32,9 +32,9 @@ typedef enum{
 #define BANK_INDEX_PSP 1
 
 typedef struct{
-	// general registers
-	union{
-        uint32_t R[16];			// 0x00~0x0D * sizeof(uint32_t)
+    // general registers
+    union{
+        uint32_t R[16];            // 0x00~0x0D * sizeof(uint32_t)
         struct {
             uint32_t R0, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12;
             union{
@@ -44,28 +44,28 @@ typedef struct{
             uint32_t LR;
             uint32_t PC;
         };
-	};
+    };
 
-	// control registers
-	uint32_t xPSR;			// 0x11
-	uint32_t PRIMASK;		// 0x12
-	uint32_t FAULTMASK;		// 0x13
-	uint32_t BASEPRI;		// 0x14
-	uint32_t CONTROL;		// 0x15
+    // control registers
+    uint32_t xPSR;            // 0x11
+    uint32_t PRIMASK;        // 0x12
+    uint32_t FAULTMASK;        // 0x13
+    uint32_t BASEPRI;        // 0x14
+    uint32_t CONTROL;        // 0x15
 
     // banked registers
-	uint32_t SP_bank[2];		// backup for MSP/PSP
-	uint8_t sp_in_use;  /* which is in use (should to be banked) */
+    uint32_t SP_bank[2];        // backup for MSP/PSP
+    uint8_t sp_in_use;  /* which is in use (should to be banked) */
 
-	uint32_t PC_return;		/* the return value of PC, it is the same as PC in 32-bit instructions
-							   and PC+2 in 16-bit instructions */
+    uint32_t PC_return;        /* the return value of PC, it is the same as PC in 32-bit instructions
+                               and PC+2 in 16-bit instructions */
 
 }arm_reg_t;
 
 typedef struct thumb_state{
-	uint8_t excuting_IT;
-	int mode;
-	int cur_exception;
+    uint8_t excuting_IT;
+    int mode;
+    int cur_exception;
 }thumb_state;
 
 typedef struct arm_exclusive_t{
@@ -94,8 +94,8 @@ typedef struct thumb_global_state{
 #define CONTROL_SPSEL (0x1ul << 1)
 
 #define BIT_31 (0x1UL << 31)
-#define BIT_1	(0x1UL << 1)
-#define BIT_0	(0x1UL)
+#define BIT_1    (0x1UL << 1)
+#define BIT_0    (0x1UL)
 
 #define SET_PSR(regs, val) ((regs)->xPSR = (val))
 #define SET_IPSR(regs, val) ((regs)->xPSR = ((regs)->xPSR & ~0x1FFul) | (val))
@@ -121,42 +121,42 @@ typedef struct thumb_global_state{
 #define GET_ITSTATE(regs) ((regs->xPSR >> 8 & 0xFC) | (regs->xPSR >> 25 & 0x3))
 #define SET_ITSTATE(regs, value_8bit) \
 do{\
-	regs->xPSR &= ~((0xFCul << 8)| (0x3ul << 25)); \
-	regs->xPSR |= ((value_8bit) & 0xFC) << 8; \
-	regs->xPSR |= ((value_8bit) & 0x3) << 25; \
+    regs->xPSR &= ~((0xFCul << 8)| (0x3ul << 25)); \
+    regs->xPSR |= ((value_8bit) & 0xFC) << 8; \
+    regs->xPSR |= ((value_8bit) & 0x3) << 25; \
 }while(0)
 
 static inline uint32_t InITBlock(arm_reg_t* regs)
 {
-	uint8_t ITstate = GET_ITSTATE(regs);
-	return (ITstate & 0xF) != 0;
+    uint8_t ITstate = GET_ITSTATE(regs);
+    return (ITstate & 0xF) != 0;
 }
 
 static inline uint32_t LastInITBlock(arm_reg_t* regs)
 {
-	uint8_t ITstate = GET_ITSTATE(regs);
-	return (ITstate & 0xF) == 0x8;
+    uint8_t ITstate = GET_ITSTATE(regs);
+    return (ITstate & 0xF) == 0x8;
 }
 
 static inline void ITAdvance(arm_reg_t* regs)
 {
-	uint8_t itstat =  GET_ITSTATE(regs);
-	uint8_t low4bit = itstat & 0xF;
-	if((itstat & 0x7) == 0){
-		SET_ITSTATE(regs, 0);
-	}else{
-		low4bit <<= 1;
-		itstat &= ~0xF;
-		itstat |= low4bit;
-		SET_ITSTATE(regs, itstat);
-	}
+    uint8_t itstat =  GET_ITSTATE(regs);
+    uint8_t low4bit = itstat & 0xF;
+    if((itstat & 0x7) == 0){
+        SET_ITSTATE(regs, 0);
+    }else{
+        low4bit <<= 1;
+        itstat &= ~0xF;
+        itstat |= low4bit;
+        SET_ITSTATE(regs, itstat);
+    }
 }
 
 static inline uint8_t check_and_reset_excuting_IT(thumb_state* state)
 {
-	uint8_t retval = state->excuting_IT;
-	state->excuting_IT = 0;
-	return retval;
+    uint8_t retval = state->excuting_IT;
+    state->excuting_IT = 0;
+    return retval;
 }
 
 // DOWN_ALIGN(a, n) == Align(a, 2^n)
@@ -164,57 +164,57 @@ static inline uint8_t check_and_reset_excuting_IT(thumb_state* state)
 #define CHECK_PC(PC_val) ((PC_val) & 0x1ul)
 static inline uint32_t Align(uint32_t address, uint32_t size)
 {
-	return address-address%size;
+    return address-address%size;
 }
 
 static inline uint32_t GET_REG_VAL(arm_reg_t* regs, uint32_t Rx){
-	uint32_t val = 0;
-	/* PC is special, it always return the value aligned to 4*/
-	if(Rx == PC_INDEX){
-		val = regs->PC_return;
-	}else if(Rx == PC_RAW_INDEX){
-		val = regs->PC;
-	}else{
-		val = GET_REG_VAL_UNCON(regs, Rx);
-	}
-	return val;
+    uint32_t val = 0;
+    /* PC is special, it always return the value aligned to 4*/
+    if(Rx == PC_INDEX){
+        val = regs->PC_return;
+    }else if(Rx == PC_RAW_INDEX){
+        val = regs->PC;
+    }else{
+        val = GET_REG_VAL_UNCON(regs, Rx);
+    }
+    return val;
 }
 
 static inline void SET_REG_VAL(arm_reg_t* regs, uint32_t Rx, uint32_t val){
-	uint32_t modified = val;
-	switch(Rx){
-	case SP_INDEX:
-		modified = DOWN_ALIGN(modified, 2);
-		break;
-	default:
-		break;
-	}
-	SET_REG_VAL_UNCON(regs, Rx, modified);
+    uint32_t modified = val;
+    switch(Rx){
+    case SP_INDEX:
+        modified = DOWN_ALIGN(modified, 2);
+        break;
+    default:
+        break;
+    }
+    SET_REG_VAL_UNCON(regs, Rx, modified);
 }
 
 static inline uint8_t get_bit(uint32_t* reg, uint32_t bit_pos)
 {
-	return (*reg & bit_pos) == 0 ? 0: 1;
+    return (*reg & bit_pos) == 0 ? 0: 1;
 }
 
 // if bit_val != 0 then set bit to 1. bit_pos is defined above
 static inline void set_bit(uint32_t* reg, uint32_t bit_pos,int bit_val)
 {
-	if(bit_val == 0){
-		*reg &= ~bit_pos;
-	}else{
-		*reg |= bit_pos;
-	}
+    if(bit_val == 0){
+        *reg &= ~bit_pos;
+    }else{
+        *reg |= bit_pos;
+    }
 }
 
 static inline uint32_t BitCount32(uint32_t bits)
 {
-	uint32_t count = 0;
-	while(bits != 0){
-		bits = bits & (bits-1);
-		count++;
-	}
-	return count;
+    uint32_t count = 0;
+    while(bits != 0){
+        bits = bits & (bits-1);
+        count++;
+    }
+    return count;
 }
 
 /* directly operate registers */

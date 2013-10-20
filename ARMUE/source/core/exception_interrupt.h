@@ -10,15 +10,15 @@ extern "C"{
 struct cpu_t;
 typedef struct vector_exception_t
 {
-	uint32_t *vector_table;
-	int *prio_table;
-	int vector_table_size;
-	/* controller info is the controller-specific field which can be regarded as the controller's private data*/
-	void *controller_info;
+    uint32_t *vector_table;
+    int *prio_table;
+    int vector_table_size;
+    /* controller info is the controller-specific field which can be regarded as the controller's private data*/
+    void *controller_info;
 
-	int (*throw_exception)(int vector_num, struct vector_exception_t* controller);
-	int (*check_exception)(struct cpu_t* cpu);
-	int (*handle_exception)(int vector_num, struct cpu_t* cpu);
+    int (*throw_exception)(int vector_num, struct vector_exception_t* controller);
+    int (*check_exception)(struct cpu_t* cpu);
+    int (*handle_exception)(int vector_num, struct cpu_t* cpu);
 }vector_exception_t;
 typedef vector_exception_t vector_interrupt_t;
 

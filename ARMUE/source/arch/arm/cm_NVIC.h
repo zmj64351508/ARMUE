@@ -15,12 +15,12 @@ typedef bheap_t pending_list_t;
 
 typedef struct cm_NVIC_t
 {
-	uint8_t exception_active[NVIC_MAX_EXCEPTION];
-	uint8_t nested_exception;
-	uint8_t preempt_mask;
-	uint8_t prio_mask;
-	uint8_t interrupt_lines;
-	pending_list_t* pending_list;
+    uint8_t exception_active[NVIC_MAX_EXCEPTION];
+    uint8_t nested_exception;
+    uint8_t preempt_mask;
+    uint8_t prio_mask;
+    uint8_t interrupt_lines;
+    pending_list_t* pending_list;
 }cm_NVIC_t;
 
 void ExceptionReturn(uint32_t exc_return, cpu_t *cpu);

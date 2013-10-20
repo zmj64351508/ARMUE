@@ -3,12 +3,12 @@
 
 typedef struct
 {
-	int a;
+    int a;
 }peripheral_t;
 
 typedef struct peripheral_list_t
 {
-	int a;
+    int a;
 }peripheral_list_t;
 
 #endif

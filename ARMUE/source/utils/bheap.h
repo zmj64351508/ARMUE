@@ -5,10 +5,10 @@ extern "C"{
 #endif
 
 typedef struct bheap_t{
-	void *data;
-	int data_size;
-	int current_length;
-	int total_length;	
+    void *data;
+    int data_size;
+    int current_length;
+    int total_length;    
 }bheap_t;
 
 typedef int (*bheap_compare_t)(void *a, void *b);

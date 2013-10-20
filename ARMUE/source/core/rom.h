@@ -17,12 +17,12 @@ extern "C"{
 
 typedef struct rom_s_t
 {
-	bool_t allocated;			// the flag whether the rom is allocated to specific rom file
-	int content_start;			// where the rom data start.
-	int last_offset;			// last read or write offset of the rom file
-	FILE* rom_file;				
-	uint32_t size;				// the size of the rom in byte
-	int rw_flag;
+    bool_t allocated;            // the flag whether the rom is allocated to specific rom file
+    int content_start;            // where the rom data start.
+    int last_offset;            // last read or write offset of the rom file
+    FILE* rom_file;                
+    uint32_t size;                // the size of the rom in byte
+    int rw_flag;
 }rom_t;
 
 rom_t* alloc_rom();
