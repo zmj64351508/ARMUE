@@ -192,14 +192,14 @@ error_code_t dealloc_cpu(cpu_t** cpu)
 }
 
 error_code_t destory_cpu_list(cpu_list_t** cpu_list)
-{    
+{
     //LOG(LOG_DEBUG, "destory_cpu_list\n");
     if(*cpu_list == NULL || cpu_list == NULL){
         LOG(LOG_ERROR, "destory_cpu_list: invalid parameters\n");
         return ERROR_NULL_POINTER;
     }
 
-        
+
     cpu_t* cpu, *cpu_next = NULL;
     cpu = get_first_cpu(*cpu_list);
 
@@ -229,6 +229,11 @@ int validate_cpu(cpu_t* cpu)
         return 0;
     }
     return 1;
+}
+
+void add_cycle(cpu_t *cpu)
+{
+    cpu->cycle++;
 }
 
 

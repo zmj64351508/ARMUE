@@ -22,20 +22,21 @@ typedef enum
     ERROR_SOC_STARTUP,
 }error_code_t;
 
+#define LOG_NONE            4
 #define LOG_ERROR            3
 #define LOG_WARN            2
 #define LOG_DEBUG            1
 #define LOG_ALL                0
-#define LOG_CURRENT_LEVEL    LOG_ALL
+#define LOG_CURRENT_LEVEL    LOG_NONE
 
 #include <stdio.h>
-
 
 #define LOG(debug_level, message, args...) \
     if(debug_level >= LOG_CURRENT_LEVEL){\
         printf("[%s] "message, #debug_level+4, ##args);\
     }
 
+#undef _DEBUG
 #ifdef _DEBUG
 #define LOG_INSTRUCTION(message, args...)\
     printf("[INSTRUCTION] "message, ##args);

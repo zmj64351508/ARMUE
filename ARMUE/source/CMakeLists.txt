@@ -2,7 +2,7 @@
 set(EXECUTABLE_OUTPUT_PATH ${ARMUE_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${ARMUE_SOURCE_DIR}/lib)
 
-set(SOURCE_DIRS 
+set(SOURCE_DIRS
 ./
 ./core
 ./utils
@@ -12,7 +12,13 @@ set(SOURCE_DIRS
 #include directory
 include_directories(${SOURCE_DIRS})
 
+#main app
 aux_source_directory(./ MAIN_APP)
+
+#tests
+set(SPEED_TEST ./test/speed_test.c)
+
+#source files
 aux_source_directory(./core CORE_FILE)
 aux_source_directory(./utils UTILS_FILE)
 aux_source_directory(./arch/arm ARCH_ARM_FILE)
@@ -21,8 +27,15 @@ SET(CMAKE_C_FLAGS "$ENV{CFLAGS} -O2 -Wall -g -finline-functions")
 ADD_DEFINITIONS(-D_DEBUG)
 
 #executable and library name
-add_executable(ARMUE 
+add_executable(ARMUE
 ${MAIN_APP}
+${CORE_FILE}
+${UTILS_FILE}
+${ARCH_ARM_FILE}
+)
+
+add_executable(Speed_test
+${SPEED_TEST}
 ${CORE_FILE}
 ${UTILS_FILE}
 ${ARCH_ARM_FILE}

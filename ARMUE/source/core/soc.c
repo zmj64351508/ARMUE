@@ -32,8 +32,9 @@ uint32_t run_soc(soc_t* soc)
     if(vector_num != 0){
         cpu->exceptions->handle_exception(vector_num, cpu);
     }
-    LOG_REG((arm_reg_t*)cpu->regs);
-    getchar();
+    add_cycle(cpu);
+    //LOG_REG((arm_reg_t*)cpu->regs);
+    //getchar();
     return opcode;
 }
 

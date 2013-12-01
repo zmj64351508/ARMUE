@@ -50,6 +50,7 @@ typedef struct cpu_t
     void *regs;
     void *system_info;
     void *instruction_data;
+    uint32_t cycle;
 
     /* For cortex-m profile, NVIC is internal with function of exception controller and
        general interrupt controller, while other profile like A, R and classical ARM cpu
