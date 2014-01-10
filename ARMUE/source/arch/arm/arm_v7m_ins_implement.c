@@ -2486,6 +2486,124 @@ void _ldrd_literal(uint32_t imm32,  uint32_t Rt, uint32_t Rt2, int add, cpu_t* c
 }
 
 /***********************************
+<<ARMv7-M Architecture Reference Manual A7-486>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    address = R[n];
+    if ExclusiveMonitorsPass(address,1) then
+        MemA[address,1] = R[t];
+        R[d] = 0;
+    else
+        R[d] = 1;
+**************************************/
+void _strexb_h(uint32_t Rd, uint32_t Rt, uint32_t Rn, cpu_t *cpu, int size)
+{
+    arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t address = GET_REG_VAL(regs, Rn);
+    if(ExclusiveMonitorPass(address, size, cpu)){
+        uint32_t Rt_val = GET_REG_VAL(regs, Rt);
+        MemA(address, size, (uint8_t*)&Rt_val, MEM_WRITE, cpu);
+        SET_REG_VAL(regs, Rd, 0);
+    }else{
+        SET_REG_VAL(regs, Rd, 1);
+    }
+}
+
+void _strexb(uint32_t Rd, uint32_t Rt, uint32_t Rn, cpu_t *cpu)
+{
+    _strexb_h(Rd, Rt, Rn, cpu, 1);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-487>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    address = R[n];
+    if ExclusiveMonitorsPass(address,2) then
+        MemA[address,2] = R[t];
+        R[d] = 0;
+    else
+        R[d] = 1;
+**************************************/
+void _strexh(uint32_t Rd, uint32_t Rt, uint32_t Rn, cpu_t *cpu)
+{
+    _strexb_h(Rd, Rt, Rn, cpu, 2);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-517>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    if is_tbh then
+        halfwords = UInt(MemU[R[n]+LSL(R[m],1), 2]);
+    else
+        halfwords = UInt(MemU[R[n]+R[m], 1]);
+    BranchWritePC(PC + 2*halfwords);
+**************************************/
+void _tbb_h(uint32_t Rn, uint32_t Rm, bool_t is_tbh, cpu_t *cpu)
+{
+    arm_reg_t *regs = ARMv7m_GET_REGS(cpu);
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint16_t halfwords = 0;
+    if(is_tbh){
+        MemU(Rn_val + (Rm_val << 1), 2, (uint8_t*)&halfwords, MEM_READ, cpu);
+    }else{
+        MemU(Rn_val + Rm_val, 1, (uint8_t*)&halfwords, MEM_READ, cpu);
+    }
+    uint32_t PC_val = GET_REG_VAL(regs, PC_INDEX);
+    BranchWritePC(PC_val + 2 * halfwords, regs);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-306>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    address = R[n];
+    SetExclusiveMonitors(address,1);
+    R[t] = ZeroExtend(MemA[address,1], 32);
+**************************************/
+void _ldrexb_h(uint32_t Rn, uint32_t Rt, cpu_t *cpu, int size)
+{
+    arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t address = GET_REG_VAL(regs, Rn);
+    SetExclusiveMonitor(address, size, cpu);
+    uint32_t data = 0;
+    MemA(address, size, (uint8_t*)&data, MEM_READ, cpu);
+    SET_REG_VAL(regs, Rt, data);
+}
+
+void _ldrexb(uint32_t Rn, uint32_t Rt, cpu_t* cpu)
+{
+    _ldrexb_h(Rn, Rt, cpu, 1);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-307>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    address = R[n];
+    SetExclusiveMonitors(address,2);
+    R[t] = ZeroExtend(MemA[address,2], 32);
+**************************************/
+void _ldrexh(uint32_t Rn, uint32_t Rt, cpu_t* cpu)
+{
+    _ldrexb_h(Rn, Rt, cpu, 2);
+}
+
+/***********************************
 <<ARMv7-M Architecture Reference Manual A7-239>>
 if ConditionPassed() then
     EncodingSpecificOperations();

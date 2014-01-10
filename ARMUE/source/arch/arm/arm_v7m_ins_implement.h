@@ -79,7 +79,7 @@ typedef struct thumb_global_state{
     list_t *global_exclusive;   // stores arm_exclusive_t
 }thumb_global_state;
 
-#define IN_RANGE(value, low, high) ((value) > (low)-1 && (value) < (high)+1)
+#define IN_RANGE(value, low, high) ((value) >= (low) && (value) <= (high))
 
 #define ARMv7m_GET_REGS(cpu) ((arm_reg_t*)(cpu)->regs)
 #define ARMv7m_GET_STATE(cpu) ((thumb_state*)(cpu)->run_info.cpu_spec_info)
@@ -292,5 +292,10 @@ void _ldrex(uint32_t imm32, uint32_t Rn, uint32_t Rt, cpu_t* cpu);
 void _strd(uint32_t imm32, uint32_t Rn, uint32_t Rt, uint32_t Rt2, int add, int wback, int index, cpu_t* cpu);
 void _ldrd_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt, uint32_t Rt2, int add, int wback, int index, cpu_t* cpu);
 void _ldrd_literal(uint32_t imm32,  uint32_t Rt, uint32_t Rt2, int add, cpu_t* cpu);
+void _strexb(uint32_t Rd, uint32_t Rt, uint32_t Rn, cpu_t *cpu);
+void _strexh(uint32_t Rd, uint32_t Rt, uint32_t Rn, cpu_t *cpu);
+void _tbb_h(uint32_t Rn, uint32_t Rm, bool_t is_tbh, cpu_t *cpu);
+void _ldrexb(uint32_t Rn, uint32_t Rt, cpu_t* cpu);
+void _ldrexh(uint32_t Rn, uint32_t Rt, cpu_t* cpu);
 void _b(int32_t imm32, uint8_t cond, cpu_t* cpu);
 #endif

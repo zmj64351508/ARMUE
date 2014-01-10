@@ -1042,6 +1042,11 @@ void _unpredictable_16(uint16_t ins_code, cpu_t* cpu)
     LOG(LOG_WARN, "ins_code: %x is UNPREDICTABLE, treated as NOP\n", ins_code);
 }
 
+void _unpredictable_32(uint32_t ins_code, cpu_t *cpu)
+{
+    LOG(LOG_WARN, "ins_code: %x is UNPREDICTABLE, treated as NOP\n", ins_code);
+}
+
 static inline void stm_rn_registers_wback(uint32_t ins_code, uint32_t *Rn, uint32_t *registers, bool_t *wback)
 {
     *Rn = LOW_BIT32(ins_code >> 16, 4);
@@ -1307,6 +1312,118 @@ thumb_translate32_t _ldrd_32(uint32_t ins_code, cpu_t* cpu)
     }
 }
 
+void _strexb_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = LOW_BIT32(ins_code, 4);
+    uint32_t Rt = LOW_BIT32(ins_code >> 12, 4);
+    uint32_t Rn = LOW_BIT32(ins_code >> 16, 4);
+
+    if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rt, 13, 15) || Rn == 15){
+        LOG_INSTRUCTION("UNPREDICTABLE: _strexb_32 treated as NOP\n");
+    }
+
+    if(Rd == Rn || Rd == Rt){
+        LOG_INSTRUCTION("UNPREDICTABLE: _strexb_32 treated as NOP\n");
+    }
+
+    _strexb(Rd, Rt, Rn, cpu);
+    LOG_INSTRUCTION("_strexb_32, R%d,R%d,[R%d]\n", Rd, Rt, Rn);
+}
+
+void _strexh_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = LOW_BIT32(ins_code, 4);
+    uint32_t Rt = LOW_BIT32(ins_code >> 12, 4);
+    uint32_t Rn = LOW_BIT32(ins_code >> 16, 4);
+
+    if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rt, 13, 15) || Rn == 15){
+        LOG_INSTRUCTION("UNPREDICTABLE: _strexh_32 treated as NOP\n");
+    }
+
+    if(Rd == Rn || Rd == Rt){
+        LOG_INSTRUCTION("UNPREDICTABLE: _strexh_32 treated as NOP\n");
+    }
+
+    _strexh(Rd, Rt, Rn, cpu);
+    LOG_INSTRUCTION("_strexh_32, R%d,R%d,[R%d]\n", Rd, Rt, Rn);
+}
+
+thumb_translate32_t _strexb_h_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op3 = LOW_BIT32(ins_code >> 4, 4);
+    if(op3 == 0x4){
+        return (thumb_translate32_t)_strexb_32;
+    }else if(op3 == 0x5){
+        return (thumb_translate32_t)_strexh_32;
+    }else{
+        return (thumb_translate32_t)_unpredictable_32;
+    }
+}
+
+void _tbb_h_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rm = LOW_BIT32(ins_code, 4);
+    uint32_t Rn = LOW_BIT32(ins_code >> 16, 4);
+    bool_t is_tbh = LOW_BIT32(ins_code >> 4, 1);
+
+    if(Rn == 13 || IN_RANGE(Rm, 13, 15)){
+        LOG_INSTRUCTION("UNPREDICTABLE: _tbb_h_32 treated as NOP\n");
+    }
+
+    if(InITBlock(cpu->regs) && !LastInITBlock(cpu->regs)){
+        LOG_INSTRUCTION("UNPREDICTABLE: _tbb_h_32 treated as NOP\n");
+    }
+
+    _tbb_h(Rn, Rm, is_tbh, cpu);
+    if(!is_tbh){
+        LOG_INSTRUCTION("_tbb_32, [R%d,R%d]\n", Rn, Rm);
+    }else{
+        LOG_INSTRUCTION("_tbh_32, [R%d,R%d,LSL #1]\n", Rn, Rm);
+    }
+}
+
+void _ldrexb_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rt = LOW_BIT32(ins_code >> 12, 4);
+    uint32_t Rn = LOW_BIT32(ins_code >> 16, 4);
+
+    if(IN_RANGE(Rt, 13, 15) || Rn == 15){
+        LOG_INSTRUCTION("UNPREDICTABLE: _ldrexb_32 treated as NOP\n");
+    }
+
+    _ldrexb(Rn, Rt, cpu);
+    LOG_INSTRUCTION("_ldrexb_32, R%d,[R%d]\n", Rt, Rn);
+}
+
+void _ldrexh_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rt = LOW_BIT32(ins_code >> 12, 4);
+    uint32_t Rn = LOW_BIT32(ins_code >> 16, 4);
+
+    if(IN_RANGE(Rt, 13, 15) || Rn == 15){
+        LOG_INSTRUCTION("UNPREDICTABLE: _ldrexh_32 treated as NOP\n");
+    }
+
+    _ldrexh(Rn, Rt, cpu);
+    LOG_INSTRUCTION("_ldrexh_32, R%d,[R%d]\n", Rt, Rn);
+}
+
+thumb_translate32_t _tbb_h_ldrexb_h_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op3 = LOW_BIT32(ins_code >> 4, 4);
+    switch(op3){
+    case 0:
+    case 1:
+        return (thumb_translate32_t)_tbb_h_32;
+    case 0x4:
+        return (thumb_translate32_t)_ldrexb_32;
+    case 0x5:
+        return (thumb_translate32_t)_ldrexh_32;
+    default:
+        return (thumb_translate32_t)_unpredictable_32;
+    }
+}
+
 /****** init instruction table ******/
 void init_instruction_table(thumb_instruct_table_t* table)
 {
@@ -1444,6 +1561,9 @@ void init_instruction_table(thumb_instruct_table_t* table)
     set_base_table_value(table->main_table32, 0x097, 0x097, (thumb_translate_t)_ldrd_32, THUMB_DECODER);
     set_base_table_value(table->main_table32, 0x09D, 0x09D, (thumb_translate_t)_ldrd_32, THUMB_DECODER);
     set_base_table_value(table->main_table32, 0x09F, 0x09F, (thumb_translate_t)_ldrd_32, THUMB_DECODER);
+
+    set_base_table_value(table->main_table32, 0x08C, 0x08C, (thumb_translate_t)_strexb_h_32, THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x08D, 0x08D, (thumb_translate_t)_tbb_h_ldrexb_h_32, THUMB_DECODER);
 }
 
 bool_t is_16bit_code(uint16_t opcode)
@@ -1490,6 +1610,7 @@ thumb_translate16_t thumb_parse_opcode16(uint16_t opcode, cpu_t* cpu)
 
 thumb_translate32_t thumb_parse_opcode32(uint32_t opcode, cpu_t *cpu)
 {
+    /* decode by bit 20 to 28 */
     thumb_decode_t decode = M_translate_table->main_table32[(opcode >> 20) & 0x1FF];
     if(decode.type == THUMB_DECODER){
         return (thumb_translate32_t)decode.translater32(opcode, cpu);

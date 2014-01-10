@@ -100,6 +100,8 @@ error_code_t set_cpu_module(cpu_t* cpu, void* module);
 void*    get_cpu_module(cpu_t* cpu);
 int validate_cpu(cpu_t* cpu);
 
+void add_cycle(cpu_t *cpu);
+
 #ifdef __cplusplus
 }
 #endif

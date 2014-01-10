@@ -27,7 +27,7 @@ typedef enum
 #define LOG_WARN            2
 #define LOG_DEBUG            1
 #define LOG_ALL                0
-#define LOG_CURRENT_LEVEL    LOG_NONE
+#define LOG_CURRENT_LEVEL    LOG_ALL
 
 #include <stdio.h>
 
@@ -36,7 +36,6 @@ typedef enum
         printf("[%s] "message, #debug_level+4, ##args);\
     }
 
-#undef _DEBUG
 #ifdef _DEBUG
 #define LOG_INSTRUCTION(message, args...)\
     printf("[INSTRUCTION] "message, ##args);
