@@ -84,6 +84,16 @@ thumb_translate16_t con_branch_svc(uint16_t ins_code, cpu_t* cpu)
 }
 
 /****** Here are the final decoders of 16bit instructions ******/
+void _unpredictable_16(uint16_t ins_code, cpu_t* cpu)
+{
+    LOG(LOG_WARN, "ins_code: %x is UNPREDICTABLE, treated as NOP\n", ins_code);
+}
+
+void _unpredictable_32(uint32_t ins_code, cpu_t *cpu)
+{
+    LOG(LOG_WARN, "ins_code: %x is UNPREDICTABLE, treated as NOP\n", ins_code);
+}
+
 void _lsl_imm_16(uint16_t ins_code, cpu_t* cpu)
 {
     arm_reg_t* regs = (arm_reg_t*)cpu->regs;
@@ -959,7 +969,7 @@ thumb_translate16_t _it_hint_16(uint16_t ins_code, cpu_t* cpu)
             return (thumb_translate16_t)_nop_16;
             break;
         default:
-            return NULL;
+            return (thumb_translate16_t)_unpredictable_16;
             break;
         }
     }
@@ -1035,16 +1045,6 @@ void _uncon_b_16(uint16_t ins_code, cpu_t* cpu)
 
     _b(imm32, 0, cpu);
     LOG_INSTRUCTION("_uncon_b_16, 0x%x\n", imm32);
-}
-
-void _unpredictable_16(uint16_t ins_code, cpu_t* cpu)
-{
-    LOG(LOG_WARN, "ins_code: %x is UNPREDICTABLE, treated as NOP\n", ins_code);
-}
-
-void _unpredictable_32(uint32_t ins_code, cpu_t *cpu)
-{
-    LOG(LOG_WARN, "ins_code: %x is UNPREDICTABLE, treated as NOP\n", ins_code);
 }
 
 static inline void stm_rn_registers_wback(uint32_t ins_code, uint32_t *Rn, uint32_t *registers, bool_t *wback)
@@ -1302,7 +1302,7 @@ void _ldrd_literal_32(uint32_t ins_code, cpu_t *cpu)
     LOG_INSTRUCTION("_ldrd_literal_32, R%d,R%d,[PC,%c#%d]\n", Rt, Rt2, add?'+':'-', imm8);
 }
 
-thumb_translate32_t _ldrd_32(uint32_t ins_code, cpu_t* cpu)
+thumb_translate32_t ldrd_32(uint32_t ins_code, cpu_t* cpu)
 {
     uint32_t Rn = LOW_BIT32(ins_code >> 16, 4);
     if(Rn == 0xF){
@@ -1348,7 +1348,7 @@ void _strexh_32(uint32_t ins_code, cpu_t *cpu)
     LOG_INSTRUCTION("_strexh_32, R%d,R%d,[R%d]\n", Rd, Rt, Rn);
 }
 
-thumb_translate32_t _strexb_h_32(uint32_t ins_code, cpu_t *cpu)
+thumb_translate32_t strexb_h_32(uint32_t ins_code, cpu_t *cpu)
 {
     uint32_t op3 = LOW_BIT32(ins_code >> 4, 4);
     if(op3 == 0x4){
@@ -1408,7 +1408,7 @@ void _ldrexh_32(uint32_t ins_code, cpu_t *cpu)
     LOG_INSTRUCTION("_ldrexh_32, R%d,[R%d]\n", Rt, Rn);
 }
 
-thumb_translate32_t _tbb_h_ldrexb_h_32(uint32_t ins_code, cpu_t *cpu)
+thumb_translate32_t tbb_h_ldrexb_h_32(uint32_t ins_code, cpu_t *cpu)
 {
     uint32_t op3 = LOW_BIT32(ins_code >> 4, 4);
     switch(op3){
@@ -1420,6 +1420,351 @@ thumb_translate32_t _tbb_h_ldrexb_h_32(uint32_t ins_code, cpu_t *cpu)
     case 0x5:
         return (thumb_translate32_t)_ldrexh_32;
     default:
+        return (thumb_translate32_t)_unpredictable_32;
+    }
+}
+
+/* data processing 32 bit */
+/*  bit 4,5 = type
+    bit 6,7 = imm2
+    bit 12-14 = imm3
+    imm5 = (imm3:imm2)*/
+inline void get_shift_imm5_32(uint32_t ins_code, _O uint32_t *type, _O uint32_t *imm5)
+{
+    *type = LOW_BIT32(ins_code >> 4, 2);
+    uint32_t imm2 = LOW_BIT32(ins_code >> 6, 2);
+    uint32_t imm3 = LOW_BIT32(ins_code >> 12, 3);
+    *imm5 = imm3 << 2 | imm2;
+}
+
+/*  bit 16-19= Rn
+    bit 8-11 = Rd
+    bit 20 = S*/
+inline void data_process_reg_rn_rd_s(uint32_t ins_code, uint32_t *Rn, uint32_t *Rd, uint32_t *S)
+{
+    *Rd = LOW_BIT32(ins_code >> 8, 4);
+    *Rn = LOW_BIT32(ins_code >> 16, 4);
+    *S = LOW_BIT32(ins_code >> 20, 1);
+}
+
+/*  bit 0-4 = Rm*/
+inline void data_process_reg_rm_shift(uint32_t ins_code, uint32_t *Rm, uint32_t *shift_t, uint32_t *shift_n)
+{
+    *Rm = LOW_BIT32(ins_code, 4);
+    uint32_t type, imm5;
+    get_shift_imm5_32(ins_code, &type, &imm5);
+    DecodeImmShift(type, imm5, shift_t, shift_n);
+}
+
+/*  bit 8-11 = Rd
+    bit 0-4 = Rm
+    bit 20 = setflags*/
+inline void data_process_reg_rd_rm_setflags(uint32_t ins_code, uint32_t *Rd, uint32_t *Rm, bool_t *setflags)
+{
+    *Rd = LOW_BIT32(ins_code >> 8, 4);
+    *Rm = LOW_BIT32(ins_code, 4);
+    *setflags = LOW_BIT32(ins_code >> 20, 1);
+}
+
+inline void data_process_reg_rn_rm(uint32_t ins_code, uint32_t *Rn, uint32_t *Rm)
+{
+    *Rn = LOW_BIT32(ins_code >> 16, 4);
+    *Rm = LOW_BIT32(ins_code, 4);
+}
+
+inline void data_process_reg_shift(uint32_t ins_code, uint32_t *shift_t, uint32_t *shift_n)
+{
+    uint32_t type, imm5;
+    get_shift_imm5_32(ins_code, &type, &imm5);
+    DecodeImmShift(type, imm5, shift_t, shift_n);
+}
+
+inline void get_shift_imm_32_params(uint32_t ins_code, uint32_t type, uint32_t *Rd, uint32_t *Rm, bool_t *setflags, uint32_t *shift_n)
+{
+    data_process_reg_rd_rm_setflags(ins_code, Rd, Rm, setflags);
+    uint32_t dummy;
+    data_process_reg_shift(ins_code, &dummy, shift_n);
+}
+
+void _and_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd, Rn, Rm, S, shift_t, shift_n;
+    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
+    data_process_reg_rm_shift(ins_code, &Rm, &shift_t, &shift_n);
+    bool_t setflags = S;
+
+    if(Rd == 13 || (Rd == 15 && S == 0) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15)){
+        LOG_INSTRUCTION("UNPREDICTABLE: _and_reg_32 treated as NOP\n");
+    }
+
+    _and_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
+    LOG_INSTRUCTION("_and_reg_32, R%d, R%d, R%d, SRType%d #%d\n",Rd, Rn, Rm, shift_t, shift_n);
+}
+
+void _tst_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn, Rm, shift_t, shift_n, dummy;
+    data_process_reg_rn_rd_s(ins_code, &Rn, &dummy, &dummy);
+    data_process_reg_rm_shift(ins_code, &Rm, &shift_t, &shift_n);
+
+    if(IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15)){
+        LOG_INSTRUCTION("UNPREDICTABLE: _tst_reg_32 treated as NOP\n");
+    }
+
+    _tst_reg(Rm, Rn, shift_t, shift_n, cpu->regs);
+    LOG_INSTRUCTION("_tst_reg_32, R%d, R%d, SRType%d #%d\n",Rn, Rm, shift_t, shift_n);
+}
+
+thumb_translate32_t and_tst_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn, Rd, S;
+    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
+
+    if(Rd != 0xF){
+        return (thumb_translate32_t)_and_reg_32;
+    }else if(S == 1){
+        return (thumb_translate32_t)_tst_reg_32;
+    }else{
+        return (thumb_translate32_t)_unpredictable_32;
+    }
+}
+
+void _bic_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd, Rn, Rm, S, shift_t, shift_n;
+    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
+    data_process_reg_rm_shift(ins_code, &Rm, &shift_t, &shift_n);
+    bool_t setflags = S;
+
+    if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15)){
+        LOG_INSTRUCTION("UNPREDICTABLE: _bic_reg_32 treated as NOP\n");
+    }
+
+    _bic_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
+    LOG_INSTRUCTION("_bic_reg_32, R%d, R%d, R%d, SRType%d #%d\n",Rd, Rn, Rm, shift_t, shift_n);
+}
+
+void _orr_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd, Rn, Rm, S, shift_t, shift_n;
+    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
+    data_process_reg_rm_shift(ins_code, &Rm, &shift_t, &shift_n);
+    bool_t setflags = S;
+
+    if(IN_RANGE(Rd, 13, 15) || Rn == 13 || IN_RANGE(Rm, 13, 15)){
+        LOG_INSTRUCTION("UNPREDICTABLE: _orr_reg_32 treated as NOP\n");
+    }
+
+    _orr_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
+    LOG_INSTRUCTION("_orr_reg_32, R%d, R%d, R%d, SRType%d #%d\n",Rd, Rn, Rm, shift_t, shift_n);
+}
+
+void _mov_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd, Rm;
+    bool_t setflags;
+    data_process_reg_rd_rm_setflags(ins_code, &Rd, &Rm, &setflags);
+
+    if(setflags && (IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15))){
+        LOG_INSTRUCTION("UNPREDICTABLE: _mov_reg_32 treated as NOP\n");
+    }
+
+    if(!setflags && (Rd == 15 || Rm == 15 || (Rd == 13 && Rm == 13))){
+        LOG_INSTRUCTION("UNPREDICTABLE: _mov_reg_32 treated as NOP\n");
+    }
+
+    _mov_reg(Rm, Rd, setflags, cpu->regs);
+    LOG_INSTRUCTION("_mov_reg_32, R%d, R%d\n",Rd, Rm);
+}
+
+
+void _lsl_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd, Rm, shift_n;
+    bool_t setflags;
+    get_shift_imm_32_params(ins_code, 0, &Rd, &Rm, &setflags, &shift_n);
+
+    if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15)){
+        LOG_INSTRUCTION("UNPREDICTABLE: _lsl_imm_32 treated as NOP\n");
+    }
+
+    _lsl_imm(shift_n, Rm, Rd, setflags, cpu->regs);
+    LOG_INSTRUCTION("_lsl_imm_32, R%d, R%d, #%d\n",Rd, Rm, shift_n);
+}
+
+void _lsr_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd, Rm, shift_n;
+    bool_t setflags;
+    get_shift_imm_32_params(ins_code, 1, &Rd, &Rm, &setflags, &shift_n);
+
+    if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15)){
+        LOG_INSTRUCTION("UNPREDICTABLE: _lsr_imm_32 treated as NOP\n");
+    }
+
+    _lsr_imm(shift_n, Rm, Rd, setflags, cpu->regs);
+    LOG_INSTRUCTION("_lsr_imm_32, R%d, R%d, #%d\n",Rd, Rm, shift_n);
+}
+
+void _asr_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd, Rm, shift_n;
+    bool_t setflags;
+    get_shift_imm_32_params(ins_code, 2, &Rd, &Rm, &setflags, &shift_n);
+
+    if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15)){
+        LOG_INSTRUCTION("UNPREDICTABLE: _asr_imm_32 treated as NOP\n");
+    }
+
+    _asr_imm(shift_n, Rm, Rd, setflags, cpu->regs);
+    LOG_INSTRUCTION("_asr_imm_32, R%d, R%d, #%d\n",Rd, Rm, shift_n);
+}
+
+void _rrx_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = LOW_BIT32(ins_code >> 8, 4);
+    uint32_t Rm = LOW_BIT32(ins_code, 4);
+    uint32_t setflags = LOW_BIT32(ins_code >> 20, 1);
+
+    if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15)){
+        LOG_INSTRUCTION("UNPREDICTABLE: _rrx_imm_32 treated as NOP\n");
+    }
+
+    _rrx(Rm, Rd, setflags, cpu->regs);
+    LOG_INSTRUCTION("_rrx_32, R%d, R%d\n",Rd, Rm);
+}
+
+void _ror_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd, Rm, shift_n;
+    bool_t setflags;
+    get_shift_imm_32_params(ins_code, 3, &Rd, &Rm, &setflags, &shift_n);
+
+    if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15)){
+        LOG_INSTRUCTION("UNPREDICTABLE: _ror_imm_32 treated as NOP\n");
+    }
+
+    _ror_imm(shift_n, Rm, Rd, setflags, cpu->regs);
+    LOG_INSTRUCTION("_ror_imm_32, R%d, R%d, #%d\n",Rd, Rm, shift_n);
+}
+
+thumb_translate32_t mov_shift_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t type, imm5;
+    get_shift_imm5_32(ins_code, &type, &imm5);
+
+    switch(type){
+    case 0:
+        if(imm5 == 0){
+            return (thumb_translate32_t)_mov_reg_32;
+        }else{
+            return (thumb_translate32_t)_lsl_imm_32;
+        }
+    case 1:
+        return (thumb_translate32_t)_lsr_imm_32;
+    case 2:
+        return (thumb_translate32_t)_asr_imm_32;
+    case 3:
+        if(imm5 == 0){
+            return (thumb_translate32_t)_rrx_32;
+        }else{
+            return (thumb_translate32_t)_ror_imm_32;
+        }
+    default:
+        return (thumb_translate32_t)_unpredictable_32;
+    }
+}
+
+thumb_translate32_t orr_mov_shift_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn, Rd, S;
+    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
+    if(Rn != 0xF){
+        return (thumb_translate32_t)_orr_reg_32;
+    }else{
+        return (thumb_translate32_t)mov_shift_reg_32(ins_code, cpu);
+    }
+}
+
+void _orn_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn, Rd, S, Rm, shift_t, shift_n;
+    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
+    data_process_reg_rm_shift(ins_code, &Rm, &shift_t, &shift_n);
+    bool_t setflags = S;
+
+    if(IN_RANGE(Rd, 13, 15) || Rn == 13 || IN_RANGE(Rm, 13, 15)){
+        LOG_INSTRUCTION("UNPREDICTABLE: _orn_reg_32 treated as NOP\n");
+    }
+
+    _orn_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
+    LOG_INSTRUCTION("_orn_reg_32, R%d, R%d, R%d, SRType%d #%d\n",Rd, Rm, Rn, shift_t, shift_n);
+}
+
+void _mvn_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd, Rm, shift_t, shift_n;
+    bool_t setflags;
+    data_process_reg_rd_rm_setflags(ins_code, &Rd, &Rm, &setflags);
+    data_process_reg_shift(ins_code, &shift_t, &shift_n);
+
+    if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15)){
+        LOG_INSTRUCTION("UNPREDICTABLE: _mvn_reg_32 treated as NOP\n");
+    }
+
+    _mvn_reg(Rm, Rd, shift_t, shift_n, setflags, cpu->regs);
+    LOG_INSTRUCTION("_mvn_reg_32, R%d, R%d, SRType%d #%d\n",Rd, Rm, shift_t, shift_n);
+}
+
+thumb_translate32_t orn_mvn_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn, Rd, S;
+    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
+    if(Rn != 0xF){
+        return (thumb_translate32_t)_orn_reg_32;
+    }else{
+        return (thumb_translate32_t)_mvn_reg_32;
+    }
+}
+
+void _eor_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd, Rn, Rm, S, shift_t, shift_n;
+    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
+    data_process_reg_rm_shift(ins_code, &Rm, &shift_t, &shift_n);
+    bool_t setflags = S;
+
+    if(Rd == 13 || (Rd == 15 && S == 0) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15)){
+        LOG_INSTRUCTION("UNPREDICTABLE: _eor_reg_32 treated as NOP\n");
+    }
+
+    _eor_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
+    LOG_INSTRUCTION("_eor_reg_32, R%d, R%d, R%d, SRType%d #%d\n",Rd, Rn, Rm, shift_t, shift_n);
+}
+
+void _teq_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn, Rm, shift_t, shift_n;
+    data_process_reg_rn_rm(ins_code, &Rn, &Rm);
+    data_process_reg_shift(ins_code, &shift_t, &shift_n);
+
+    if(IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15)){
+        LOG_INSTRUCTION("UNPREDICTABLE: _eor_reg_32 treated as NOP\n");
+    }
+
+    _teq_reg(Rm, Rn, shift_t, shift_n, cpu->regs);
+    LOG_INSTRUCTION("_teq_reg_32, R%d, R%d, SRType%d #%d\n", Rn, Rm, shift_t, shift_n);
+}
+
+thumb_translate32_t eor_teq_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn, Rd, S;
+    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
+    if(Rd != 0xF){
+        return (thumb_translate32_t)_eor_reg_32;
+    }else if(S == 1){
+        return (thumb_translate32_t)_teq_reg_32;
+    }else{
         return (thumb_translate32_t)_unpredictable_32;
     }
 }
@@ -1555,15 +1900,22 @@ void init_instruction_table(thumb_instruct_table_t* table)
     set_base_table_value(table->main_table32, 0x09C, 0x09C, (thumb_translate_t)_strd_32, THUMB_EXCUTER);
     set_base_table_value(table->main_table32, 0x09E, 0x09E, (thumb_translate_t)_strd_32, THUMB_EXCUTER);
 
-    set_base_table_value(table->main_table32, 0x087, 0x087, (thumb_translate_t)_ldrd_32, THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x08F, 0x08F, (thumb_translate_t)_ldrd_32, THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x095, 0x095, (thumb_translate_t)_ldrd_32, THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x097, 0x097, (thumb_translate_t)_ldrd_32, THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x09D, 0x09D, (thumb_translate_t)_ldrd_32, THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x09F, 0x09F, (thumb_translate_t)_ldrd_32, THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x087, 0x087, (thumb_translate_t)ldrd_32, THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x08F, 0x08F, (thumb_translate_t)ldrd_32, THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x095, 0x095, (thumb_translate_t)ldrd_32, THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x097, 0x097, (thumb_translate_t)ldrd_32, THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x09D, 0x09D, (thumb_translate_t)ldrd_32, THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x09F, 0x09F, (thumb_translate_t)ldrd_32, THUMB_DECODER);
 
-    set_base_table_value(table->main_table32, 0x08C, 0x08C, (thumb_translate_t)_strexb_h_32, THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x08D, 0x08D, (thumb_translate_t)_tbb_h_ldrexb_h_32, THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x08C, 0x08C, (thumb_translate_t)strexb_h_32, THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x08D, 0x08D, (thumb_translate_t)tbb_h_ldrexb_h_32, THUMB_DECODER);
+
+    // data processing
+    set_base_table_value(table->main_table32, 0x0A0, 0x0A1, (thumb_translate_t)and_tst_reg_32, THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x0A2, 0x0A2, (thumb_translate_t)_bic_reg_32, THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x0A4, 0x0A4, (thumb_translate_t)orr_mov_shift_reg_32, THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x0A6, 0x0A6, (thumb_translate_t)orn_mvn_reg_32, THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x0A8, 0x0A9, (thumb_translate_t)eor_teq_reg_32, THUMB_DECODER);
 }
 
 bool_t is_16bit_code(uint16_t opcode)
