@@ -11,9 +11,6 @@ enum ARM_INS_TYPE{
     ARM_INS_ARM,
 };
 
-#define LOW_BIT32(value, bit_num) (assert(bit_num < 32 && bit_num > 0), ((value) & (0xFFFFFFFF >> (32-(bit_num)))))
-#define LOW_BIT16(value, bit_num) (assert(bit_num < 16 && bit_num > 0), ((value) & (0xFFFF >> (16-(bit_num)))))
-
 // 16bit thumb-2 instruction type
 struct armv7m_instruct_t;
 typedef void (*_armv7m_translate_t)(uint32_t opcode, struct cpu_t* cpu);

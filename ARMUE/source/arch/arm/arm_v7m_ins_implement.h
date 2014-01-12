@@ -79,6 +79,10 @@ typedef struct thumb_global_state{
     list_t *global_exclusive;   // stores arm_exclusive_t
 }thumb_global_state;
 
+#define HIGH_BIT32(value, bit_num) (assert(bit_num < 32 && bit_num > 0), ((value) & (0xFFFFFFFF << (32-(bit_num)))))
+#define LOW_BIT32(value, bit_num) (assert(bit_num < 32 && bit_num > 0), ((value) & (0xFFFFFFFF >> (32-(bit_num)))))
+#define LOW_BIT16(value, bit_num) (assert(bit_num < 16 && bit_num > 0), ((value) & (0xFFFF >> (16-(bit_num)))))
+
 #define IN_RANGE(value, low, high) ((value) >= (low) && (value) <= (high))
 
 #define ARMv7m_GET_REGS(cpu) ((arm_reg_t*)(cpu)->regs)
@@ -250,6 +254,7 @@ void _sbc_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t sh
 void _ror_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflags, arm_reg_t* regs);
 void _tst_reg(uint32_t Rm, uint32_t Rn, SRType shift_t, uint32_t shift_n, arm_reg_t* regs);
 void _rsb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, arm_reg_t* regs);
+void _rsb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t *regs);
 void _cmp_reg(uint32_t Rm, uint32_t Rn, SRType shift_t, uint32_t shift_n, arm_reg_t* regs);
 void _cmn_reg(uint32_t Rm, uint32_t Rn, SRType shift_t, uint32_t shift_n, arm_reg_t* regs);
 void _orr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs);
@@ -303,5 +308,6 @@ void _strexh(uint32_t Rd, uint32_t Rt, uint32_t Rn, cpu_t *cpu);
 void _tbb_h(uint32_t Rn, uint32_t Rm, bool_t is_tbh, cpu_t *cpu);
 void _ldrexb(uint32_t Rn, uint32_t Rt, cpu_t* cpu);
 void _ldrexh(uint32_t Rn, uint32_t Rt, cpu_t* cpu);
+void _pkhbt_pkhtb(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t shift_t, uint32_t shift_n, bool_t tbform, arm_reg_t *regs);
 void _b(int32_t imm32, uint8_t cond, cpu_t* cpu);
 #endif

@@ -1110,15 +1110,46 @@ void _rsb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, arm_r
     }
 
     /* Warning: this function is not tested since MDK can't generate 16bit code for it */
-    uint32_t result;
-    uint32_t overflow;
-    uint32_t carry = GET_APSR_C(regs);
+    uint32_t result, overflow, carry;
     uint32_t Rn_val = GET_REG_VAL(regs, Rn);
-    AddWithCarry(~Rn_val, imm32, carry, &result, &carry, &overflow);
+    AddWithCarry(~Rn_val, imm32, 1, &result, &carry, &overflow);
     SET_REG_VAL(regs, Rd, result);
     if(setflags){
         SET_APSR_N(regs, result);
         SET_APSR_Z(regs, result);
+        SET_APSR_C(regs, carry);
+        SET_APSR_V(regs, overflow);
+    }
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-413>>
+if ConditionPassed() then
+EncodingSpecificOperations();
+    shifted = Shift(R[m], shift_t, shift_n, APSR.C);
+    (result, carry, overflow) = AddWithCarry(NOT(R[n]), shifted, ¡®1¡¯);
+    R[d] = result;
+    if setflags then
+        APSR.N = result<31>;
+        APSR.C = carry;
+        APSR.V = overflow;
+**************************************/
+void _rsb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t result, overflow, shifted;
+    uint32_t carry = GET_APSR_C(regs);
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+
+    Shift(GET_REG_VAL(regs, Rm), shift_t, shift_n, carry, &shifted);
+    AddWithCarry(~Rn_val, shifted, 1, &result, &carry, &overflow);
+    SET_REG_VAL(regs, Rd, result);
+
+    if(setflags){
+        SET_APSR_N(regs, result);
         SET_APSR_C(regs, carry);
         SET_APSR_V(regs, overflow);
     }
@@ -2757,6 +2788,29 @@ if ConditionPassed() then
 void _ldrexh(uint32_t Rn, uint32_t Rt, cpu_t* cpu)
 {
     _ldrexb_h(Rn, Rt, cpu, 2);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-375>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    operand2 = Shift(R[m], shift_t, shift_n, APSR.C); // APSR.C ignored
+    R[d]<15:0> = if tbform then operand2<15:0> else R[n]<15:0>;
+    R[d]<31:16> = if tbform then R[n]<31:16> else operand2<31:16>;
+**************************************/
+void _pkhbt_pkhtb(uint32_t Rd, uint32_t Rn, uint32_t Rm, uint32_t shift_t, uint32_t shift_n, bool_t tbform, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+       return;
+    }
+
+    uint32_t operand2;
+    Shift(GET_REG_VAL(regs, Rm), shift_t, shift_n, GET_APSR_C(regs), &operand2);
+    uint32_t result;
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    result = tbform ? LOW_BIT32(operand2, 16) : LOW_BIT32(Rn_val, 16);
+    result |= tbform ? HIGH_BIT32(Rn_val, 16) : HIGH_BIT32(operand2, 16);
+    SET_REG_VAL(regs, Rd, result);
 }
 
 /***********************************
