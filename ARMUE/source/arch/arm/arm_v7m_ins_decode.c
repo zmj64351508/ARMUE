@@ -4,11 +4,15 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#define CHECK_UNPREDICTABLE(condition, instruction_name)\
+if(condition){\
+    LOG_INSTRUCTION("UNPREDICTABLE: " #instruction_name " treated as NOP\n");\
+    return;\
+}
+
 thumb_instruct_table_t *M_translate_table; // table for ARMvX-M
 thumb_instruct_table_t *R_translate_table; // table for ARMvX-R, implement in the future
 thumb_instruct_table_t *A_translate_table; // table for ARMvX-A, implement in the future
-
-
 
 /******                            IMPROTANT                                    */
 /****** PC always pointers to the address of next instruction.                */
@@ -1094,9 +1098,11 @@ void _ldm_32(uint32_t ins_code, cpu_t* cpu)
     }
     if((registers & (1ul << 15)) && InITBlock(regs) && !LastInITBlock(regs)){
         LOG_INSTRUCTION("UNPREDICTABLE: _ldm_32 treated as NOP\n");
+        return;
     }
     if(wback && (registers & (1ul << Rn))){
         LOG_INSTRUCTION("UNPREDICTABLE: _ldm_32 treated as NOP\n");
+        return;
     }
 
     _ldm(Rn, registers, bitcout, wback, cpu);
@@ -1116,6 +1122,7 @@ void _pop_32(uint32_t ins_code, cpu_t* cpu)
     }
     if((registers & (1ul << 15)) && InITBlock(regs) && !LastInITBlock(regs)){
         LOG_INSTRUCTION("UNPREDICTABLE: _pop_32 treated as NOP\n");
+        return;
     }
 
     _pop(registers, bitcount, cpu);
@@ -1141,6 +1148,7 @@ void _push_32(uint32_t ins_code, cpu_t* cpu)
     uint32_t bitcount = BitCount32(registers);
     if(bitcount < 2){
         LOG_INSTRUCTION("UNPREDICTABLE: _pop_32 treated as NOP\n");
+        return;
     }
 
     _push(registers, bitcount, cpu);
@@ -1157,9 +1165,11 @@ void _stmdb_32(uint32_t ins_code, cpu_t *cpu)
 
     if(Rn == 15 || bitcount < 2){
         LOG_INSTRUCTION("UNPREDICTABLE: _stmdb_32 treated as NOP\n");
+        return;
     }
     if(wback && (registers & (1ul << Rn))){
         LOG_INSTRUCTION("UNPREDICTABLE: _stmdb_32 treated as NOP\n");
+        return;
     }
 
     _stmdb(Rn, registers, bitcount, wback, cpu);
@@ -1186,12 +1196,15 @@ void _ldmdb_32(uint32_t ins_code, cpu_t* cpu)
 
     if(Rn == 15 || bitcout < 2 || (registers >> 14) == 0x3){
         LOG_INSTRUCTION("UNPREDICTABLE: _ldmdb_32 treated as NOP\n");
+        return;
     }
     if((registers & (1ul << 15)) && InITBlock(regs) && !LastInITBlock(regs)){
         LOG_INSTRUCTION("UNPREDICTABLE: _ldmdb_32 treated as NOP\n");
+        return;
     }
     if(wback && (registers & (1ul << Rn))){
         LOG_INSTRUCTION("UNPREDICTABLE: _ldmdb_32 treated as NOP\n");
+        return;
     }
 
     _ldmdb(Rn, registers, bitcout, wback, cpu);
@@ -1208,10 +1221,12 @@ void _strex_32(uint32_t ins_code, cpu_t* cpu)
 
     if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rt, 13, 15) || Rn == 15){
         LOG_INSTRUCTION("UNPREDICTABLE: _strex_32 treated as NOP\n");
+        return;
     }
 
     if(Rd == Rn || Rd == Rt){
         LOG_INSTRUCTION("UNPREDICTABLE: _strex_32 treated as NOP\n");
+        return;
     }
 
     _strex(imm32, Rn, Rd, Rt, cpu);
@@ -1227,6 +1242,7 @@ void _ldrex_32(uint32_t ins_code, cpu_t* cpu)
 
     if(IN_RANGE(Rt, 13, 15) || Rn == 15){
         LOG_INSTRUCTION("UNPREDICTABLE: _ldrex_32 treated as NOP\n");
+        return;
     }
     _ldrex(imm32, Rn, Rt, cpu);
     LOG_INSTRUCTION("_ldrex_32, R%d,[R%d,#%d]\n", Rt, Rn, imm8);
@@ -1249,9 +1265,11 @@ void _strd_32(uint32_t ins_code, cpu_t* cpu)
 
     if(wback && (Rn == Rt || Rn == Rt2)){
         LOG_INSTRUCTION("UNPREDICTABLE: _strd_32 treated as NOP\n");
+        return;
     }
     if(Rn == 15 || IN_RANGE(Rt, 13, 15) || IN_RANGE(Rt2, 13, 15)){
         LOG_INSTRUCTION("UNPREDICTABLE: _strd_32 treated as NOP\n");
+        return;
     }
 
     _strd(imm32, Rn, Rt, Rt2, add, wback, index, cpu);
@@ -1275,9 +1293,11 @@ void _ldrd_imm_32(uint32_t ins_code, cpu_t* cpu)
 
     if(wback && (Rn == Rt || Rn == Rt2)){
         LOG_INSTRUCTION("UNPREDICTABLE: _ldrd_imm_32 treated as NOP\n");
+        return;
     }
     if(Rn == 15 || IN_RANGE(Rt, 13, 15) || IN_RANGE(Rt2, 13, 15) || Rt == Rt2){
         LOG_INSTRUCTION("UNPREDICTABLE: _ldrd_imm_32 treated as NOP\n");
+        return;
     }
 
     _ldrd_imm(imm32, Rn, Rt, Rt2, add, wback, index, cpu);
@@ -1296,6 +1316,7 @@ void _ldrd_literal_32(uint32_t ins_code, cpu_t *cpu)
 
     if(W || IN_RANGE(Rt, 13, 15) || IN_RANGE(Rt2, 13, 15) || Rt == Rt2){
         LOG_INSTRUCTION("UNPREDICTABLE: _ldrd_literal_32 treated as NOP\n");
+        return;
     }
 
     _ldrd_literal(imm32, Rt, Rt2, add, cpu);
@@ -1320,10 +1341,12 @@ void _strexb_32(uint32_t ins_code, cpu_t *cpu)
 
     if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rt, 13, 15) || Rn == 15){
         LOG_INSTRUCTION("UNPREDICTABLE: _strexb_32 treated as NOP\n");
+        return;
     }
 
     if(Rd == Rn || Rd == Rt){
         LOG_INSTRUCTION("UNPREDICTABLE: _strexb_32 treated as NOP\n");
+        return;
     }
 
     _strexb(Rd, Rt, Rn, cpu);
@@ -1338,10 +1361,12 @@ void _strexh_32(uint32_t ins_code, cpu_t *cpu)
 
     if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rt, 13, 15) || Rn == 15){
         LOG_INSTRUCTION("UNPREDICTABLE: _strexh_32 treated as NOP\n");
+        return;
     }
 
     if(Rd == Rn || Rd == Rt){
         LOG_INSTRUCTION("UNPREDICTABLE: _strexh_32 treated as NOP\n");
+        return;
     }
 
     _strexh(Rd, Rt, Rn, cpu);
@@ -1372,6 +1397,7 @@ void _tbb_h_32(uint32_t ins_code, cpu_t *cpu)
 
     if(InITBlock(cpu->regs) && !LastInITBlock(cpu->regs)){
         LOG_INSTRUCTION("UNPREDICTABLE: _tbb_h_32 treated as NOP\n");
+        return;
     }
 
     _tbb_h(Rn, Rm, is_tbh, cpu);
@@ -1389,6 +1415,7 @@ void _ldrexb_32(uint32_t ins_code, cpu_t *cpu)
 
     if(IN_RANGE(Rt, 13, 15) || Rn == 15){
         LOG_INSTRUCTION("UNPREDICTABLE: _ldrexb_32 treated as NOP\n");
+        return;
     }
 
     _ldrexb(Rn, Rt, cpu);
@@ -1402,6 +1429,7 @@ void _ldrexh_32(uint32_t ins_code, cpu_t *cpu)
 
     if(IN_RANGE(Rt, 13, 15) || Rn == 15){
         LOG_INSTRUCTION("UNPREDICTABLE: _ldrexh_32 treated as NOP\n");
+        return;
     }
 
     _ldrexh(Rn, Rt, cpu);
@@ -1424,58 +1452,26 @@ thumb_translate32_t tbb_h_ldrexb_h_32(uint32_t ins_code, cpu_t *cpu)
     }
 }
 
-/* data processing 32 bit */
-/*  bit 4,5 = type
-    bit 6,7 = imm2
-    bit 12-14 = imm3
-    imm5 = (imm3:imm2)*/
+/* data process */
+#define DATA_PROCESS32_RN(ins_code) LOW_BIT32((ins_code) >> 16, 4)
+#define DATA_PROCESS32_RD(ins_code) LOW_BIT32((ins_code) >> 8, 4)
+#define DATA_PROCESS32_RM(ins_code) LOW_BIT32((ins_code), 4)
+#define DATA_PROCESS32_S(ins_code) LOW_BIT32((ins_code) >> 20, 1)
+#define DATA_PROCESS32_IMM3(ins_code) LOW_BIT32((ins_code) >> 12, 3)
+
+#define DATA_PROCESS32_IMM2(ins_code) LOW_BIT32((ins_code) >> 6, 2)
+#define DATA_PROCESS32_TYPE(ins_code) LOW_BIT32((ins_code) >> 4, 2)
+
+#define DATA_PROCESS32_IMM8(ins_code) LOW_BIT32((ins_code), 8)
+#define DATA_PROCESS32_I(ins_code) LOW_BIT32((ins_code) >> 26, 1)
+#define DATA_PROCESS32_I_IMM3_IMM8(ins_code) (DATA_PROCESS32_I(ins_code) << 11 | DATA_PROCESS32_IMM3(ins_code) << 8 | DATA_PROCESS32_IMM8(ins_code))
+
 inline void get_shift_imm5_32(uint32_t ins_code, _O uint32_t *type, _O uint32_t *imm5)
 {
-    *type = LOW_BIT32(ins_code >> 4, 2);
-    uint32_t imm2 = LOW_BIT32(ins_code >> 6, 2);
-    uint32_t imm3 = LOW_BIT32(ins_code >> 12, 3);
+    *type = DATA_PROCESS32_TYPE(ins_code);
+    uint32_t imm2 = DATA_PROCESS32_IMM2(ins_code);
+    uint32_t imm3 = DATA_PROCESS32_IMM3(ins_code);
     *imm5 = imm3 << 2 | imm2;
-}
-
-/*  bit 16-19= Rn
-    bit 8-11 = Rd
-    bit 20 = S*/
-inline void data_process_reg_rn_rd_s(uint32_t ins_code, uint32_t *Rn, uint32_t *Rd, uint32_t *S)
-{
-    *Rd = LOW_BIT32(ins_code >> 8, 4);
-    *Rn = LOW_BIT32(ins_code >> 16, 4);
-    *S = LOW_BIT32(ins_code >> 20, 1);
-}
-
-/*  bit 0-4 = Rm*/
-inline void data_process_reg_rm(uint32_t ins_code, uint32_t *Rm)
-{
-    *Rm = LOW_BIT32(ins_code, 4);
-}
-
-/*  bit 0-4 = Rm*/
-inline void data_process_reg_rm_shift(uint32_t ins_code, uint32_t *Rm, uint32_t *shift_t, uint32_t *shift_n)
-{
-    *Rm = LOW_BIT32(ins_code, 4);
-    uint32_t type, imm5;
-    get_shift_imm5_32(ins_code, &type, &imm5);
-    DecodeImmShift(type, imm5, shift_t, shift_n);
-}
-
-/*  bit 8-11 = Rd
-    bit 0-4 = Rm
-    bit 20 = setflags*/
-inline void data_process_reg_rd_rm_setflags(uint32_t ins_code, uint32_t *Rd, uint32_t *Rm, bool_t *setflags)
-{
-    *Rd = LOW_BIT32(ins_code >> 8, 4);
-    *Rm = LOW_BIT32(ins_code, 4);
-    *setflags = LOW_BIT32(ins_code >> 20, 1);
-}
-
-inline void data_process_reg_rn_rm(uint32_t ins_code, uint32_t *Rn, uint32_t *Rm)
-{
-    *Rn = LOW_BIT32(ins_code >> 16, 4);
-    *Rm = LOW_BIT32(ins_code, 4);
 }
 
 inline void data_process_reg_shift(uint32_t ins_code, uint32_t *shift_t, uint32_t *shift_n)
@@ -1487,20 +1483,25 @@ inline void data_process_reg_shift(uint32_t ins_code, uint32_t *shift_t, uint32_
 
 inline void get_shift_imm_32_params(uint32_t ins_code, uint32_t type, uint32_t *Rd, uint32_t *Rm, bool_t *setflags, uint32_t *shift_n)
 {
-    data_process_reg_rd_rm_setflags(ins_code, Rd, Rm, setflags);
+    *Rd = DATA_PROCESS32_RD(ins_code);
+    *Rm = DATA_PROCESS32_RM(ins_code);
+    *setflags = DATA_PROCESS32_S(ins_code);
     uint32_t dummy;
     data_process_reg_shift(ins_code, &dummy, shift_n);
 }
 
 void _and_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rd, Rn, Rm, S, shift_t, shift_n;
-    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
-    data_process_reg_rm_shift(ins_code, &Rm, &shift_t, &shift_n);
-    bool_t setflags = S;
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t shift_t, shift_n;
+    data_process_reg_shift(ins_code, &shift_t, &shift_n);
 
-    if(Rd == 13 || (Rd == 15 && S == 0) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15)){
+    if(Rd == 13 || (Rd == 15 && setflags == 0) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15)){
         LOG_INSTRUCTION("UNPREDICTABLE: _and_reg_32 treated as NOP\n");
+        return;
     }
 
     _and_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
@@ -1509,12 +1510,14 @@ void _and_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 void _tst_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn, Rm, shift_t, shift_n, dummy;
-    data_process_reg_rn_rd_s(ins_code, &Rn, &dummy, &dummy);
-    data_process_reg_rm_shift(ins_code, &Rm, &shift_t, &shift_n);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t shift_t, shift_n;
+    data_process_reg_shift(ins_code, &shift_t, &shift_n);
 
     if(IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15)){
         LOG_INSTRUCTION("UNPREDICTABLE: _tst_reg_32 treated as NOP\n");
+        return;
     }
 
     _tst_reg(Rm, Rn, shift_t, shift_n, cpu->regs);
@@ -1523,8 +1526,8 @@ void _tst_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 thumb_translate32_t and_tst_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn, Rd, S;
-    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t S = DATA_PROCESS32_S(ins_code);
 
     if(Rd != 0xF){
         return (thumb_translate32_t)_and_reg_32;
@@ -1537,13 +1540,16 @@ thumb_translate32_t and_tst_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 void _bic_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rd, Rn, Rm, S, shift_t, shift_n;
-    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
-    data_process_reg_rm_shift(ins_code, &Rm, &shift_t, &shift_n);
-    bool_t setflags = S;
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t shift_t, shift_n;
+    data_process_reg_shift(ins_code, &shift_t, &shift_n);
 
     if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15)){
         LOG_INSTRUCTION("UNPREDICTABLE: _bic_reg_32 treated as NOP\n");
+        return;
     }
 
     _bic_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
@@ -1552,13 +1558,16 @@ void _bic_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 void _orr_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rd, Rn, Rm, S, shift_t, shift_n;
-    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
-    data_process_reg_rm_shift(ins_code, &Rm, &shift_t, &shift_n);
-    bool_t setflags = S;
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t shift_t, shift_n;
+    data_process_reg_shift(ins_code, &shift_t, &shift_n);
 
     if(IN_RANGE(Rd, 13, 15) || Rn == 13 || IN_RANGE(Rm, 13, 15)){
         LOG_INSTRUCTION("UNPREDICTABLE: _orr_reg_32 treated as NOP\n");
+        return;
     }
 
     _orr_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
@@ -1567,16 +1576,18 @@ void _orr_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 void _mov_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rd, Rm;
-    bool_t setflags;
-    data_process_reg_rd_rm_setflags(ins_code, &Rd, &Rm, &setflags);
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t setflags = DATA_PROCESS32_S(ins_code);
 
     if(setflags && (IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15))){
         LOG_INSTRUCTION("UNPREDICTABLE: _mov_reg_32 treated as NOP\n");
+        return;
     }
 
     if(!setflags && (Rd == 15 || Rm == 15 || (Rd == 13 && Rm == 13))){
         LOG_INSTRUCTION("UNPREDICTABLE: _mov_reg_32 treated as NOP\n");
+        return;
     }
 
     _mov_reg(Rm, Rd, setflags, cpu->regs);
@@ -1592,6 +1603,7 @@ void _lsl_imm_32(uint32_t ins_code, cpu_t *cpu)
 
     if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15)){
         LOG_INSTRUCTION("UNPREDICTABLE: _lsl_imm_32 treated as NOP\n");
+        return;
     }
 
     _lsl_imm(shift_n, Rm, Rd, setflags, cpu->regs);
@@ -1606,6 +1618,7 @@ void _lsr_imm_32(uint32_t ins_code, cpu_t *cpu)
 
     if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15)){
         LOG_INSTRUCTION("UNPREDICTABLE: _lsr_imm_32 treated as NOP\n");
+        return;
     }
 
     _lsr_imm(shift_n, Rm, Rd, setflags, cpu->regs);
@@ -1620,6 +1633,7 @@ void _asr_imm_32(uint32_t ins_code, cpu_t *cpu)
 
     if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15)){
         LOG_INSTRUCTION("UNPREDICTABLE: _asr_imm_32 treated as NOP\n");
+        return;
     }
 
     _asr_imm(shift_n, Rm, Rd, setflags, cpu->regs);
@@ -1634,6 +1648,7 @@ void _rrx_32(uint32_t ins_code, cpu_t *cpu)
 
     if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15)){
         LOG_INSTRUCTION("UNPREDICTABLE: _rrx_imm_32 treated as NOP\n");
+        return;
     }
 
     _rrx(Rm, Rd, setflags, cpu->regs);
@@ -1648,6 +1663,7 @@ void _ror_imm_32(uint32_t ins_code, cpu_t *cpu)
 
     if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15)){
         LOG_INSTRUCTION("UNPREDICTABLE: _ror_imm_32 treated as NOP\n");
+        return;
     }
 
     _ror_imm(shift_n, Rm, Rd, setflags, cpu->regs);
@@ -1683,8 +1699,8 @@ thumb_translate32_t mov_shift_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 thumb_translate32_t orr_mov_shift_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn, Rd, S;
-    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+
     if(Rn != 0xF){
         return (thumb_translate32_t)_orr_reg_32;
     }else{
@@ -1694,13 +1710,16 @@ thumb_translate32_t orr_mov_shift_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 void _orn_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn, Rd, S, Rm, shift_t, shift_n;
-    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
-    data_process_reg_rm_shift(ins_code, &Rm, &shift_t, &shift_n);
-    bool_t setflags = S;
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t shift_t, shift_n;
+    data_process_reg_shift(ins_code, &shift_t, &shift_n);
 
     if(IN_RANGE(Rd, 13, 15) || Rn == 13 || IN_RANGE(Rm, 13, 15)){
         LOG_INSTRUCTION("UNPREDICTABLE: _orn_reg_32 treated as NOP\n");
+        return;
     }
 
     _orn_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
@@ -1709,13 +1728,15 @@ void _orn_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 void _mvn_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rd, Rm, shift_t, shift_n;
-    bool_t setflags;
-    data_process_reg_rd_rm_setflags(ins_code, &Rd, &Rm, &setflags);
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t shift_t, shift_n;
     data_process_reg_shift(ins_code, &shift_t, &shift_n);
 
     if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15)){
         LOG_INSTRUCTION("UNPREDICTABLE: _mvn_reg_32 treated as NOP\n");
+        return;
     }
 
     _mvn_reg(Rm, Rd, shift_t, shift_n, setflags, cpu->regs);
@@ -1724,8 +1745,8 @@ void _mvn_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 thumb_translate32_t orn_mvn_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn, Rd, S;
-    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+
     if(Rn != 0xF){
         return (thumb_translate32_t)_orn_reg_32;
     }else{
@@ -1735,13 +1756,16 @@ thumb_translate32_t orn_mvn_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 void _eor_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rd, Rn, Rm, S, shift_t, shift_n;
-    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
-    data_process_reg_rm_shift(ins_code, &Rm, &shift_t, &shift_n);
-    bool_t setflags = S;
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t shift_t, shift_n;
+    data_process_reg_shift(ins_code, &shift_t, &shift_n);
 
-    if(Rd == 13 || (Rd == 15 && S == 0) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15)){
+    if(Rd == 13 || (Rd == 15 && setflags == 0) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15)){
         LOG_INSTRUCTION("UNPREDICTABLE: _eor_reg_32 treated as NOP\n");
+        return;
     }
 
     _eor_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
@@ -1750,12 +1774,14 @@ void _eor_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 void _teq_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn, Rm, shift_t, shift_n;
-    data_process_reg_rn_rm(ins_code, &Rn, &Rm);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t shift_t, shift_n;
     data_process_reg_shift(ins_code, &shift_t, &shift_n);
 
     if(IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15)){
         LOG_INSTRUCTION("UNPREDICTABLE: _eor_reg_32 treated as NOP\n");
+        return;
     }
 
     _teq_reg(Rm, Rn, shift_t, shift_n, cpu->regs);
@@ -1764,8 +1790,9 @@ void _teq_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 thumb_translate32_t eor_teq_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn, Rd, S;
-    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t S = DATA_PROCESS32_S(ins_code);
+
     if(Rd != 0xF){
         return (thumb_translate32_t)_eor_reg_32;
     }else if(S == 1){
@@ -1777,17 +1804,19 @@ thumb_translate32_t eor_teq_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 void _pkhbt_pkhtb_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn, Rd, Rm, S;
-    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
-    data_process_reg_rm(ins_code, &Rm);
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t S = DATA_PROCESS32_S(ins_code);
 
     uint32_t T = LOW_BIT32(ins_code >> 4, 1);
     if(S == 1 || T == 1){
         LOG_INSTRUCTION("UNDEFINED: _pkhbt_pkhtb_32 treated as NOP\n");
+        return;
     }
 
-    uint32_t imm2 = LOW_BIT32(ins_code >> 6, 2);
-    uint32_t imm3 = LOW_BIT32(ins_code >> 12, 3);
+    uint32_t imm2 = DATA_PROCESS32_IMM2(ins_code);
+    uint32_t imm3 = DATA_PROCESS32_IMM3(ins_code);
     uint32_t tbform = LOW_BIT32(ins_code >> 5, 1);
 
     uint32_t shift_t, shift_n;
@@ -1799,13 +1828,16 @@ void _pkhbt_pkhtb_32(uint32_t ins_code, cpu_t *cpu)
 
 void _add_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rd, Rn, Rm, S, shift_t, shift_n;
-    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
-    data_process_reg_rm_shift(ins_code, &Rm, &shift_t, &shift_n);
-    bool_t setflags = S;
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t shift_t, shift_n;
+    data_process_reg_shift(ins_code, &shift_t, &shift_n);
 
-    if(Rd == 13 || (Rd == 15 && S == 0) || Rn == 15 || IN_RANGE(Rm, 13, 15)){
+    if(Rd == 13 || (Rd == 15 && setflags == 0) || Rn == 15 || IN_RANGE(Rm, 13, 15)){
         LOG_INSTRUCTION("UNPREDICTABLE: _add_reg_32 treated as NOP\n");
+        return;
     }
 
     _add_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
@@ -1814,12 +1846,14 @@ void _add_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 void _cmn_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn, Rm, shift_t, shift_n;
-    data_process_reg_rn_rm(ins_code, &Rn, &Rm);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t shift_t, shift_n;
     data_process_reg_shift(ins_code, &shift_t, &shift_n);
 
     if(Rn == 15 || IN_RANGE(Rm, 13, 15)){
         LOG_INSTRUCTION("UNPREDICTABLE: _cmn_reg_32 treated as NOP\n");
+        return;
     }
 
     _cmn_reg(Rm, Rn, shift_t, shift_n, cpu->regs);
@@ -1828,8 +1862,9 @@ void _cmn_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 thumb_translate32_t add_cmn_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn, Rd, S;
-    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t S = DATA_PROCESS32_S(ins_code);
+
     if(Rd != 0xF){
         return (thumb_translate32_t)_add_reg_32;
     }else if(S == 1){
@@ -1841,13 +1876,16 @@ thumb_translate32_t add_cmn_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 void _adc_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rd, Rn, Rm, S, shift_t, shift_n;
-    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
-    data_process_reg_rm_shift(ins_code, &Rm, &shift_t, &shift_n);
-    bool_t setflags = S;
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t shift_t, shift_n;
+    data_process_reg_shift(ins_code, &shift_t, &shift_n);
 
     if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15)){
         LOG_INSTRUCTION("UNPREDICTABLE: _adc_reg_32 treated as NOP\n");
+        return;
     }
 
     _adc_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
@@ -1856,13 +1894,16 @@ void _adc_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 void _sbc_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rd, Rn, Rm, S, shift_t, shift_n;
-    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
-    data_process_reg_rm_shift(ins_code, &Rm, &shift_t, &shift_n);
-    bool_t setflags = S;
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t shift_t, shift_n;
+    data_process_reg_shift(ins_code, &shift_t, &shift_n);
 
     if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15)){
         LOG_INSTRUCTION("UNPREDICTABLE: _sbc_reg_32 treated as NOP\n");
+        return;
     }
 
     _sbc_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
@@ -1871,37 +1912,37 @@ void _sbc_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 void _sub_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rd, Rn, Rm, S, shift_t, shift_n;
-    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
-    data_process_reg_rm_shift(ins_code, &Rm, &shift_t, &shift_n);
-    bool_t setflags = S;
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t shift_t, shift_n;
+    data_process_reg_shift(ins_code, &shift_t, &shift_n);
 
-    if(Rd == 13 || (Rd == 15 && S == 0) || Rn == 15 || IN_RANGE(Rm, 13, 15)){
-        LOG_INSTRUCTION("UNPREDICTABLE: _sub_reg_32 treated as NOP\n");
-    }
-
+    CHECK_UNPREDICTABLE(Rd == 13 || (Rd == 15 && setflags == 0) || Rn == 15 || IN_RANGE(Rm, 13, 15), _sub_reg_32);
     _sub_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
+
     LOG_INSTRUCTION("_sub_reg_32, R%d, R%d, R%d, SRType%d #%d\n", Rd, Rn, Rm, shift_t, shift_n);
 }
 
 void _cmp_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn, Rm, shift_t, shift_n;
-    data_process_reg_rn_rm(ins_code, &Rn, &Rm);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t shift_t, shift_n;
     data_process_reg_shift(ins_code, &shift_t, &shift_n);
 
-    if(Rn == 15 || IN_RANGE(Rm, 13, 15)){
-        LOG_INSTRUCTION("UNPREDICTABLE: _cmp_reg_32 treated as NOP\n");
-    }
-
+    CHECK_UNPREDICTABLE(Rn == 15 || IN_RANGE(Rm, 13, 15), _cmp_reg_32);
     _cmp_reg(Rm, Rn, shift_t, shift_n, cpu->regs);
+
     LOG_INSTRUCTION("_cmp_reg_32, R%d, R%d, SRType%d #%d\n", Rn, Rm, shift_t, shift_n);
 }
 
 thumb_translate32_t sub_cmp_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn, Rd, S;
-    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t S = DATA_PROCESS32_S(ins_code);
+
     if(Rd != 0xF){
         return (thumb_translate32_t)_sub_reg_32;
     }else if(S == 1){
@@ -1913,17 +1954,197 @@ thumb_translate32_t sub_cmp_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 void _rsb_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rd, Rn, Rm, S, shift_t, shift_n;
-    data_process_reg_rn_rd_s(ins_code, &Rn, &Rd, &S);
-    data_process_reg_rm_shift(ins_code, &Rm, &shift_t, &shift_n);
-    bool_t setflags = S;
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t shift_t, shift_n;
+    data_process_reg_shift(ins_code, &shift_t, &shift_n);
 
-    if(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15)){
-        LOG_INSTRUCTION("UNPREDICTABLE: _rsb_reg_32 treated as NOP\n");
-    }
-
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15), _rsb_reg_32);
     _rsb_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
+
     LOG_INSTRUCTION("_rsb_reg_32, R%d, R%d, R%d, SRType%d #%d\n", Rd, Rn, Rm, shift_t, shift_n);
+}
+
+
+void _and_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t i_imm3_imm8 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+    uint32_t imm32;
+    int carry;
+    ThumbExpandImm_C(i_imm3_imm8, GET_APSR_C((arm_reg_t *)cpu->regs), &imm32, &carry);
+
+    CHECK_UNPREDICTABLE(Rd == 13 || (Rd == 15 && setflags == 0) || IN_RANGE(Rn, 13, 15), _and_imm32);
+    _and_imm(imm32, Rn, Rd, setflags, carry, cpu->regs);
+
+    LOG_INSTRUCTION("_and_imm_32, R%d, R%d, #%d\n", Rd, Rn, imm32);
+}
+
+void _tst_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t i_imm3_imm8 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+    uint32_t imm32;
+    int carry;
+
+    ThumbExpandImm_C(i_imm3_imm8, GET_APSR_C((arm_reg_t*)cpu->regs), &imm32, &carry);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rn, 13, 15), _tst_imm32);
+    _tst_imm(imm32, Rn, carry, cpu->regs);
+
+    LOG_INSTRUCTION("_tst_imm_32, R%d, #%d\n", Rn, imm32);
+}
+
+thumb_translate32_t and_tst_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+
+    if(Rd != 0xF){
+        return (thumb_translate32_t)_and_imm_32;
+    }else{
+        return (thumb_translate32_t)_tst_imm_32;
+    }
+}
+
+void _bic_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t i_imm3_imm8 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+
+    uint32_t imm32; int carry;
+    ThumbExpandImm_C(i_imm3_imm8, GET_APSR_C((arm_reg_t *)cpu->regs), &imm32, &carry);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15), _bic_imm_32);
+    _bic_imm(imm32, Rn, Rd, setflags, carry, cpu->regs);
+
+    LOG_INSTRUCTION("_bic_imm_32, R%d, #%d\n", Rn, imm32);
+}
+
+void _orr_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t i_imm3_imm8 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+
+    uint32_t imm32; int carry;
+    ThumbExpandImm_C(i_imm3_imm8, GET_APSR_C((arm_reg_t *)cpu->regs), &imm32, &carry);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || Rn == 13, _orr_imm_32);
+    _orr_imm(imm32, Rn, Rd, setflags, carry, cpu->regs);
+
+    LOG_INSTRUCTION("_orr_imm_32, R%d, R%d, #%d\n", Rd, Rn, imm32);
+}
+
+/* Encoding T2 */
+void _mov_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t i_imm3_imm8 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+
+    uint32_t imm32; int carry;
+    ThumbExpandImm_C(i_imm3_imm8, GET_APSR_C((arm_reg_t *)cpu->regs), &imm32, &carry);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15), _mov_imm_32);
+    _mov_imm(Rd, imm32, setflags, carry, cpu->regs);
+
+    LOG_INSTRUCTION("_mov_imm_32, R%d, #%d\n", Rd, imm32);
+}
+
+thumb_translate32_t orr_mov_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+
+    if(Rn != 0xF){
+        return (thumb_translate32_t)_orr_imm_32;
+    }else{
+        return (thumb_translate32_t)_mov_imm_32;
+    }
+}
+
+void _orn_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t i_imm3_imm8 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+
+    uint32_t imm32; int carry;
+    ThumbExpandImm_C(i_imm3_imm8, GET_APSR_C((arm_reg_t *)cpu->regs), &imm32, &carry);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || Rn == 13, _orn_imm_32);
+    _orn_imm(imm32, Rn, Rd, setflags, carry, cpu->regs);
+    LOG_INSTRUCTION("_orn_imm_32, R%d, #%d\n", Rd, imm32);
+}
+
+void _mvn_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t i_imm3_imm8 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+
+    uint32_t imm32; int carry;
+    ThumbExpandImm_C(i_imm3_imm8, GET_APSR_C((arm_reg_t *)cpu->regs), &imm32, &carry);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15), _mvn_imm_32);
+    _mvn_imm(Rd, imm32, setflags, carry, cpu->regs);
+
+    LOG_INSTRUCTION("_mvn_imm_32, R%d, #%d\n", Rd, imm32);
+}
+
+thumb_translate32_t orn_mvn_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    if(Rn != 0xF){
+        return (thumb_translate32_t)_orn_imm_32;
+    }else{
+        return (thumb_translate32_t)_mvn_imm_32;
+    }
+}
+
+void _eor_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t i_imm3_imm8 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+
+    uint32_t imm32; int carry;
+    ThumbExpandImm_C(i_imm3_imm8, GET_APSR_C((arm_reg_t *)cpu->regs), &imm32, &carry);
+
+    CHECK_UNPREDICTABLE(Rd == 13 || (Rd == 15 && setflags == 0) || IN_RANGE(Rn, 13, 15), _eor_imm_32);
+    _eor_imm(imm32, Rn, Rd, setflags, carry, cpu->regs);
+    LOG_INSTRUCTION("_eor_imm_32, R%d, R%d, #%d\n", Rd, Rn, imm32);
+}
+
+void _teq_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t i_imm3_imm8 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+
+    uint32_t imm32; int carry;
+    ThumbExpandImm_C(i_imm3_imm8, GET_APSR_C((arm_reg_t *)cpu->regs), &imm32, &carry);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rn, 13, 15), _teq_imm_32);
+    _teq_imm(imm32, Rn, carry, cpu->regs);
+    LOG_INSTRUCTION("_teq_imm_32, R%d, #%d\n", Rn, imm32);
+}
+
+thumb_translate32_t eor_teq_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    if(Rd != 0xF){
+        return (thumb_translate32_t)_eor_imm_32;
+    }else{
+        return (thumb_translate32_t)_teq_imm_32;
+    }
 }
 
 /****** init instruction table ******/
@@ -2067,7 +2288,7 @@ void init_instruction_table(thumb_instruct_table_t* table)
     set_base_table_value(table->main_table32, 0x08C, 0x08C, (thumb_translate_t)strexb_h_32,       THUMB_DECODER);
     set_base_table_value(table->main_table32, 0x08D, 0x08D, (thumb_translate_t)tbb_h_ldrexb_h_32, THUMB_DECODER);
 
-    // data processing
+    // data processing(shifted register)
     set_base_table_value(table->main_table32, 0x0A0, 0x0A1, (thumb_translate_t)and_tst_reg_32,  THUMB_DECODER);
     set_base_table_value(table->main_table32, 0x0A2, 0x0A3, (thumb_translate_t)_bic_reg_32,     THUMB_EXCUTER);
     set_base_table_value(table->main_table32, 0x0A4, 0x0A5, (thumb_translate_t)orr_mov_shift_reg_32, THUMB_DECODER);
@@ -2076,9 +2297,23 @@ void init_instruction_table(thumb_instruct_table_t* table)
     set_base_table_value(table->main_table32, 0x0AC, 0x0AD, (thumb_translate_t)_pkhbt_pkhtb_32, THUMB_EXCUTER);
     set_base_table_value(table->main_table32, 0x0B0, 0x0B1, (thumb_translate_t)add_cmn_reg_32,  THUMB_DECODER);
     set_base_table_value(table->main_table32, 0x0B4, 0x0B5, (thumb_translate_t)_adc_reg_32,     THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x0B4, 0x0B5, (thumb_translate_t)_sbc_reg_32,     THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x0B6, 0x0B7, (thumb_translate_t)_sbc_reg_32,     THUMB_EXCUTER);
     set_base_table_value(table->main_table32, 0x0BA, 0x0BB, (thumb_translate_t)sub_cmp_reg_32,  THUMB_DECODER);
     set_base_table_value(table->main_table32, 0x0BC, 0x0BD, (thumb_translate_t)_rsb_reg_32,     THUMB_EXCUTER);
+
+    // data processing(modified immediate)
+    set_base_table_value(table->main_table32, 0x100, 0x101, (thumb_translate_t)and_tst_imm_32,  THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x140, 0x141, (thumb_translate_t)and_tst_imm_32,  THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x102, 0x103, (thumb_translate_t)_bic_imm_32,     THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x142, 0x143, (thumb_translate_t)_bic_imm_32,     THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x104, 0x105, (thumb_translate_t)orr_mov_imm_32,  THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x144, 0x145, (thumb_translate_t)orr_mov_imm_32,  THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x106, 0x107, (thumb_translate_t)orn_mvn_imm_32,  THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x146, 0x147, (thumb_translate_t)orn_mvn_imm_32,  THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x108, 0x109, (thumb_translate_t)eor_teq_imm_32,  THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x148, 0x149, (thumb_translate_t)eor_teq_imm_32,  THUMB_DECODER);
+
+
 }
 
 bool_t is_16bit_code(uint16_t opcode)
@@ -2098,11 +2333,6 @@ uint32_t align_address(uint32_t address)
 {
     return address & 0xFFFFFFFE;
 }
-
-typedef struct{
-    uint16_t opcode16_h;
-    uint16_t opcode16_l;
-}opcode_t;
 
 /***** The main parsing function for the instruction *******/
 /* The decode structure has 2 types: THUMB_DECODER and THUMB_EXCUTER.
@@ -2167,7 +2397,6 @@ int armv7m_PC_modified(cpu_t* cpu)
 arm_reg_t* create_arm_regs()
 {
     arm_reg_t* regs = (arm_reg_t*)calloc(1, sizeof(arm_reg_t));
-
     return regs;
 }
 

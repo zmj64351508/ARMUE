@@ -55,19 +55,19 @@ typedef struct{
 
     // banked registers
     uint32_t SP_bank[2];        // backup for MSP/PSP
-    uint8_t sp_in_use;  /* which is in use (should to be banked) */
+    int sp_in_use;  /* which is in use (should to be banked) */
 
     uint32_t PC_return;        /* the return value of PC, it is the same as PC in 32-bit instructions
                                and PC+2 in 16-bit instructions */
-
 }arm_reg_t;
 
 typedef struct thumb_state{
-    uint8_t excuting_IT;
-    int mode;
-    int cur_exception;
+    int excuting_IT;    // the flag of whether in IT block or not
+    int mode;           // current working mode
+    int cur_exception;  // current exception
 }thumb_state;
 
+/* exclusive state */
 typedef struct arm_exclusive_t{
     uint32_t low_addr;
     uint32_t high_addr;
@@ -131,6 +131,7 @@ do{\
 }while(0)
 
 void DecodeImmShift(uint32_t type, uint32_t imm5, _O uint32_t *shift_t, _O uint32_t *shift_n);
+int ThumbExpandImm_C(uint32_t imm12, uint32_t carry_in, uint32_t *imm32, int*carry_out);
 
 static inline uint32_t InITBlock(arm_reg_t* regs)
 {
@@ -241,11 +242,13 @@ void _add_sp_reg(uint32_t Rm, uint32_t Rd, SRType shift_t, uint32_t shift_n, uin
 void _sub_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs);
 void _add_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, arm_reg_t* regs);
 void _sub_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, arm_reg_t* regs);
-void _mov_imm(uint32_t d, uint32_t imm32, uint32_t setflag, int carry, arm_reg_t* regs);
 void _cmp_imm(uint32_t imm32, uint32_t Rn, arm_reg_t* regs);
 void _and_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs);
+void _and_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, bool_t setflags, uint32_t carry, arm_reg_t *regs);
 void _eor_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs);
+void _eor_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, bool_t setflags, int carry, arm_reg_t *regs);
 void _teq_reg(uint32_t Rm, uint32_t Rn, SRType shift_t, uint32_t shift_n, arm_reg_t* regs);
+void _teq_imm(uint32_t imm32, uint32_t Rn, int carry, arm_reg_t *regs);
 void _lsl_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflag, arm_reg_t* regs);
 void _lsr_reg(uint32_t Rm, uint32_t Rn ,uint32_t Rd, uint32_t setflag, arm_reg_t* regs);
 void _asr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflag, arm_reg_t* regs);
@@ -253,16 +256,22 @@ void _adc_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t sh
 void _sbc_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs);
 void _ror_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflags, arm_reg_t* regs);
 void _tst_reg(uint32_t Rm, uint32_t Rn, SRType shift_t, uint32_t shift_n, arm_reg_t* regs);
+void _tst_imm(uint32_t imm32, uint32_t Rn, uint32_t carry, arm_reg_t *regs);
 void _rsb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, uint32_t setflags, arm_reg_t* regs);
 void _rsb_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t *regs);
 void _cmp_reg(uint32_t Rm, uint32_t Rn, SRType shift_t, uint32_t shift_n, arm_reg_t* regs);
 void _cmn_reg(uint32_t Rm, uint32_t Rn, SRType shift_t, uint32_t shift_n, arm_reg_t* regs);
 void _orr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs);
+void _orr_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, bool_t setflags, int carry, arm_reg_t *regs);
 void _orn_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs);
+void _orn_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, bool_t setflags, int carry, arm_reg_t *regs);
 void _mul_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflags, arm_reg_t* regs);
 void _bic_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs);
+void _bic_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, bool_t setflags, int carry, arm_reg_t *regs);
 void _mvn_reg(uint32_t Rm, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs);
+void _mvn_imm(uint32_t Rd, uint32_t imm32, bool_t setflags, int carry, arm_reg_t *regs);
 void _mov_reg(uint32_t Rm, uint32_t Rd, uint32_t setflag, arm_reg_t* regs);
+void _mov_imm(uint32_t Rd, uint32_t imm32, bool_t setflag, int carry, arm_reg_t* regs);
 void _bx(uint32_t Rm, cpu_t* cpu);
 void _blx(uint32_t Rm, cpu_t* cpu);
 void _ldr_literal(uint32_t imm32, uint32_t Rt, bool_t add, cpu_t* cpu);

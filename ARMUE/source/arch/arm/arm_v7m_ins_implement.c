@@ -134,6 +134,46 @@ inline void Shift(uint32_t val, SRType type, int amount, int carry_in, _O uint32
     Shift_C(val, type, amount, carry_in, result, &carry_out);
 }
 
+int ThumbExpandImm_C(uint32_t imm12, uint32_t carry_in, uint32_t *imm32, int*carry_out)
+{
+    uint32_t imm12_8 = LOW_BIT32(imm12, 8);
+    if((imm12 >> 10 & 0x3) == 0){
+        switch((imm12 >> 8) & 0x3){
+        case 0x0:
+            *imm32 = imm12_8;
+            break;
+        case 0x1:
+            if(imm12_8 == 0){
+                return -1;
+            }else{
+                *imm32 = (imm12_8 << 16) | imm12_8;
+            }
+            break;
+        case 0x2:
+            if(imm12_8 == 0){
+                return -2;
+            }else{
+                *imm32 = (imm12_8 << 24) | (imm12_8 << 8);
+            }
+            break;
+        case 0x3:
+            if(imm12_8 == 0){
+                return -3;
+            }else{
+                *imm32 = (imm12_8 << 24) | (imm12_8 << 16) | (imm12_8 << 8) | imm12_8;
+            }
+            break;
+        default:
+            return -4;
+        }
+        *carry_out = carry_in;
+    }else{
+        uint32_t unrotated = (1ul << 7) | LOW_BIT32(imm12, 7);
+        ROR_C(unrotated, LOW_BIT32(imm12 >> 7, 5), imm32, carry_out);
+    }
+    return 0;
+}
+
 inline uint8_t CurrentCond(arm_reg_t* regs)
 {
     return (GET_ITSTATE(regs)>>4) & 0xF;
@@ -721,7 +761,7 @@ if ConditionPassed() then
         APSR.C = carry;
         // APSR.V unchanged
 *************************************/
-void _mov_imm(uint32_t Rd, uint32_t imm32, uint32_t setflags, int carry, arm_reg_t* regs)
+void _mov_imm(uint32_t Rd, uint32_t imm32, bool_t setflags, int carry, arm_reg_t* regs)
 {
     if(!ConditionPassed(0, regs)){
         return;
@@ -799,6 +839,35 @@ void _and_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t sh
 }
 
 /***********************************
+<<ARMv7-M Architecture Reference Manual A7-231>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    result = R[n] AND imm32;
+    R[d] = result;
+        if setflags then
+            APSR.N = result<31>;
+            APSR.Z = IsZeroBit(result);
+            APSR.C = carry;
+            // APSR.V unchanged
+*************************************/
+void _and_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, bool_t setflags, uint32_t carry, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t result = Rn_val & imm32;
+    SET_REG_VAL(regs, Rd, result);
+
+    if(setflags){
+        SET_APSR_N(regs, result);
+        SET_APSR_Z(regs, result);
+        SET_APSR_C(regs, carry);
+    }
+}
+
+/***********************************
 <<ARMv7-M Architecture Reference Manual A7-273>>
 if ConditionPassed() then
     EncodingSpecificOperations();
@@ -831,6 +900,34 @@ void _eor_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t sh
 }
 
 /***********************************
+<<ARMv7-M Architecture Reference Manual A7-271>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    result = R[n] EOR imm32;
+    R[d] = result;
+    if setflags then
+        APSR.N = result<31>;
+        APSR.Z = IsZeroBit(result);
+        APSR.C = carry;
+        // APSR.V unchanged
+**************************************/
+void _eor_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, bool_t setflags, int carry, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t result = Rn_val ^ imm32;
+    SET_REG_VAL(regs, Rd, result);
+    if(setflags){
+        SET_APSR_N(regs, result);
+        SET_APSR_Z(regs, result);
+        SET_APSR_C(regs, carry);
+    }
+}
+
+/***********************************
 <<ARMv7-M Architecture Reference Manual A7-273>>
 if ConditionPassed() then
     EncodingSpecificOperations();
@@ -853,6 +950,29 @@ void _teq_reg(uint32_t Rm, uint32_t Rn, SRType shift_t, uint32_t shift_n, arm_re
     uint32_t Rn_val = GET_REG_VAL(regs, Rn);
     uint32_t result = Rn_val ^ shifted;
 
+    SET_APSR_N(regs, result);
+    SET_APSR_Z(regs, result);
+    SET_APSR_C(regs, carry);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-519>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    result = R[n] EOR imm32;
+    APSR.N = result<31>;
+    APSR.Z = IsZeroBit(result);
+    APSR.C = carry;
+    // APSR.V unchanged
+**************************************/
+void _teq_imm(uint32_t imm32, uint32_t Rn, int carry, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t result = Rn_val ^ imm32;
     SET_APSR_N(regs, result);
     SET_APSR_Z(regs, result);
     SET_APSR_C(regs, carry);
@@ -1092,6 +1212,29 @@ void _tst_reg(uint32_t Rm, uint32_t Rn, SRType shift_t, uint32_t shift_n, arm_re
 }
 
 /***********************************
+<<ARMv7-M Architecture Reference Manual A7-521>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    result = R[n] AND imm32;
+    APSR.N = result<31>;
+    APSR.Z = IsZeroBit(result);
+    APSR.C = carry;
+    // APSR.V unchanged
+**************************************/
+void _tst_imm(uint32_t imm32, uint32_t Rn, uint32_t carry, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t result = imm32 & Rn_val;
+    SET_APSR_N(regs, result);
+    SET_APSR_Z(regs, result);
+    SET_APSR_C(regs, carry);
+}
+
+/***********************************
 <<ARMv7-M Architecture Reference Manual A7-411>>
 if ConditionPassed() then
     EncodingSpecificOperations();
@@ -1255,6 +1398,35 @@ void _orr_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t sh
 }
 
 /***********************************
+<<ARMv7-M Architecture Reference Manual A7-371>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    result = R[n] OR imm32;
+    R[d] = result;
+        if setflags then
+        APSR.N = result<31>;
+        APSR.Z = IsZeroBit(result);
+        APSR.C = carry;
+        // APSR.V unchanged
+**************************************/
+void _orr_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, bool_t setflags, int carry, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t result = Rn_val | imm32;
+    SET_REG_VAL(regs, Rd, result);
+
+    if(setflags){
+        SET_APSR_N(regs, result);
+        SET_APSR_Z(regs, result);
+        SET_APSR_C(regs, carry);
+    }
+}
+
+/***********************************
 <<ARMv7-M Architecture Reference Manual A7-369>>
 if ConditionPassed() then
     EncodingSpecificOperations();
@@ -1283,6 +1455,35 @@ void _orn_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t sh
     SET_REG_VAL(regs, Rd, result);
 
     if(setflags){
+        SET_APSR_N(regs, result);
+        SET_APSR_Z(regs, result);
+        SET_APSR_C(regs, carry);
+    }
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-367>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    result = R[n] OR NOT(imm32);
+    R[d] = result;
+    if setflags then
+        APSR.N = result<31>;
+        APSR.Z = IsZeroBit(result);
+        APSR.C = carry;
+        // APSR.V unchanged
+**************************************/
+void _orn_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, bool_t setflags, int carry, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t result = Rn_val | ~imm32;
+    SET_REG_VAL(regs, Rd, result);
+
+     if(setflags){
         SET_APSR_N(regs, result);
         SET_APSR_Z(regs, result);
         SET_APSR_C(regs, carry);
@@ -1357,6 +1558,35 @@ void _bic_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t sh
 }
 
 /***********************************
+<<ARMv7-M Architecture Reference Manual A7-243>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    result = R[n] AND NOT(imm32);
+    R[d] = result;
+        if setflags then
+            APSR.N = result<31>;
+            APSR.Z = IsZeroBit(result);
+            APSR.C = carry;
+            // APSR.V unchanged
+**************************************/
+void _bic_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, bool_t setflags, int carry, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t result = Rn_val & ~imm32;
+    SET_REG_VAL(regs, Rd, result);
+
+    if(setflags){
+        SET_APSR_N(regs, result);
+        SET_APSR_Z(regs, result);
+        SET_APSR_C(regs, carry);
+    }
+}
+
+/***********************************
 <<ARMv7-M Architecture Reference Manual A7-363>>
 if ConditionPassed() then
     EncodingSpecificOperations();
@@ -1381,6 +1611,34 @@ void _mvn_reg(uint32_t Rm, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32
     Shift_C(Rm_val, shift_t, shift_n, carry, &shifted, &carry);
 
     uint32_t result = ~shifted;
+    SET_REG_VAL(regs, Rd, result);
+
+    if(setflags){
+        SET_APSR_N(regs, result);
+        SET_APSR_Z(regs, result);
+        SET_APSR_C(regs, carry);
+    }
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-361>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    result = NOT(imm32);
+    R[d] = result;
+    if setflags then
+        APSR.N = result<31>;
+        APSR.Z = IsZeroBit(result);
+        APSR.C = carry;
+        // APSR.V unchanged
+**************************************/
+void _mvn_imm(uint32_t Rd, uint32_t imm32, bool_t setflags, int carry, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t result = ~imm32;
     SET_REG_VAL(regs, Rd, result);
 
     if(setflags){
@@ -2798,7 +3056,7 @@ if ConditionPassed() then
     R[d]<15:0> = if tbform then operand2<15:0> else R[n]<15:0>;
     R[d]<31:16> = if tbform then R[n]<31:16> else operand2<31:16>;
 **************************************/
-void _pkhbt_pkhtb(uint32_t Rd, uint32_t Rn, uint32_t Rm, uint32_t shift_t, uint32_t shift_n, bool_t tbform, arm_reg_t *regs)
+void _pkhbt_pkhtb(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t shift_t, uint32_t shift_n, bool_t tbform, arm_reg_t *regs)
 {
     if(!ConditionPassed(0, regs)){
        return;
