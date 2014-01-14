@@ -1114,6 +1114,36 @@ void _adc_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t sh
 }
 
 /***********************************
+<<ARMv7-M Architecture Reference Manual A7-217>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    (result, carry, overflow) = AddWithCarry(R[n], imm32, APSR.C);
+    R[d] = result;
+    if setflags then
+        APSR.N = result<31>;
+        APSR.Z = IsZeroBit(result);
+        APSR.C = carry;
+        APSR.V = overflow;
+**************************************/
+void _adc_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, bool_t setflags, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t result, carry, overflow;
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    AddWithCarry(Rn_val, imm32, GET_APSR_C(regs), &result, &carry, &overflow);
+    SET_REG_VAL(regs, Rd, result);
+    if(setflags){
+        SET_APSR_N(regs, result);
+        SET_APSR_Z(regs, result);
+        SET_APSR_C(regs, carry);
+        SET_APSR_V(regs, overflow);
+    }
+}
+
+/***********************************
 <<ARMv7-M Architecture Reference Manual A7-419>>
 if ConditionPassed() then
     EncodingSpecificOperations();
@@ -1140,6 +1170,36 @@ void _sbc_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t sh
     uint32_t result;
     uint32_t overflow;
     AddWithCarry(Rn_val, ~shifted, carry, &result, &carry, &overflow);
+    SET_REG_VAL(regs, Rd, result);
+    if(setflags){
+        SET_APSR_N(regs, result);
+        SET_APSR_Z(regs, result);
+        SET_APSR_C(regs, carry);
+        SET_APSR_V(regs, overflow);
+    }
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-418>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    (result, carry, overflow) = AddWithCarry(R[n], NOT(imm32), APSR.C);
+    R[d] = result;
+    if setflags then
+        APSR.N = result<31>;
+        APSR.Z = IsZeroBit(result);
+        APSR.C = carry;
+        APSR.V = overflow;
+**************************************/
+void _sbc_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, bool_t setflags, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t result, carry, overflow;
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    AddWithCarry(Rn_val, ~imm32, GET_APSR_C(regs), &result, &carry, &overflow);
     SET_REG_VAL(regs, Rd, result);
     if(setflags){
         SET_APSR_N(regs, result);
@@ -1355,6 +1415,32 @@ void _cmn_reg(uint32_t Rm, uint32_t Rn, SRType shift_t, uint32_t shift_n, arm_re
     uint32_t overflow;
     uint32_t Rn_val = GET_REG_VAL(regs, Rn);
     AddWithCarry(Rn_val, shifted, 0, &result, &carry, &overflow);
+
+    SET_APSR_N(regs, result);
+    SET_APSR_Z(regs, result);
+    SET_APSR_C(regs, carry);
+    SET_APSR_V(regs, overflow);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-257>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    (result, carry, overflow) = AddWithCarry(R[n], imm32, ¡®0¡¯);
+    APSR.N = result<31>;
+    APSR.Z = IsZeroBit(result);
+    APSR.C = carry;
+    APSR.V = overflow;
+**************************************/
+void _cmn_imm(uint32_t imm32, uint32_t Rn, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t result, carry, overflow;
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    AddWithCarry(Rn_val, imm32, 0, &result, &carry, &overflow);
 
     SET_APSR_N(regs, result);
     SET_APSR_Z(regs, result);

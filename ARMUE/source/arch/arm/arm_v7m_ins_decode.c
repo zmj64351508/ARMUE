@@ -2147,6 +2147,129 @@ thumb_translate32_t eor_teq_imm_32(uint32_t ins_code, cpu_t *cpu)
     }
 }
 
+/* Encoding T3 */
+void _add_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    bool_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t i_imm3_imm8 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+
+    uint32_t imm32; int carry;
+    ThumbExpandImm_C(i_imm3_imm8, GET_APSR_C((arm_reg_t *)cpu->regs), &imm32, &carry);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15), _add_imm_32);
+    _add_imm(imm32, Rn, Rd, setflags, cpu->regs);
+    LOG_INSTRUCTION("_add_imm_32, R%d, R%d, #%d\n", Rd, Rn, imm32);
+}
+
+void _cmn_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t i_imm3_imm8 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+
+    uint32_t imm32; int carry;
+    ThumbExpandImm_C(i_imm3_imm8, GET_APSR_C((arm_reg_t *)cpu->regs), &imm32, &carry);
+
+    CHECK_UNPREDICTABLE(Rn == 15, _cmn_imm_32);
+    _cmn_imm(imm32, Rn, cpu->regs);
+    LOG_INSTRUCTION("_cmn_imm_32, R%d, #%d\n", Rn, imm32);
+}
+
+thumb_translate32_t add_cmn_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    if(Rd != 0xF){
+        return (thumb_translate32_t)_add_imm_32;
+    }else{
+        return (thumb_translate32_t)_cmn_imm_32;
+    }
+}
+
+void _adc_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    bool_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t i_imm3_imm8 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+
+    uint32_t imm32; int carry;
+    ThumbExpandImm_C(i_imm3_imm8, GET_APSR_C((arm_reg_t *)cpu->regs), &imm32, &carry);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15), _adc_imm_32);
+    _adc_imm(imm32, Rn, Rd, setflags, cpu->regs);
+    LOG_INSTRUCTION("_adc_imm_32, R%d, R%d, #%d\n", Rd, Rn, imm32);
+}
+
+void _sbc_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    bool_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t i_imm3_imm8 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+
+    uint32_t imm32; int carry;
+    ThumbExpandImm_C(i_imm3_imm8, GET_APSR_C((arm_reg_t *)cpu->regs), &imm32, &carry);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15), _sbc_imm_32);
+    _sbc_imm(imm32, Rn, Rd, setflags, cpu->regs);
+    LOG_INSTRUCTION("_sbc_imm_32, R%d, R%d, #%d\n", Rd, Rn, imm32);
+}
+
+/* Encoding T3 */
+void _sub_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    bool_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t i_imm3_imm8 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+
+    uint32_t imm32; int carry;
+    ThumbExpandImm_C(i_imm3_imm8, GET_APSR_C((arm_reg_t *)cpu->regs), &imm32, &carry);
+
+    CHECK_UNPREDICTABLE(Rd == 13 || (Rd == 15 && setflags == 0) || Rn == 15, _sub_imm_32);
+    _sub_imm(imm32, Rn, Rd, setflags, cpu->regs);
+    LOG_INSTRUCTION("_sub_imm_32, R%d, R%d, #%d\n", Rd, Rn, imm32);
+}
+
+void _cmp_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t i_imm3_imm8 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+
+    uint32_t imm32; int carry;
+    ThumbExpandImm_C(i_imm3_imm8, GET_APSR_C((arm_reg_t *)cpu->regs), &imm32, &carry);
+
+    CHECK_UNPREDICTABLE(Rn == 15, _cmp_imm_32);
+    _cmp_imm(imm32, Rn, cpu->regs);
+    LOG_INSTRUCTION("_cmp_imm_32, R%d, #%d\n", Rn, imm32);
+}
+
+thumb_translate32_t sub_cmp_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    if(Rd != 0xF){
+        return (thumb_translate32_t)_sub_imm_32;
+    }else{
+        return (thumb_translate32_t)_cmp_imm_32;
+    }
+}
+
+void _rsb_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    bool_t setflags = DATA_PROCESS32_S(ins_code);
+    uint32_t i_imm3_imm8 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+
+    uint32_t imm32; int carry;
+    ThumbExpandImm_C(i_imm3_imm8, GET_APSR_C((arm_reg_t *)cpu->regs), &imm32, &carry);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15), _rsb_imm_32);
+    _rsb_imm(imm32, Rn, Rd, setflags, cpu->regs);
+    LOG_INSTRUCTION("_rsb_imm_32, R%d, R%d, #%d\n", Rd, Rn, imm32);
+}
+
 /****** init instruction table ******/
 void init_instruction_table(thumb_instruct_table_t* table)
 {
@@ -2312,6 +2435,16 @@ void init_instruction_table(thumb_instruct_table_t* table)
     set_base_table_value(table->main_table32, 0x146, 0x147, (thumb_translate_t)orn_mvn_imm_32,  THUMB_DECODER);
     set_base_table_value(table->main_table32, 0x108, 0x109, (thumb_translate_t)eor_teq_imm_32,  THUMB_DECODER);
     set_base_table_value(table->main_table32, 0x148, 0x149, (thumb_translate_t)eor_teq_imm_32,  THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x110, 0x111, (thumb_translate_t)add_cmn_imm_32,  THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x150, 0x151, (thumb_translate_t)add_cmn_imm_32,  THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x114, 0x115, (thumb_translate_t)_adc_imm_32,     THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x154, 0x155, (thumb_translate_t)_adc_imm_32,     THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x116, 0x116, (thumb_translate_t)_sbc_imm_32,     THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x156, 0x156, (thumb_translate_t)_sbc_imm_32,     THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x11A, 0x11B, (thumb_translate_t)sub_cmp_imm_32,  THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x15A, 0x15B, (thumb_translate_t)sub_cmp_imm_32,  THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x11C, 0x11D, (thumb_translate_t)_rsb_imm_32,     THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x15C, 0x15D, (thumb_translate_t)_rsb_imm_32,     THUMB_EXCUTER);
 
 
 }
