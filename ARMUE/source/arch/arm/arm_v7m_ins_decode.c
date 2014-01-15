@@ -1130,7 +1130,7 @@ void _pop_32(uint32_t ins_code, cpu_t* cpu)
 
 }
 
-thumb_translate32_t ldm_pop_bundle(uint32_t ins_code, cpu_t *cpu)
+thumb_translate32_t ldm_pop_32(uint32_t ins_code, cpu_t *cpu)
 {
     uint32_t WRn = LOW_BIT32(ins_code >> 16, 4) | LOW_BIT32(ins_code >> 21, 1) << 4;
     if(WRn == 0x1D){
@@ -1176,7 +1176,7 @@ void _stmdb_32(uint32_t ins_code, cpu_t *cpu)
     LOG_INSTRUCTION("_stmdb_32, R%d,%d\n", Rn, registers);
 }
 
-thumb_translate32_t stmdb_push_bundle(uint32_t ins_code, cpu_t *cpu)
+thumb_translate32_t stmdb_push_32(uint32_t ins_code, cpu_t *cpu)
 {
     uint32_t WRn = LOW_BIT32(ins_code >> 16, 4) | LOW_BIT32(ins_code >> 21, 1) << 4;
     if(WRn == 0x1D){
@@ -1453,18 +1453,31 @@ thumb_translate32_t tbb_h_ldrexb_h_32(uint32_t ins_code, cpu_t *cpu)
 }
 
 /* data process */
+/* general decoding */
 #define DATA_PROCESS32_RN(ins_code) LOW_BIT32((ins_code) >> 16, 4)
 #define DATA_PROCESS32_RD(ins_code) LOW_BIT32((ins_code) >> 8, 4)
 #define DATA_PROCESS32_RM(ins_code) LOW_BIT32((ins_code), 4)
 #define DATA_PROCESS32_S(ins_code) LOW_BIT32((ins_code) >> 20, 1)
 #define DATA_PROCESS32_IMM3(ins_code) LOW_BIT32((ins_code) >> 12, 3)
 
-#define DATA_PROCESS32_IMM2(ins_code) LOW_BIT32((ins_code) >> 6, 2)
+/* shifted register decoding */
+#define DATA_PROCESS32_IMM2(ins_code) LOW_BIT32((ins_code) >> 6, 2) // used in plain immediate decoding as well
 #define DATA_PROCESS32_TYPE(ins_code) LOW_BIT32((ins_code) >> 4, 2)
 
+/* modified immediate & plain bianry immediate decoding */
 #define DATA_PROCESS32_IMM8(ins_code) LOW_BIT32((ins_code), 8)
 #define DATA_PROCESS32_I(ins_code) LOW_BIT32((ins_code) >> 26, 1)
 #define DATA_PROCESS32_I_IMM3_IMM8(ins_code) (DATA_PROCESS32_I(ins_code) << 11 | DATA_PROCESS32_IMM3(ins_code) << 8 | DATA_PROCESS32_IMM8(ins_code))
+
+/* plain binary immediate decoding */
+#define DATA_PROCESS32_IMM3_IMM2(ins_code) (DATA_PROCESS32_IMM3(ins_code) << 2 | DATA_PROCESS32_IMM2(ins_code))
+#define DATA_PROCESS32_IMM4(ins_code) LOW_BIT32((ins_code) >> 16, 4)
+#define DATA_PROCESS32_IMM4_I_IMM3_IMM8(ins_code) (DATA_PROCESS32_IMM4(ins_code) << 12 | DATA_PROCESS32_I_IMM3_IMM8(ins_code))
+#define _DATA_PROCESS32_LOWBIT5(ins_code) LOW_BIT32((ins_code), 5)
+#define DATA_PROCESS32_SAT_IMM(ins_code) _DATA_PROCESS32_LOWBIT5(ins_code)
+#define DATA_PROCESS32_WIDTHM1(ins_code) _DATA_PROCESS32_LOWBIT5(ins_code)
+#define DATA_PROCESS32_MSB(ins_code) _DATA_PROCESS32_LOWBIT5(ins_code)
+#define DATA_PROCESS32_SH(ins_code) LOW_BIT32((ins_code) >> 21, 1)
 
 inline void get_shift_imm5_32(uint32_t ins_code, _O uint32_t *type, _O uint32_t *imm5)
 {
@@ -2270,6 +2283,186 @@ void _rsb_imm_32(uint32_t ins_code, cpu_t *cpu)
     LOG_INSTRUCTION("_rsb_imm_32, R%d, R%d, #%d\n", Rd, Rn, imm32);
 }
 
+/* Encoding T4 */
+void _add_imm12_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    bool_t setflags = FALSE;
+    uint32_t imm32 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15), _add_imm12_32);
+    _add_imm(imm32, Rn, Rd, setflags, cpu->regs);
+    LOG_INSTRUCTION("_add_imm12_32, R%d, R%d, #%d\n", Rd, Rn, imm32);
+}
+
+/* Encoding T3 */
+void _adr_after_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t imm32 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+    bool_t add = TRUE;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15), _adr_after_32);
+    _adr(imm32, Rd, add, cpu->regs);
+    LOG_INSTRUCTION("_adr_after_32, R%d, #%d\n", Rd, imm32);
+}
+
+thumb_translate32_t add_adr_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    if(Rn != 0xF){
+        return (thumb_translate32_t)_add_imm12_32;
+    }else{
+        return (thumb_translate32_t)_adr_after_32;
+    }
+}
+
+/* Encoding T3 */
+void _mov_imm16_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t imm32 = DATA_PROCESS32_IMM4_I_IMM3_IMM8(ins_code);
+    bool_t setflags = FALSE;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15), _mov_imm16_32);
+    _mov_imm(Rd, imm32, setflags, 0, cpu->regs);
+    LOG_INSTRUCTION("_mov_imm16_32, R%d, #%d\n", Rd, imm32);
+}
+
+/* Encoding T4 */
+void _sub_imm12_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    bool_t setflags = FALSE;
+    uint32_t imm32 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15), _sub_imm12_32);
+    _sub_imm(imm32, Rn, Rd, setflags, cpu->regs);
+    LOG_INSTRUCTION("_sub_imm12_32, R%d, R%d, #%d\n", Rd, Rn, imm32);
+}
+
+/* Encoding T2 */
+void _adr_before_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t imm32 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
+    bool_t add = FALSE;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15), _adr_after_32);
+    _adr(imm32, Rd, add, cpu->regs);
+    LOG_INSTRUCTION("_adr_before_32, R%d, #%d\n", Rd, imm32);
+}
+
+thumb_translate32_t sub_adr_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    if(Rn != 0xF){
+        return (thumb_translate32_t)_sub_imm12_32;
+    }else{
+        return (thumb_translate32_t)_adr_before_32;
+    }
+}
+
+void _movt_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t imm16 = DATA_PROCESS32_IMM4_I_IMM3_IMM8(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15), _movt_32);
+    _movt(imm16, Rd, cpu->regs);
+    LOG_INSTRUCTION("_movt_32, R%d, #%d\n", Rd, imm16);
+}
+
+void _ssat_32(uint32_t ins_code, cpu_t *cpu)
+{
+    // TODO:
+    // if sh == 1 && (imm3 : imm2) == 0 && HaveDSPExt()
+    //      see ssat16
+    // else
+    //      undefined
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t saturate_to = DATA_PROCESS32_SAT_IMM(ins_code) + 1;
+    uint32_t sh = DATA_PROCESS32_SH(ins_code);
+    uint32_t imm5 = DATA_PROCESS32_IMM3_IMM2(ins_code);
+
+    uint32_t shift_t, shift_n;
+    DecodeImmShift(sh << 1, imm5, &shift_t, &shift_n);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15), _ssat_32);
+    _ssat(saturate_to, Rn, Rd, shift_n, shift_t, cpu->regs);
+    LOG_INSTRUCTION("_ssat_32, R%d, #%d, R%d, SRType%d #%d\n", Rd, saturate_to, Rn, shift_t, shift_n);
+}
+
+void _ssat16_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    // sat_imm in this instruction should be bit 0~3 and bit 4 should always be 1
+    uint32_t saturate_to = DATA_PROCESS32_SAT_IMM(ins_code) + 1;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15), _ssat16_32);
+    _ssat16(saturate_to, Rn, Rd, cpu->regs);
+    LOG_INSTRUCTION("_ssat16_32, R%d, #%d, R%d\n", Rd, saturate_to, Rn);
+}
+
+thumb_translate32_t ssat_ssat16_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t flag = LOW_BIT32(ins_code >> 12, 3) << 2 | LOW_BIT32(ins_code >> 6 ,2);
+    if(flag != 0){
+        return (thumb_translate32_t)_ssat_32;
+    }else{
+        return (thumb_translate32_t)_ssat16_32;
+    }
+}
+
+void _sbfx_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t lsbit = DATA_PROCESS32_IMM3_IMM2(ins_code);
+    uint32_t widthminus1 = DATA_PROCESS32_WIDTHM1(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15), _sbfx_32);
+    _sbfx(lsbit, widthminus1, Rn, Rd, cpu->regs);
+    LOG_INSTRUCTION("_sbfx_32, R%d, R%d, #%d, #%d\n", Rd, Rn, lsbit, widthminus1 + 1);
+}
+
+void _bfi_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t msbit = DATA_PROCESS32_MSB(ins_code);
+    uint32_t lsbit = DATA_PROCESS32_IMM3_IMM2(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || Rn == 13, _bfi_32);
+    _bfi(lsbit, msbit, Rn, Rd, cpu->regs);
+    LOG_INSTRUCTION("_bfi_32, R%d, R%d, #%d, #%d\n", Rd, Rn, lsbit, msbit + 1 - lsbit);
+}
+
+void _bfc_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t msbit = DATA_PROCESS32_MSB(ins_code);
+    uint32_t lsbit = DATA_PROCESS32_IMM3_IMM2(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15), _bfc_32);
+    _bfc(lsbit, msbit, Rd, cpu->regs);
+    LOG_INSTRUCTION("_bfc_32, R%d, #%d, #%d\n", Rd, lsbit, msbit + 1 - lsbit);
+}
+
+thumb_translate32_t bfi_bfc_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    if(Rn != 0xF){
+        return (thumb_translate32_t)_bfi_32;
+    }else{
+        return (thumb_translate32_t)_bfc_32;
+    }
+}
+
 /****** init instruction table ******/
 void init_instruction_table(thumb_instruct_table_t* table)
 {
@@ -2294,15 +2487,15 @@ void init_instruction_table(thumb_instruct_table_t* table)
     set_base_table_value(table->base_table16, 0x38, 0x39, (thumb_translate_t)_uncon_b_16,           THUMB_EXCUTER);        // 11100x
 
     // shift(imm) add sub mov A5-157
-    set_sub_table_value(table->shift_add_sub_mov_table16, 0x00, 0x03, (thumb_translate_t)_lsl_imm_16, THUMB_EXCUTER);    // 000xx
-    set_sub_table_value(table->shift_add_sub_mov_table16, 0x04, 0x07, (thumb_translate_t)_lsr_imm_16, THUMB_EXCUTER);    // 001xx
-    set_sub_table_value(table->shift_add_sub_mov_table16, 0x08, 0x0B, (thumb_translate_t)_asr_imm_16, THUMB_EXCUTER);    // 010xx
-    set_sub_table_value(table->shift_add_sub_mov_table16, 0x0C, 0x0C, (thumb_translate_t)_add_reg_16, THUMB_EXCUTER);    // 01100
-    set_sub_table_value(table->shift_add_sub_mov_table16, 0x0D, 0x0D, (thumb_translate_t)_sub_reg_16, THUMB_EXCUTER);    // 01101
+    set_sub_table_value(table->shift_add_sub_mov_table16, 0x00, 0x03, (thumb_translate_t)_lsl_imm_16,  THUMB_EXCUTER);    // 000xx
+    set_sub_table_value(table->shift_add_sub_mov_table16, 0x04, 0x07, (thumb_translate_t)_lsr_imm_16,  THUMB_EXCUTER);    // 001xx
+    set_sub_table_value(table->shift_add_sub_mov_table16, 0x08, 0x0B, (thumb_translate_t)_asr_imm_16,  THUMB_EXCUTER);    // 010xx
+    set_sub_table_value(table->shift_add_sub_mov_table16, 0x0C, 0x0C, (thumb_translate_t)_add_reg_16,  THUMB_EXCUTER);    // 01100
+    set_sub_table_value(table->shift_add_sub_mov_table16, 0x0D, 0x0D, (thumb_translate_t)_sub_reg_16,  THUMB_EXCUTER);    // 01101
     set_sub_table_value(table->shift_add_sub_mov_table16, 0x0E, 0x0E, (thumb_translate_t)_add_imm3_16, THUMB_EXCUTER);    // 01110
     set_sub_table_value(table->shift_add_sub_mov_table16, 0x0F, 0x0F, (thumb_translate_t)_sub_imm3_16, THUMB_EXCUTER);    // 01111
-    set_sub_table_value(table->shift_add_sub_mov_table16, 0x10, 0x13, (thumb_translate_t)_mov_imm_16, THUMB_EXCUTER);    // 100xx
-    set_sub_table_value(table->shift_add_sub_mov_table16, 0x14, 0x17, (thumb_translate_t)_cmp_imm_16, THUMB_EXCUTER);    // 101xx
+    set_sub_table_value(table->shift_add_sub_mov_table16, 0x10, 0x13, (thumb_translate_t)_mov_imm_16,  THUMB_EXCUTER);    // 100xx
+    set_sub_table_value(table->shift_add_sub_mov_table16, 0x14, 0x17, (thumb_translate_t)_cmp_imm_16,  THUMB_EXCUTER);    // 101xx
     set_sub_table_value(table->shift_add_sub_mov_table16, 0x18, 0x1B, (thumb_translate_t)_add_imm8_16, THUMB_EXCUTER);    // 110xx
     set_sub_table_value(table->shift_add_sub_mov_table16, 0x1C, 0x1F, (thumb_translate_t)_sub_imm8_16, THUMB_EXCUTER);    // 111xx
 
@@ -2381,14 +2574,14 @@ void init_instruction_table(thumb_instruct_table_t* table)
     /*************************************** 32 bit thumb instructions *******************************************************/
     // bit 20~28
     // load multiple and store multiple A5-171
-    set_base_table_value(table->main_table32, 0x088, 0x088, (thumb_translate_t)_stm_32,           THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x08A, 0x08A, (thumb_translate_t)_stm_32,           THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x089, 0x089, (thumb_translate_t)ldm_pop_bundle,    THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x08B, 0x08B, (thumb_translate_t)ldm_pop_bundle,    THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x090, 0x090, (thumb_translate_t)stmdb_push_bundle, THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x092, 0x092, (thumb_translate_t)stmdb_push_bundle, THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x091, 0x091, (thumb_translate_t)_ldmdb_32,         THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x093, 0x093, (thumb_translate_t)_ldmdb_32,         THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x088, 0x088, (thumb_translate_t)_stm_32,       THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x08A, 0x08A, (thumb_translate_t)_stm_32,       THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x089, 0x089, (thumb_translate_t)ldm_pop_32,    THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x08B, 0x08B, (thumb_translate_t)ldm_pop_32,    THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x090, 0x090, (thumb_translate_t)stmdb_push_32, THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x092, 0x092, (thumb_translate_t)stmdb_push_32, THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x091, 0x091, (thumb_translate_t)_ldmdb_32,     THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x093, 0x093, (thumb_translate_t)_ldmdb_32,     THUMB_EXCUTER);
 
     // load store dual or exclusive, table brach A5-172
     set_base_table_value(table->main_table32, 0x084, 0x084, (thumb_translate_t)_strex_32, THUMB_EXCUTER);
@@ -2446,7 +2639,25 @@ void init_instruction_table(thumb_instruct_table_t* table)
     set_base_table_value(table->main_table32, 0x11C, 0x11D, (thumb_translate_t)_rsb_imm_32,     THUMB_EXCUTER);
     set_base_table_value(table->main_table32, 0x15C, 0x15D, (thumb_translate_t)_rsb_imm_32,     THUMB_EXCUTER);
 
+    // TODO: coprocessor instructions
 
+    // data processing(plain binary immediate)
+    set_base_table_value(table->main_table32, 0x120, 0x120, (thumb_translate_t)add_adr_imm_32,  THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x160, 0x160, (thumb_translate_t)add_adr_imm_32,  THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x124, 0x124, (thumb_translate_t)_mov_imm16_32,   THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x164, 0x164, (thumb_translate_t)_mov_imm16_32,   THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x12A, 0x12A, (thumb_translate_t)sub_adr_imm_32,  THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x16A, 0x16A, (thumb_translate_t)sub_adr_imm_32,  THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x12C, 0x12C, (thumb_translate_t)_movt_32,        THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x16C, 0x16C, (thumb_translate_t)_movt_32,        THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x130, 0x130, (thumb_translate_t)_ssat_32,        THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x170, 0x170, (thumb_translate_t)_ssat_32,        THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x132, 0x132, (thumb_translate_t)ssat_ssat16_32,  THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x172, 0x172, (thumb_translate_t)ssat_ssat16_32,  THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x134, 0x134, (thumb_translate_t)_sbfx_32,        THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x174, 0x174, (thumb_translate_t)_sbfx_32,        THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x136, 0x136, (thumb_translate_t)bfi_bfc_32,      THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x176, 0x176, (thumb_translate_t)bfi_bfc_32,      THUMB_DECODER);
 }
 
 bool_t is_16bit_code(uint16_t opcode)

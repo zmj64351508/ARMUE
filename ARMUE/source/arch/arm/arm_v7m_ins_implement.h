@@ -93,6 +93,7 @@ typedef struct thumb_global_state{
 #define PSR_Z (0x1UL << 30)
 #define PSR_C (0x1UL << 29)
 #define PSR_V (0x1UL << 28)
+#define PSR_Q (0x1UL << 27)
 #define PSR_T (0x1UL << 24)
 #define CONTROL_nPRIV (0x1UL)
 #define CONTROL_SPSEL (0x1ul << 1)
@@ -107,6 +108,7 @@ typedef struct thumb_global_state{
 #define SET_APSR_Z(regs, result_reg) set_bit(&(regs)->xPSR, PSR_Z, (result_reg) == 0 ? 1 : 0)
 #define SET_APSR_C(regs, carry) set_bit(&(regs)->xPSR, PSR_C, (carry))
 #define SET_APSR_V(regs, overflow) set_bit(&(regs)->xPSR, PSR_V, (overflow))
+#define SET_APSR_Q(regs, Q) set_bit(&(regs)->xPSR, PSR_Q, (Q))
 #define SET_EPSR_T(regs, bit) set_bit(&(regs)->xPSR, PSR_T, (bit))
 #define SET_CONTROL_SPSEL(regs, bit) set_bit(&(regs)->CONTROL, CONTROL_SPSEL, (bit))
 
@@ -166,6 +168,7 @@ static inline uint8_t check_and_reset_excuting_IT(thumb_state* state)
     return retval;
 }
 
+#define ORDER_2(order) (1ul << (order))
 // DOWN_ALIGN(a, n) == Align(a, 2^n)
 #define DOWN_ALIGN(val, order) ((val) & (0xFFFFFFFFUL << order))
 #define CHECK_PC(PC_val) ((PC_val) & 0x1ul)
@@ -275,6 +278,12 @@ void _mvn_reg(uint32_t Rm, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32
 void _mvn_imm(uint32_t Rd, uint32_t imm32, bool_t setflags, int carry, arm_reg_t *regs);
 void _mov_reg(uint32_t Rm, uint32_t Rd, uint32_t setflag, arm_reg_t* regs);
 void _mov_imm(uint32_t Rd, uint32_t imm32, bool_t setflag, int carry, arm_reg_t* regs);
+void _movt(uint32_t imm16, uint32_t Rd, arm_reg_t *regs);
+void _ssat(uint32_t saturate_to, uint32_t Rn, uint32_t Rd, uint32_t shift_n, uint32_t shift_t, arm_reg_t *regs);
+void _ssat16(uint32_t saturate_to, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _sbfx(uint32_t lsbit, uint32_t widthminus1, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _bfi(uint32_t lsbit, uint32_t msbit, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _bfc(uint32_t lsbit, uint32_t msbit, uint32_t Rd, arm_reg_t *regs);
 void _bx(uint32_t Rm, cpu_t* cpu);
 void _blx(uint32_t Rm, cpu_t* cpu);
 void _ldr_literal(uint32_t imm32, uint32_t Rt, bool_t add, cpu_t* cpu);

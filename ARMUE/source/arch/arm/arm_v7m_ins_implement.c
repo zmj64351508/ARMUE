@@ -71,18 +71,23 @@ void LSR_C(uint32_t val, int shift, _O uint32_t* result, _O int *carry_out)
     *result = val >> shift;
 }
 
+inline uint32_t _ASR32(uint32_t val, int amount)
+{
+// MS VC will ASR signed int
+#if defined _MSC_VER || defined __GNUC__
+     return (uint32_t)((int32_t)val >> amount);
+#else
+#error Unknow compiler
+#endif
+}
+
 void ASR_C(uint32_t val, int shift, _O uint32_t* result, _O int *carry_out)
 {
     *carry_out = 0;
     if(shift > 0){
         *carry_out = val >> (shift - 1) & BIT_0;
     }
-// MS VC will ASR signed int
-#if defined _MSC_VER || defined __GNUC__
-    *result = (int32_t)val >> shift;
-#else
-#error Unknow compiler
-#endif
+    *result = _ASR32(val, shift);
 }
 
 void ROR_C(uint32_t val, int shift, _O uint32_t* result, _O int *carry_out)
@@ -256,6 +261,21 @@ inline void AddWithCarry(uint32_t op1, uint32_t op2, uint32_t carry_in, uint32_t
         *overflow = (shigh_sum == (int16_t)high_result) ? 0 : 1;
         *carry_out = (uhigh_sum == (uint32_t)high_result) ? 0 : 1;
         *result = op1 + op2 + carry_in;
+    }
+}
+
+/* <<ARMv7-M Architecture Reference Manual 44>> */
+void SignedSatQ(int32_t i, int32_t N, int32_t *result, bool_t *saturated)
+{
+    if(i > (int32_t)ORDER_2(N - 1)){
+        *result = (int32_t)ORDER_2(N - 1) - 1;
+        *saturated = TRUE;
+    }else if(i < -(int32_t)ORDER_2(N - 1)){
+        *result = -(int32_t)ORDER_2(N - 1);
+        *saturated = TRUE;
+    }else{
+        *result = i;
+        *saturated = FALSE;
     }
 }
 
@@ -1768,6 +1788,163 @@ void _mov_reg(uint32_t Rm, uint32_t Rd, uint32_t setflags, arm_reg_t* regs)
     }
 }
 
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-352>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    R[d]<31:16> = imm16;
+    // R[d]<15:0> unchanged
+**************************************/
+void _movt(uint32_t imm16, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rd_val = GET_REG_VAL(regs, Rd);
+    Rd_val &= 0xFFFF;
+    Rd_val |= imm16 << 16;
+    SET_REG_VAL(regs, Rd, Rd_val);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-461>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    operand = Shift(R[n], shift_t, shift_n, APSR.C); // APSR.C ignored
+    (result, sat) = SignedSatQ(SInt(operand), saturate_to);
+    R[d] = SignExtend(result, 32);
+    if sat then
+        APSR.Q = ¡®1¡¯;
+**************************************/
+void _ssat(uint32_t saturate_to, uint32_t Rn, uint32_t Rd, uint32_t shift_n, uint32_t shift_t, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t operand;
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    Shift(Rn_val, shift_t, shift_n, GET_APSR_C(regs), &operand);
+
+    int32_t result;
+    bool_t sat;
+    SignedSatQ((int32_t)operand, saturate_to, &result, &sat);
+    SET_REG_VAL(regs, Rd, (uint32_t)result);
+
+    if(sat){
+        SET_APSR_Q(regs, 1);
+    }
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-xxx>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    (result1, sat1) = SignedSatQ(SInt(R[n]<15:0>), saturate_to);
+    (result2, sat2) = SignedSatQ(SInt(R[n]<31:16>), saturate_to);
+    R[d]<15:0> = SignExtend(result1, 16);
+    R[d]<31:16> = SignExtend(result2, 16);
+    if sat1 || sat2 then
+        APSR.Q = ¡®1¡¯;
+**************************************/
+void _ssat16(uint32_t saturate_to, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    int32_t result1; bool_t sat1;
+    int32_t result2; bool_t sat2;
+    SignedSatQ((int16_t)LOW_BIT32(Rn_val, 16), saturate_to, &result1, &sat1);
+    SignedSatQ((int16_t)LOW_BIT32(Rn_val >> 16, 16), saturate_to, &result2, &sat2);
+    uint32_t Rd_val = LOW_BIT32(result1, 16) | LOW_BIT32(result2, 16) << 16;
+    SET_REG_VAL(regs, Rd, Rd_val);
+
+    if(sat1 || sat2){
+        SET_APSR_Q(regs, 1);
+    }
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-421>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    msbit = lsbit + widthminus1;
+    if msbit <= 31 then
+        R[d] = SignExtend(R[n]<msbit:lsbit>, 32);
+    else
+        UNPREDICTABLE;
+**************************************/
+void _sbfx(uint32_t lsbit, uint32_t widthminus1, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t msbit = lsbit + widthminus1;
+    uint32_t result;
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    if(msbit < 32){
+        result = HIGH_BIT32(Rn_val << (31 - msbit), widthminus1 + 1);
+        // NOTE: asr to extend the
+        result = _ASR32(result, 31 - widthminus1);
+        SET_REG_VAL(regs, Rd, result);
+    }
+}
+
+#define BIT_MASK32(low, high) 0xFFFFFFFFul >> low << (low + 31 - high) >> (31 - high)
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-242>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    if msbit >= lsbit then
+        R[d]<msbit:lsbit> = R[n]<(msbit-lsbit):0>;
+        // Other bits of R[d] are unchanged
+    else
+        UNPREDICTABLE;
+**************************************/
+void _bfi(uint32_t lsbit, uint32_t msbit, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t Rd_val = GET_REG_VAL(regs, Rd);
+    uint32_t mask = BIT_MASK32(lsbit, msbit);
+    if(msbit >= lsbit){
+        Rd_val &= ~mask;
+        Rd_val |= LOW_BIT32(Rn_val, msbit + 1 - lsbit + 1) << lsbit;
+        SET_REG_VAL(regs, Rd, Rd_val);
+    }
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-241>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    if msbit >= lsbit then
+        R[d]<msbit:lsbit> = Replicate(¡®0¡¯, msbit-lsbit+1);
+        // Other bits of R[d] are unchanged
+    else
+        UNPREDICTABLE;
+**************************************/
+void _bfc(uint32_t lsbit, uint32_t msbit, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rd_val = GET_REG_VAL(regs, Rd);
+    uint32_t mask = BIT_MASK32(lsbit, msbit);
+    if(msbit >= lsbit){
+        Rd_val &= ~mask;
+        SET_REG_VAL(regs, Rd, Rd_val);
+    }
+}
 
 /***********************************
 <<ARMv7-M Architecture Reference Manual A7-250>>
