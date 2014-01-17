@@ -90,12 +90,17 @@ void ASR_C(uint32_t val, int shift, _O uint32_t* result, _O int *carry_out)
     *result = _ASR32(val, shift);
 }
 
+inline uint32_t _ROR32(uint32_t val, int amount)
+{
+    uint32_t shift_out = val << (32 - amount);
+    return val >> amount | shift_out;
+}
+
 void ROR_C(uint32_t val, int shift, _O uint32_t* result, _O int *carry_out)
 {
     assert(shift != 0);
     *carry_out = val >> (shift - 1) & BIT_0;
-    uint32_t shift_out = val << (32-shift);
-    *result = val >> shift | shift_out;
+    *result = _ROR32(val, shift);
 }
 
 void RRX_C(uint32_t val, uint32_t carry_in, _O uint32_t *result, _O int *carry_out)
@@ -2646,10 +2651,28 @@ void _sxth(uint32_t Rm, uint32_t Rd, uint32_t rotation, arm_reg_t* regs)
         return;
     }
 
-    // EncodingSpecificOperations();
     uint32_t Rm_val = GET_REG_VAL(regs, Rm);
-    uint32_t rotated = Rm_val >> rotation;
-    uint32_t result = (int32_t)((int16_t)rotated);
+    uint32_t rotated = _ROR32(Rm_val, rotation);
+    uint32_t result = (int32_t)((int16_t)LOW_BIT32(rotated, 16));
+    SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-509>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    rotated = ROR(R[m], rotation);
+    R[d] = R[n] + SignExtend(rotated<15:0>, 32);
+**************************************/
+void _sxtah(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t rotation, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t rotated = _ROR32(Rm_val, rotation);
+    uint32_t result = GET_REG_VAL(regs, Rn) + (int32_t)((int16_t)LOW_BIT32(rotated, 16));
     SET_REG_VAL(regs, Rd, result);
 }
 
@@ -2666,10 +2689,73 @@ void _sxtb(uint32_t Rm, uint32_t Rd, uint32_t rotation, arm_reg_t* regs)
         return;
     }
 
-    // EncodingSpecificOperations();
     uint32_t Rm_val = GET_REG_VAL(regs, Rm);
-    uint32_t rotated = Rm_val >> rotation;
-    uint32_t result = (int32_t)((int8_t)rotated);
+    uint32_t rotated = _ROR32(Rm_val, rotation);
+    uint32_t result = (int32_t)((int8_t)LOW_BIT32(rotated, 8));
+    SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-505>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    rotated = ROR(R[m], rotation);
+    R[d] = R[n] + SignExtend(rotated<7:0>, 32);
+**************************************/
+void _sxtab(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t rotation, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t rotated = _ROR32(Rm_val, rotation);
+    uint32_t result = GET_REG_VAL(regs, Rn) + (uint32_t)((int8_t)LOW_BIT32(rotated, 8));
+    SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-513>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    rotated = ROR(R[m], rotation);
+    R[d]<15:0> = SignExtend(rotated<7:0>, 16);
+    R[d]<31:16> = SignExtend(rotated<23:16>, 16);
+**************************************/
+void _sxtb16(uint32_t Rm, uint32_t Rd, uint32_t rotation, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t rotated= _ROR32(Rm_val, rotation);
+    uint32_t result = 0;
+    result = (uint32_t)((int8_t)LOW_BIT32(rotated, 8)) & 0x0000FFFF;
+    result |= (uint32_t)((int8_t)LOW_BIT32(rotated >> 16, 8)) << 16;
+    SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-507>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    rotated = ROR(R[m], rotation);
+    R[d]<15:0> = R[n]<15:0> + SignExtend(rotated<7:0>, 16);
+    R[d]<31:16> = R[n]<31:16> + SignExtend(rotated<23:16>, 16);
+**************************************/
+void _sxtab16(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t rotation, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t rotated= _ROR32(Rm_val, rotation);
+    uint32_t result = 0;
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    result = (Rn_val & 0x0000FFFFul) + ((uint32_t)((int8_t)LOW_BIT32(rotated, 8)) & 0x0000FFFF);
+    result |= (Rn_val & 0xFFFF0000ul) + ((uint32_t)((int8_t)LOW_BIT32(rotated >> 16, 8)) << 16);
     SET_REG_VAL(regs, Rd, result);
 }
 
@@ -2686,10 +2772,28 @@ void _uxth(uint32_t Rm, uint32_t Rd, uint32_t rotation, arm_reg_t* regs)
         return;
     }
 
-    // EncodingSpecificOperations();
     uint32_t Rm_val = GET_REG_VAL(regs, Rm);
-    uint32_t rotated = Rm_val >> rotation;
-    uint32_t result = ((uint16_t)rotated);
+    uint32_t rotated = _ROR32(Rm_val, rotation);
+    uint32_t result = rotated & 0x0000FFFFu;
+    SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-557>>
+    if ConditionPassed() then
+    EncodingSpecificOperations();
+    rotated = ROR(R[m], rotation);
+    R[d] = R[n] + ZeroExtend(rotated<15:0>, 32);
+**************************************/
+void _uxtah(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t rotation, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t rotated = _ROR32(Rm_val, rotation);
+    uint32_t result = GET_REG_VAL(regs, Rn) + (rotated & 0x0000FFFFu);
     SET_REG_VAL(regs, Rd, result);
 }
 
@@ -2706,10 +2810,73 @@ void _uxtb(uint32_t Rm, uint32_t Rd, uint32_t rotation, arm_reg_t* regs)
         return;
     }
 
-    // EncodingSpecificOperations();
     uint32_t Rm_val = GET_REG_VAL(regs, Rm);
-    uint32_t rotated = Rm_val >> rotation;
-    uint32_t result = (uint8_t)rotated;
+    uint32_t rotated = _ROR32(Rm_val, rotation);
+    uint32_t result = LOW_BIT32(rotated, 8);
+    SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-553>>
+    if ConditionPassed() then
+    EncodingSpecificOperations();
+    rotated = ROR(R[m], rotation);
+    R[d] = R[n] + ZeroExtend(rotated<7:0>, 32);
+**************************************/
+void _uxtab(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t rotation, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t rotated = _ROR32(Rm_val, rotation);
+    uint32_t result = GET_REG_VAL(regs, Rn) + LOW_BIT32(rotated, 8);
+    SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-561>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    rotated = ROR(R[m], rotation);
+    R[d]<15:0> = ZeroExtend(rotated<7:0>, 16);
+    R[d]<31:16> = ZeroExtend(rotated<23:16>, 16);
+**************************************/
+void _uxtb16(uint32_t Rm, uint32_t Rd, uint32_t rotation, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t rotated= _ROR32(Rm_val, rotation);
+    uint32_t result = 0;
+    result = LOW_BIT32(rotated, 8);
+    result |= LOW_BIT32(rotated >> 16, 8) << 16;
+    SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-555>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    rotated = ROR(R[m], rotation);
+    R[d]<15:0> = R[n]<15:0> + ZeroExtend(rotated<7:0>, 16);
+    R[d]<31:16> = R[n]<31:16> + ZeroExtend(rotated<23:16>, 16);
+**************************************/
+void _uxtab16(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t rotation, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t rotated= _ROR32(Rm_val, rotation);
+    uint32_t result = 0;
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    result = (Rn_val & 0x0000FFFFul) + LOW_BIT32(rotated, 8);
+    result |= (Rn_val & 0xFFFF0000ul) + (LOW_BIT32(rotated >> 16, 8) << 16);
     SET_REG_VAL(regs, Rd, result);
 }
 

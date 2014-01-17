@@ -1479,6 +1479,10 @@ thumb_translate32_t tbb_h_ldrexb_h_32(uint32_t ins_code, cpu_t *cpu)
 #define DATA_PROCESS32_MSB(ins_code) _DATA_PROCESS32_LOWBIT5(ins_code)
 #define DATA_PROCESS32_SH(ins_code) LOW_BIT32((ins_code) >> 21, 1)
 
+/* register decoding */
+#define DATA_PROCESS32_OP2(ins_code) LOW_BIT32((ins_code) >> 4, 4)
+#define DATA_PROCESS32_ROTATE(ins_code) LOW_BIT32((ins_code) >> 4, 2)
+
 inline void get_shift_imm5_32(uint32_t ins_code, _O uint32_t *type, _O uint32_t *imm5)
 {
     *type = DATA_PROCESS32_TYPE(ins_code);
@@ -2517,6 +2521,276 @@ void _ubfx_32(uint32_t ins_code, cpu_t *cpu)
     LOG_INSTRUCTION("_ubfx_32, R%d, R%d, #%d, #%d\n", Rd, Rn, lsbit, widthminus1 + 1);
 }
 
+void _lsl_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    bool_t setflags = DATA_PROCESS32_S(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15), _lsl_reg_32);
+    _lsl_reg(Rm, Rn, Rd, setflags, cpu->regs);
+    LOG_INSTRUCTION("_lsl_reg_32, R%d, R%d, R%d\n", Rd, Rn, Rm);
+}
+
+void _sxtah_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t rotation = DATA_PROCESS32_ROTATE(ins_code) << 3;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15), _sxtah_32);
+    _sxtah(Rm, Rn, Rd, rotation, cpu->regs);
+    LOG_INSTRUCTION("_sxtah, R%d, R%d, R%d, #%d\n", Rd, Rn, Rm, rotation);
+}
+
+void _sxth_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t rotation = DATA_PROCESS32_ROTATE(ins_code) << 3;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15), _sxth_32);
+    _sxth(Rm, Rd, rotation, cpu->regs);
+    LOG_INSTRUCTION("_sxth_32, R%d, R%d, #%d\n", Rd, Rm, rotation);
+}
+
+thumb_translate32_t lsl_sxth_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op2 = DATA_PROCESS32_OP2(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+
+    if(op2 == 0){
+        return (thumb_translate32_t)_lsl_reg_32;
+    }else if(Rn != 0xF){
+        return (thumb_translate32_t)_sxtah_32;
+    }else{
+        return (thumb_translate32_t)_sxth_32;
+    }
+}
+
+void _uxtah_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t rotation = DATA_PROCESS32_ROTATE(ins_code) << 3;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15), _uxtah_32);
+    _uxtah(Rm, Rn, Rd, rotation, cpu->regs);
+    LOG_INSTRUCTION("_uxtah, R%d, R%d, R%d, #%d\n", Rd, Rn, Rm, rotation);
+}
+
+void _uxth_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t rotation = DATA_PROCESS32_ROTATE(ins_code) << 3;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15), _uxth_32);
+    _uxth(Rm, Rd, rotation, cpu->regs);
+    LOG_INSTRUCTION("_uxth_32, R%d, R%d, #%d\n", Rd, Rm, rotation);
+}
+
+thumb_translate32_t lsl_uxth_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op2 = DATA_PROCESS32_OP2(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+
+    if(op2 == 0){
+        return (thumb_translate32_t)_lsl_reg_32;
+    }else if(Rn != 0xF){
+        return (thumb_translate32_t)_uxtah_32;
+    }else{
+        return (thumb_translate32_t)_uxth_32;
+    }
+}
+
+void _lsr_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    bool_t setflags = DATA_PROCESS32_S(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15), _lsr_reg_32);
+    _lsr_reg(Rm, Rn, Rd, setflags, cpu->regs);
+    LOG_INSTRUCTION("_lsr_reg_32, R%d, R%d, R%d\n", Rd, Rn, Rm);
+}
+
+void _sxtab16_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t rotation = DATA_PROCESS32_ROTATE(ins_code) << 3;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15), _sxtab16_32);
+    _sxtab16(Rm, Rn, Rd, rotation, cpu->regs);
+    LOG_INSTRUCTION("_sxtab16, R%d, R%d, R%d, #%d\n", Rd, Rn, Rm, rotation);
+}
+
+void _sxtb16_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t rotation = DATA_PROCESS32_ROTATE(ins_code) << 3;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15), _sxth_32);
+    _sxtb16(Rm, Rd, rotation, cpu->regs);
+    LOG_INSTRUCTION("_sxtb16, R%d, R%d, #%d\n", Rd, Rm, rotation);
+}
+
+thumb_translate32_t lsr_sxtb16_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op2 = DATA_PROCESS32_OP2(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+
+    if(op2 == 0){
+        return (thumb_translate32_t)_lsr_reg_32;
+    }else if(Rn != 0xF){
+        return (thumb_translate32_t)_sxtab16_32;
+    }else{
+        return (thumb_translate32_t)_sxtb16_32;
+    }
+}
+
+void _uxtab16_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t rotation = DATA_PROCESS32_ROTATE(ins_code) << 3;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15), _uxtab16_32);
+    _uxtab16(Rm, Rn, Rd, rotation, cpu->regs);
+    LOG_INSTRUCTION("_uxtab16, R%d, R%d, R%d, #%d\n", Rd, Rn, Rm, rotation);
+}
+
+void _uxtb16_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t rotation = DATA_PROCESS32_ROTATE(ins_code) << 3;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15), _uxth_32);
+    _uxtb16(Rm, Rd, rotation, cpu->regs);
+    LOG_INSTRUCTION("_uxtb16, R%d, R%d, #%d\n", Rd, Rm, rotation);
+}
+
+thumb_translate32_t lsr_uxtb16_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op2 = DATA_PROCESS32_OP2(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+
+    if(op2 == 0){
+        return (thumb_translate32_t)_lsr_reg_32;
+    }else if(Rn != 0xF){
+        return (thumb_translate32_t)_uxtab16_32;
+    }else{
+        return (thumb_translate32_t)_uxtb16_32;
+    }
+}
+
+void _asr_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    bool_t setflags = DATA_PROCESS32_S(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15), _asr_reg_32);
+    _asr_reg(Rm, Rn, Rd, setflags, cpu->regs);
+    LOG_INSTRUCTION("_asr_reg_32, R%d, R%d, R%d\n", Rd, Rn, Rm);
+}
+
+void _sxtab_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t rotation = DATA_PROCESS32_ROTATE(ins_code) << 3;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15), _sxtab_32);
+    _sxtab(Rm, Rn, Rd, rotation, cpu->regs);
+    LOG_INSTRUCTION("_sxtab_32, R%d, R%d, R%d, #%d\n", Rd, Rn, Rm, rotation);
+}
+
+void _sxtb_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t rotation = DATA_PROCESS32_ROTATE(ins_code) << 3;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15), _sxtb_32);
+    _sxtb(Rm, Rd, rotation, cpu->regs);
+    LOG_INSTRUCTION("_sxtb_32, R%d, R%d, #%d\n", Rd, Rm, rotation);
+}
+
+thumb_translate32_t asr_sxtb_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op2 = DATA_PROCESS32_OP2(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+
+    if(op2 == 0){
+        return (thumb_translate32_t)_asr_reg_32;
+    }else if(Rn != 0xF){
+        return (thumb_translate32_t)_sxtab_32;
+    }else{
+        return (thumb_translate32_t)_sxtb_32;
+    }
+}
+
+void _uxtab_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t rotation = DATA_PROCESS32_ROTATE(ins_code) << 3;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15), _uxtab_32);
+    _uxtab(Rm, Rn, Rd, rotation, cpu->regs);
+    LOG_INSTRUCTION("_uxtab_32, R%d, R%d, R%d, #%d\n", Rd, Rn, Rm, rotation);
+}
+
+void _uxtb_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    uint32_t rotation = DATA_PROCESS32_ROTATE(ins_code) << 3;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15), _uxtb_32);
+    _uxtb(Rm, Rd, rotation, cpu->regs);
+    LOG_INSTRUCTION("_uxtb_32, R%d, R%d, #%d\n", Rd, Rm, rotation);
+}
+
+thumb_translate32_t asr_uxtb_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op2 = DATA_PROCESS32_OP2(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+
+    if(op2 == 0){
+        return (thumb_translate32_t)_asr_reg_32;
+    }else if(Rn != 0xF){
+        return (thumb_translate32_t)_uxtab_32;
+    }else{
+        return (thumb_translate32_t)_uxtb_32;
+    }
+}
+
+void _ror_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t Rm = DATA_PROCESS32_RM(ins_code);
+    bool_t setflags = DATA_PROCESS32_S(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15), _ror_reg_32);
+    _ror_reg(Rm, Rn, Rd, setflags, cpu->regs);
+    LOG_INSTRUCTION("_ror_reg_32, R%d, R%d, R%d\n", Rd, Rn, Rm);
+}
+
 /****** init instruction table ******/
 void init_instruction_table(thumb_instruct_table_t* table)
 {
@@ -2717,6 +2991,16 @@ void init_instruction_table(thumb_instruct_table_t* table)
     set_base_table_value(table->main_table32, 0x13A, 0x13A, (thumb_translate_t)usat_usat16_32,  THUMB_DECODER);
     set_base_table_value(table->main_table32, 0x13C, 0x13C, (thumb_translate_t)_ubfx_32,        THUMB_EXCUTER);
     set_base_table_value(table->main_table32, 0x17C, 0x17C, (thumb_translate_t)_ubfx_32,        THUMB_EXCUTER);
+
+    // data processing(register)
+    set_base_table_value(table->main_table32, 0x1A0, 0x1A0, (thumb_translate_t)lsl_sxth_32,     THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x1A1, 0x1A1, (thumb_translate_t)lsl_uxth_32,     THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x1A2, 0x1A2, (thumb_translate_t)lsr_sxtb16_32,   THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x1A3, 0x1A3, (thumb_translate_t)lsr_uxtb16_32,   THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x1A4, 0x1A4, (thumb_translate_t)asr_sxtb_32,     THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x1A5, 0x1A5, (thumb_translate_t)asr_uxtb_32,     THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x1A6, 0x1A7, (thumb_translate_t)_ror_reg_32,     THUMB_EXCUTER);
+
 }
 
 bool_t is_16bit_code(uint16_t opcode)
