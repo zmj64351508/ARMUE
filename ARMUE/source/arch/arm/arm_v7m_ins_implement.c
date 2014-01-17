@@ -267,11 +267,25 @@ inline void AddWithCarry(uint32_t op1, uint32_t op2, uint32_t carry_in, uint32_t
 /* <<ARMv7-M Architecture Reference Manual 44>> */
 void SignedSatQ(int32_t i, int32_t N, int32_t *result, bool_t *saturated)
 {
-    if(i > (int32_t)ORDER_2(N - 1)){
-        *result = (int32_t)ORDER_2(N - 1) - 1;
+    if(i > ORDER_2(N - 1)){
+        *result = ORDER_2(N - 1) - 1;
         *saturated = TRUE;
-    }else if(i < -(int32_t)ORDER_2(N - 1)){
-        *result = -(int32_t)ORDER_2(N - 1);
+    }else if(i < -ORDER_2(N - 1)){
+        *result = -ORDER_2(N - 1);
+        *saturated = TRUE;
+    }else{
+        *result = i;
+        *saturated = FALSE;
+    }
+}
+
+void UnsignedSatQ(int32_t i, int32_t N, uint32_t *result, bool_t *saturated)
+{
+    if(i > ORDER_2(N - 1)){
+        *result = (uint32_t)ORDER_2(N) - 1;
+        *saturated = TRUE;
+    }else if(i < 0){
+        *result = 0;
         *saturated = TRUE;
     }else{
         *result = i;
@@ -1868,6 +1882,66 @@ void _ssat16(uint32_t saturate_to, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
 }
 
 /***********************************
+<<ARMv7-M Architecture Reference Manual A7-547>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    operand = Shift(R[n], shift_t, shift_n, APSR.C); // APSR.C ignored
+    (result, sat) = UnsignedSatQ(SInt(operand), saturate_to);
+    R[d] = ZeroExtend(result, 32);
+    if sat then
+        APSR.Q = ¡®1¡¯;
+**************************************/
+void _usat(uint32_t saturate_to, uint32_t Rn, uint32_t Rd, uint32_t shift_n, uint32_t shift_t, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t operand;
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    Shift(Rn_val, shift_t, shift_n, GET_APSR_C(regs), &operand);
+
+    uint32_t result;
+    bool_t sat;
+    UnsignedSatQ((int32_t)operand, saturate_to, &result, &sat);
+    SET_REG_VAL(regs, Rd, (uint32_t)result);
+
+    if(sat){
+        SET_APSR_Q(regs, 1);
+    }
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-549>>
+if ConditionPassed() then
+EncodingSpecificOperations();
+    (result1, sat1) = UnsignedSatQ(SInt(R[n]<15:0>), saturate_to);
+    (result2, sat2) = UnsignedSatQ(SInt(R[n]<31:16>), saturate_to);
+    R[d]<15:0> = ZeroExtend(result1, 16);
+    R[d]<31:16> = ZeroExtend(result2, 16);
+    if sat1 || sat2 then
+        APSR.Q = ¡®1¡¯;
+**************************************/
+void _usat16(uint32_t saturate_to, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t result1; bool_t sat1;
+    uint32_t result2; bool_t sat2;
+    UnsignedSatQ((int16_t)LOW_BIT32(Rn_val, 16), saturate_to, &result1, &sat1);
+    UnsignedSatQ((int16_t)LOW_BIT32(Rn_val >> 16, 16), saturate_to, &result2, &sat2);
+    uint32_t Rd_val = LOW_BIT32(result1, 16) | LOW_BIT32(result2, 16) << 16;
+    SET_REG_VAL(regs, Rd, Rd_val);
+
+    if(sat1 || sat2){
+        SET_APSR_Q(regs, 1);
+    }
+}
+
+/***********************************
 <<ARMv7-M Architecture Reference Manual A7-421>>
 if ConditionPassed() then
     EncodingSpecificOperations();
@@ -1890,6 +1964,32 @@ void _sbfx(uint32_t lsbit, uint32_t widthminus1, uint32_t Rn, uint32_t Rd, arm_r
         result = HIGH_BIT32(Rn_val << (31 - msbit), widthminus1 + 1);
         // NOTE: asr to extend the
         result = _ASR32(result, 31 - widthminus1);
+        SET_REG_VAL(regs, Rd, result);
+    }
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-528>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    msbit = lsbit + widthminus1;
+    if msbit <= 31 then
+        R[d] = ZeroExtend(R[n]<msbit:lsbit>, 32);
+    else
+        UNPREDICTABLE;
+**************************************/
+void _ubfx(uint32_t lsbit, uint32_t widthminus1, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t msbit = lsbit + widthminus1;
+    uint32_t result;
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    if(msbit < 32){
+        result = HIGH_BIT32(Rn_val << (31 - msbit), widthminus1 + 1);
+        result = result >> (31 - widthminus1);
         SET_REG_VAL(regs, Rd, result);
     }
 }

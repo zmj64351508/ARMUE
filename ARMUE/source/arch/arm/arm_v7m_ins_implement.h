@@ -168,7 +168,7 @@ static inline uint8_t check_and_reset_excuting_IT(thumb_state* state)
     return retval;
 }
 
-#define ORDER_2(order) (1ul << (order))
+#define ORDER_2(order) (1L << (order))
 // DOWN_ALIGN(a, n) == Align(a, 2^n)
 #define DOWN_ALIGN(val, order) ((val) & (0xFFFFFFFFUL << order))
 #define CHECK_PC(PC_val) ((PC_val) & 0x1ul)
@@ -281,7 +281,10 @@ void _mov_imm(uint32_t Rd, uint32_t imm32, bool_t setflag, int carry, arm_reg_t*
 void _movt(uint32_t imm16, uint32_t Rd, arm_reg_t *regs);
 void _ssat(uint32_t saturate_to, uint32_t Rn, uint32_t Rd, uint32_t shift_n, uint32_t shift_t, arm_reg_t *regs);
 void _ssat16(uint32_t saturate_to, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _usat(uint32_t saturate_to, uint32_t Rn, uint32_t Rd, uint32_t shift_n, uint32_t shift_t, arm_reg_t *regs);
+void _usat16(uint32_t saturate_to, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
 void _sbfx(uint32_t lsbit, uint32_t widthminus1, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _ubfx(uint32_t lsbit, uint32_t widthminus1, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
 void _bfi(uint32_t lsbit, uint32_t msbit, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
 void _bfc(uint32_t lsbit, uint32_t msbit, uint32_t Rd, arm_reg_t *regs);
 void _bx(uint32_t Rm, cpu_t* cpu);

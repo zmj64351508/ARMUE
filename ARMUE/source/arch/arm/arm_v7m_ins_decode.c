@@ -2463,6 +2463,60 @@ thumb_translate32_t bfi_bfc_32(uint32_t ins_code, cpu_t *cpu)
     }
 }
 
+void _usat_32(uint32_t ins_code, cpu_t *cpu)
+{
+    // TODO:
+    // if sh == 1 && (imm3 : imm2) == 0 && HaveDSPExt()
+    //      see usat16
+    // else
+    //      undefined
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t saturate_to = DATA_PROCESS32_SAT_IMM(ins_code);
+    uint32_t sh = DATA_PROCESS32_SH(ins_code);
+    uint32_t imm5 = DATA_PROCESS32_IMM3_IMM2(ins_code);
+
+    uint32_t shift_t, shift_n;
+    DecodeImmShift(sh << 1, imm5, &shift_t, &shift_n);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15), _usat_32);
+    _usat(saturate_to, Rn, Rd, shift_n, shift_t, cpu->regs);
+    LOG_INSTRUCTION("_usat_32, R%d, #%d, R%d, SRType%d #%d\n", Rd, saturate_to, Rn, shift_t, shift_n);
+}
+
+void _usat16_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t saturate_to = DATA_PROCESS32_SAT_IMM(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15), _usat16);
+    _usat16(saturate_to, Rn, Rd, cpu->regs);
+    LOG_INSTRUCTION("_usat16_32, R%d, #%d, R%d\n", Rd, saturate_to, Rn);
+}
+
+thumb_translate32_t usat_usat16_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t flag = LOW_BIT32(ins_code >> 12, 3) << 2 | LOW_BIT32(ins_code >> 6 ,2);
+    if(flag != 0){
+        return (thumb_translate32_t)_usat_32;
+    }else{
+        return (thumb_translate32_t)_usat16_32;
+    }
+}
+
+void _ubfx_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = DATA_PROCESS32_RD(ins_code);
+    uint32_t Rn = DATA_PROCESS32_RN(ins_code);
+    uint32_t lsbit = DATA_PROCESS32_IMM3_IMM2(ins_code);
+    uint32_t widthminus1 = DATA_PROCESS32_WIDTHM1(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15), _ubfx_32);
+    _ubfx(lsbit, widthminus1, Rn, Rd, cpu->regs);
+    LOG_INSTRUCTION("_ubfx_32, R%d, R%d, #%d, #%d\n", Rd, Rn, lsbit, widthminus1 + 1);
+}
+
 /****** init instruction table ******/
 void init_instruction_table(thumb_instruct_table_t* table)
 {
@@ -2658,6 +2712,11 @@ void init_instruction_table(thumb_instruct_table_t* table)
     set_base_table_value(table->main_table32, 0x174, 0x174, (thumb_translate_t)_sbfx_32,        THUMB_EXCUTER);
     set_base_table_value(table->main_table32, 0x136, 0x136, (thumb_translate_t)bfi_bfc_32,      THUMB_DECODER);
     set_base_table_value(table->main_table32, 0x176, 0x176, (thumb_translate_t)bfi_bfc_32,      THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x138, 0x138, (thumb_translate_t)_usat_32,        THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x178, 0x178, (thumb_translate_t)_usat_32,        THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x13A, 0x13A, (thumb_translate_t)usat_usat16_32,  THUMB_DECODER);
+    set_base_table_value(table->main_table32, 0x13C, 0x13C, (thumb_translate_t)_ubfx_32,        THUMB_EXCUTER);
+    set_base_table_value(table->main_table32, 0x17C, 0x17C, (thumb_translate_t)_ubfx_32,        THUMB_EXCUTER);
 }
 
 bool_t is_16bit_code(uint16_t opcode)
