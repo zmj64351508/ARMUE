@@ -5,6 +5,7 @@
 #include "cpu.h"
 #include "memory_map.h"
 #include "list.h"
+#include <stdint.h>
 
 typedef enum{
     SRType_LSL,
@@ -14,11 +15,11 @@ typedef enum{
     SRType_RRX,
 }SRType;
 
-#define MODE_THREAD        1
+#define MODE_THREAD     1
 #define MODE_HANDLER    2
 
-#define MEM_READ 1
-#define MEM_WRITE 2
+#define MEM_READ    1
+#define MEM_WRITE   2
 
 /* used in GET_REG_VAL to get register value while PC_INDEX will get current address of instruction +4
    which is the fact we see when read PC in program and PC_RAW_INDEX will get the address of next
@@ -95,6 +96,8 @@ typedef struct thumb_global_state{
 #define PSR_V (0x1UL << 28)
 #define PSR_Q (0x1UL << 27)
 #define PSR_T (0x1UL << 24)
+#define PSR_GE_MASK 0xFul
+#define PSR_GE_OFFSET 16
 #define CONTROL_nPRIV (0x1UL)
 #define CONTROL_SPSEL (0x1ul << 1)
 
@@ -109,6 +112,19 @@ typedef struct thumb_global_state{
 #define SET_APSR_C(regs, carry) set_bit(&(regs)->xPSR, PSR_C, (carry))
 #define SET_APSR_V(regs, overflow) set_bit(&(regs)->xPSR, PSR_V, (overflow))
 #define SET_APSR_Q(regs, Q) set_bit(&(regs)->xPSR, PSR_Q, (Q))
+//#define SET_APSR_GE(regs, GE) set_bits(&(regs)->xPSR, PSR_GE_MASK, PSR_GE_OFFSET, (GE))
+#define SET_APSR_GE16(regs, sum_low, sum_high) do{ \
+    uint8_t __ge_1_0 = sum_low >= 0 ? 0x3 : 0; \
+    uint8_t __ge_3_2 = sum_high >= 0 ? 0x3 : 0; \
+    set_bits(&(regs)->xPSR, PSR_GE_MASK, PSR_GE_OFFSET, __ge_3_2 << 2 | __ge_1_0);\
+}while(0)
+#define SET_APSR_GE8(regs, sum_low, sum_low2, sum_high2, sum_high) do{\
+    uint8_t __ge_0 = sum_low >= 0;\
+    uint8_t __ge_1 = sum_low2 >= 0;\
+    uint8_t __ge_2 = sum_high2 >= 0;\
+    uint8_t __ge_3 = sum_high >= 0;\
+    set_bits(&(regs)->xPSR, PSR_GE_MASK, PSR_GE_OFFSET, __ge_3 << 3 | __ge_2 << 2 | __ge_1 << 1 | __ge_0);\
+}while(0)
 #define SET_EPSR_T(regs, bit) set_bit(&(regs)->xPSR, PSR_T, (bit))
 #define SET_CONTROL_SPSEL(regs, bit) set_bit(&(regs)->CONTROL, CONTROL_SPSEL, (bit))
 
@@ -217,6 +233,12 @@ static inline void set_bit(uint32_t* reg, uint32_t bit_pos,int bit_val)
     }
 }
 
+static inline void set_bits(uint32_t* reg, uint32_t mask, uint32_t offset, uint32_t bits_value)
+{
+    *reg &= ~(mask << offset);
+    *reg |= bits_value << offset;
+}
+
 static inline uint32_t BitCount32(uint32_t bits)
 {
     uint32_t count = 0;
@@ -320,6 +342,21 @@ void _uxtb(uint32_t Rm, uint32_t Rd, uint32_t rotation, arm_reg_t* regs);
 void _uxtab(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t rotation, arm_reg_t *regs);
 void _uxtb16(uint32_t Rm, uint32_t Rd, uint32_t rotation, arm_reg_t *regs);
 void _uxtab16(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t rotation, arm_reg_t *regs);
+void _sadd16(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _sasx(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _ssax(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _sadd8(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _ssub8(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _ssub16(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _qadd16(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _qasx(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _qsax(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _qsub16(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _qadd8(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _qsub8(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _shadd16(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _shasx(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _shsax(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
 void _push(uint32_t registers, uint32_t bitcount, cpu_t* cpu);
 void _rev(uint32_t Rm, uint32_t Rd, arm_reg_t* regs);
 void _rev16(uint32_t Rm, uint32_t Rd, arm_reg_t* regs);

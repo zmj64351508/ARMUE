@@ -273,7 +273,7 @@ inline void AddWithCarry(uint32_t op1, uint32_t op2, uint32_t carry_in, uint32_t
 void SignedSatQ(int32_t i, int32_t N, int32_t *result, bool_t *saturated)
 {
     if(i > ORDER_2(N - 1)){
-        *result = ORDER_2(N - 1) - 1;
+        *result = (int32_t)ORDER_2(N - 1) - 1;
         *saturated = TRUE;
     }else if(i < -ORDER_2(N - 1)){
         *result = -ORDER_2(N - 1);
@@ -282,6 +282,7 @@ void SignedSatQ(int32_t i, int32_t N, int32_t *result, bool_t *saturated)
         *result = i;
         *saturated = FALSE;
     }
+    //*result = LOW_BIT32(*result, N);
 }
 
 void UnsignedSatQ(int32_t i, int32_t N, uint32_t *result, bool_t *saturated)
@@ -296,6 +297,7 @@ void UnsignedSatQ(int32_t i, int32_t N, uint32_t *result, bool_t *saturated)
         *result = i;
         *saturated = FALSE;
     }
+    //*result = LOW_BIT32(*result, N);
 }
 
 /* <<ARMv7-M Architecture Reference Manual 630>> */
@@ -2877,6 +2879,453 @@ void _uxtab16(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t rotation, arm_reg_
     uint32_t Rn_val = GET_REG_VAL(regs, Rn);
     result = (Rn_val & 0x0000FFFFul) + LOW_BIT32(rotated, 8);
     result |= (Rn_val & 0xFFFF0000ul) + (LOW_BIT32(rotated >> 16, 8) << 16);
+    SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-415>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    sum1 = SInt(R[n]<15:0>) + SInt(R[m]<15:0>);
+    sum2 = SInt(R[n]<31:16>) + SInt(R[m]<31:16>);
+    R[d]<15:0> = sum1<15:0>;
+    R[d]<31:16> = sum2<15:0>;
+    APSR.GE<1:0> = if sum1 >= 0 then ¡®11¡¯ else ¡®00¡¯;
+    APSR.GE<3:2> = if sum2 >= 0 then ¡®11¡¯ else ¡®00¡¯;
+**************************************/
+void _sadd16(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    int16_t sum1 = (int16_t)LOW_BIT32(Rn_val, 16) + (int16_t)LOW_BIT32(Rm_val, 16);
+    int32_t sum2 = (int32_t)HIGH_BIT32(Rn_val, 16) + (int32_t)HIGH_BIT32(Rm_val, 16);
+    uint32_t result = LOW_BIT32(sum1, 16) | HIGH_BIT32(sum2, 16);
+    SET_REG_VAL(regs, Rd, result);
+
+    SET_APSR_GE16(regs, sum1, sum2);
+}
+
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-416>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    diff = SInt(R[n]<15:0>) - SInt(R[m]<31:16>);
+    sum = SInt(R[n]<31:16>) + SInt(R[m]<15:0>);
+    R[d]<15:0> = diff<15:0>;
+    R[d]<31:16> = sum<15:0>;
+    APSR.GE<1:0> = if diff >= 0 then ¡®11¡¯ else ¡®00¡¯;
+    APSR.GE<3:2> = if sum >= 0 then ¡®11¡¯ else ¡®00¡¯;
+**************************************/
+void _sasx(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    int16_t diff = (int16_t)LOW_BIT32(Rn_val, 16) - (int16_t)LOW_BIT32(Rm_val >> 16, 16);
+    int16_t sum = (int16_t)LOW_BIT32(Rn_val >> 16, 16) + (int16_t)LOW_BIT32(Rm_val, 16);
+    uint32_t result = LOW_BIT32(diff, 16) | LOW_BIT32(sum, 16) << 16;
+    SET_REG_VAL(regs, Rd, result);
+
+    SET_APSR_GE16(regs, diff, sum);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-416>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    sum = SInt(R[n]<15:0>) + SInt(R[m]<31:16>);
+    diff = SInt(R[n]<31:16>) - SInt(R[m]<15:0>);
+    R[d]<15:0> = sum<15:0>;
+    R[d]<31:16> = diff<15:0>;
+    APSR.GE<1:0> = if sum >= 0 then ¡®11¡¯ else ¡®00¡¯;
+    APSR.GE<3:2> = if diff >= 0 then ¡®11¡¯ else ¡®00¡¯;
+**************************************/
+void _ssax(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    int16_t sum = (int16_t)LOW_BIT32(Rn_val, 16) + (int16_t)LOW_BIT32(Rm_val >> 16, 16);
+    int16_t diff = (int16_t)LOW_BIT32(Rn_val >> 16, 16) - (int16_t)LOW_BIT32(Rm_val, 16);
+    uint32_t result = LOW_BIT32(sum, 16) | LOW_BIT32(diff, 16) << 16;
+    SET_REG_VAL(regs, Rd, result);
+
+    SET_APSR_GE16(regs, sum, diff);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-465>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    diff1 = SInt(R[n]<15:0>) - SInt(R[m]<15:0>);
+    diff2 = SInt(R[n]<31:16>) - SInt(R[m]<31:16>);
+    R[d]<15:0> = diff1<15:0>;
+    R[d]<31:16> = diff2<15:0>;
+    APSR.GE<1:0> = if diff1 >= 0 then ¡®11¡¯ else ¡®00¡¯;
+    APSR.GE<3:2> = if diff2 >= 0 then ¡®11¡¯ else ¡®00¡¯;
+**************************************/
+void _ssub16(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    int16_t diff1 = (int16_t)LOW_BIT32(Rn_val, 16) - (int16_t)LOW_BIT32(Rm_val, 16);
+    int32_t diff2 = (int32_t)HIGH_BIT32(Rn_val, 16) - (int32_t)HIGH_BIT32(Rm_val, 16);
+    uint32_t result = LOW_BIT32(diff1, 16) | HIGH_BIT32(diff2, 16);
+    SET_REG_VAL(regs, Rd, result);
+
+    SET_APSR_GE16(regs, diff1, diff2);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-416>>
+    if ConditionPassed() then
+    EncodingSpecificOperations();
+    sum1 = SInt(R[n]<7:0>) + SInt(R[m]<7:0>);
+    sum2 = SInt(R[n]<15:8>) + SInt(R[m]<15:8>);
+    sum3 = SInt(R[n]<23:16>) + SInt(R[m]<23:16>);
+    sum4 = SInt(R[n]<31:24>) + SInt(R[m]<31:24>);
+    R[d]<7:0> = sum1<7:0>;
+    R[d]<15:8> = sum2<7:0>;
+    R[d]<23:16> = sum3<7:0>;
+    R[d]<31:24> = sum4<7:0>;
+    APSR.GE<0> = if sum1 >= 0 then ¡®1¡¯ else ¡®0¡¯;
+    APSR.GE<1> = if sum2 >= 0 then ¡®1¡¯ else ¡®0¡¯;
+    APSR.GE<2> = if sum3 >= 0 then ¡®1¡¯ else ¡®0¡¯;
+    APSR.GE<3> = if sum4 >= 0 then ¡®1¡¯ else ¡®0¡¯;
+**************************************/
+void _sadd8(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+
+    int8_t sum1 = (int8_t)LOW_BIT32(Rn_val, 8) + (int8_t)LOW_BIT32(Rm_val, 8);
+    int8_t sum2 = (int8_t)LOW_BIT32(Rn_val >> 8, 8) + (int8_t)LOW_BIT32(Rm_val >> 8, 8);
+    int8_t sum3 = (int8_t)LOW_BIT32(Rn_val >> 16, 8) + (int8_t)LOW_BIT32(Rm_val >> 16, 8);
+    int8_t sum4 = (int8_t)LOW_BIT32(Rn_val >> 24, 8) + (int8_t)LOW_BIT32(Rm_val >> 24, 8);
+
+    uint32_t result = LOW_BIT32(sum4, 8) << 24 | LOW_BIT32(sum3, 8) << 16 | LOW_BIT32(sum2, 8) << 8  | LOW_BIT32(sum1, 8);
+    SET_REG_VAL(regs, Rd, result);
+
+    SET_APSR_GE8(regs, sum1, sum2, sum3, sum4);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-466>>
+    if ConditionPassed() then
+    EncodingSpecificOperations();
+    diff1 = SInt(R[n]<7:0>) - SInt(R[m]<7:0>);
+    diff2 = SInt(R[n]<15:8>) - SInt(R[m]<15:8>);
+    diff3 = SInt(R[n]<23:16>) - SInt(R[m]<23:16>);
+    diff4 = SInt(R[n]<31:24>) - SInt(R[m]<31:24>);
+    R[d]<7:0> = diff1<7:0>;
+    R[d]<15:8> = diff2<7:0>;
+    R[d]<23:16> = diff3<7:0>;
+    R[d]<31:24> = diff4<7:0>;
+    APSR.GE<0> = if diff1 >= 0 then ¡®1¡¯ else ¡®0¡¯;
+    APSR.GE<1> = if diff2 >= 0 then ¡®1¡¯ else ¡®0¡¯;
+    APSR.GE<2> = if diff3 >= 0 then ¡®1¡¯ else ¡®0¡¯;
+    APSR.GE<3> = if diff4 >= 0 then ¡®1¡¯ else ¡®0¡¯;
+**************************************/
+void _ssub8(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+
+    int8_t diff1 = (int8_t)LOW_BIT32(Rn_val, 8) - (int8_t)LOW_BIT32(Rm_val, 8);
+    int8_t diff2 = (int8_t)LOW_BIT32(Rn_val >> 8, 8) - (int8_t)LOW_BIT32(Rm_val >> 8, 8);
+    int8_t diff3 = (int8_t)LOW_BIT32(Rn_val >> 16, 8) - (int8_t)LOW_BIT32(Rm_val >> 16, 8);
+    int8_t diff4 = (int8_t)LOW_BIT32(Rn_val >> 24, 8) - (int8_t)LOW_BIT32(Rm_val >> 24, 8);
+
+    uint32_t result = LOW_BIT32(diff4, 8) << 24 | LOW_BIT32(diff3, 8) << 16 | LOW_BIT32(diff2, 8) << 8  | LOW_BIT32(diff1, 8);
+    SET_REG_VAL(regs, Rd, result);
+
+    SET_APSR_GE8(regs, diff1, diff2, diff3, diff4);
+}
+
+/***********************************
+TODO: Need to be verified in the real chips
+<<ARMv7-M Architecture Reference Manual A7-392>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    sum1 = SInt(R[n]<15:0>) + SInt(R[m]<15:0>);
+    sum2 = SInt(R[n]<31:16>) + SInt(R[m]<31:16>);
+    R[d]<15:0> = SignedSat(sum1, 16);
+    R[d]<31:16> = SignedSat(sum2, 16);
+**************************************/
+void _qadd16(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t sum1 = (int16_t)LOW_BIT32(Rn_val, 16) + (int16_t)LOW_BIT32(Rm_val, 16);
+    uint32_t sum2 = (int16_t)LOW_BIT32(Rn_val >> 16, 16) + (int16_t)LOW_BIT32(Rm_val >> 16, 16);
+
+    bool_t dummy;
+    int32_t result1, result2;
+    SignedSatQ(sum1, 16, &result1, &dummy);
+    SignedSatQ(sum2, 16, &result2, &dummy);
+    uint32_t result = LOW_BIT32(result1, 16) | LOW_BIT32(result2, 16) << 16;
+    SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+TODO: Need to be verified in the real chips
+<<ARMv7-M Architecture Reference Manual A7-394>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    diff = SInt(R[n]<15:0>) - SInt(R[m]<31:16>);
+    sum = SInt(R[n]<31:16>) + SInt(R[m]<15:0>);
+    R[d]<15:0> = SignedSat(diff, 16);
+    R[d]<31:16> = SignedSat(sum, 16);
+**************************************/
+void _qasx(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t diff = (int16_t)LOW_BIT32(Rn_val, 16) - (int16_t)LOW_BIT32(Rm_val >> 16, 16);
+    uint32_t sum = (int16_t)LOW_BIT32(Rn_val >> 16, 16) + (int16_t)LOW_BIT32(Rm_val, 16);
+
+    bool_t dummy;
+    int32_t result1, result2;
+    SignedSatQ(diff, 16, &result1, &dummy);
+    SignedSatQ(sum, 16, &result2, &dummy);
+    uint32_t result = LOW_BIT32(result1, 16) | LOW_BIT32(result2, 16) << 16;
+    SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+TODO: Need to be verified in the real chips
+<<ARMv7-M Architecture Reference Manual A7-397>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    sum = SInt(R[n]<15:0>) + SInt(R[m]<31:16>);
+    diff = SInt(R[n]<31:16>) - SInt(R[m]<15:0>);
+    R[d]<15:0> = SignedSat(sum, 16);
+    R[d]<31:16> = SignedSat(diff, 16);
+**************************************/
+void _qsax(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t sum = (int16_t)LOW_BIT32(Rn_val, 16) + (int16_t)LOW_BIT32(Rm_val >> 16, 16);
+    uint32_t diff = (int16_t)LOW_BIT32(Rn_val >> 16, 16) - (int16_t)LOW_BIT32(Rm_val, 16);
+
+    bool_t dummy;
+    int32_t result1, result2;
+    SignedSatQ(sum, 16, &result1, &dummy);
+    SignedSatQ(diff, 16, &result2, &dummy);
+    uint32_t result = LOW_BIT32(result1, 16) | LOW_BIT32(result2, 16) << 16;
+    SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+TODO: Need to be verified in the real chips
+<<ARMv7-M Architecture Reference Manual A7-399>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    diff1 = SInt(R[n]<15:0>) - SInt(R[m]<15:0>);
+    diff2 = SInt(R[n]<31:16>) - SInt(R[m]<31:16>);
+    R[d]<15:0> = SignedSat(diff1, 16);
+    R[d]<31:16> = SignedSat(diff2, 16);
+**************************************/
+void _qsub16(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t diff1 = (int16_t)LOW_BIT32(Rn_val, 16) - (int16_t)LOW_BIT32(Rm_val, 16);
+    uint32_t diff2 = (int16_t)LOW_BIT32(Rn_val >> 16, 16) - (int16_t)LOW_BIT32(Rm_val >> 16, 16);
+
+    bool_t dummy;
+    int32_t result1, result2;
+    SignedSatQ(diff1, 16, &result1, &dummy);
+    SignedSatQ(diff2, 16, &result2, &dummy);
+    uint32_t result = LOW_BIT32(result1, 16) | LOW_BIT32(result2, 16) << 16;
+    SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+TODO: Need to be verified in the real chips
+<<ARMv7-M Architecture Reference Manual A7-393>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    sum1 = SInt(R[n]<7:0>) + SInt(R[m]<7:0>);
+    sum2 = SInt(R[n]<15:8>) + SInt(R[m]<15:8>);
+    sum3 = SInt(R[n]<23:16>) + SInt(R[m]<23:16>);
+    sum4 = SInt(R[n]<31:24>) + SInt(R[m]<31:24>);
+    R[d]<7:0> = SignedSat(sum1, 8);
+    R[d]<15:8> = SignedSat(sum2, 8);
+    R[d]<23:16> = SignedSat(sum3, 8);
+    R[d]<31:24> = SignedSat(sum4, 8);
+**************************************/
+void _qadd8(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t sum1 = (int8_t)LOW_BIT32(Rn_val, 8) + (int8_t)LOW_BIT32(Rm_val, 8);
+    uint32_t sum2 = (int8_t)LOW_BIT32(Rn_val >> 8, 8) + (int8_t)LOW_BIT32(Rm_val >> 8, 8);
+    uint32_t sum3 = (int8_t)LOW_BIT32(Rn_val >> 16, 8) + (int8_t)LOW_BIT32(Rm_val >> 16, 8);
+    uint32_t sum4 = (int8_t)LOW_BIT32(Rn_val >> 24, 8) + (int8_t)LOW_BIT32(Rm_val >> 24, 8);
+
+    bool_t dummy;
+    int32_t result[4];
+    SignedSatQ(sum1, 8, &result[0], &dummy);
+    SignedSatQ(sum2, 8, &result[1], &dummy);
+    SignedSatQ(sum3, 8, &result[2], &dummy);
+    SignedSatQ(sum4, 8, &result[3], &dummy);
+    uint32_t Rd_val = LOW_BIT32(result[0], 8)       | LOW_BIT32(result[1], 8) << 8 |
+                      LOW_BIT32(result[2], 8) << 16 | LOW_BIT32(result[3], 8) << 24;
+    SET_REG_VAL(regs, Rd, Rd_val);
+}
+
+/***********************************
+TODO: Need to be verified in the real chips
+<<ARMv7-M Architecture Reference Manual A7-400>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    diff1 = SInt(R[n]<7:0>) - SInt(R[m]<7:0>);
+    diff2 = SInt(R[n]<15:8>) - SInt(R[m]<15:8>);
+    diff3 = SInt(R[n]<23:16>) - SInt(R[m]<23:16>);
+    diff4 = SInt(R[n]<31:24>) - SInt(R[m]<31:24>);
+    R[d]<7:0> = SignedSat(diff1, 8);
+    R[d]<15:8> = SignedSat(diff2, 8);
+    R[d]<23:16> = SignedSat(diff3, 8);
+    R[d]<31:24> = SignedSat(diff4, 8);
+**************************************/
+void _qsub8(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t diff1 = ((int8_t)LOW_BIT32(Rn_val, 8) - (int8_t)LOW_BIT32(Rm_val, 8));
+    uint32_t diff2 = ((int8_t)LOW_BIT32(Rn_val >> 8, 8) - (int8_t)LOW_BIT32(Rm_val >> 8, 8));
+    uint32_t diff3 = ((int8_t)LOW_BIT32(Rn_val >> 16, 8) - (int8_t)LOW_BIT32(Rm_val >> 16, 8));
+    uint32_t diff4 = ((int8_t)LOW_BIT32(Rn_val >> 24, 8) - (int8_t)LOW_BIT32(Rm_val >> 24, 8));
+
+    bool_t dummy;
+    int32_t result[4];
+    SignedSatQ(diff1, 8, &result[0], &dummy);
+    SignedSatQ(diff2, 8, &result[1], &dummy);
+    SignedSatQ(diff3, 8, &result[2], &dummy);
+    SignedSatQ(diff4, 8, &result[3], &dummy);
+    uint32_t Rd_val = LOW_BIT32(result[0], 8)       | LOW_BIT32(result[1], 8) << 8 |
+                      LOW_BIT32(result[2], 8) << 16 | LOW_BIT32(result[3], 8) << 24;
+    SET_REG_VAL(regs, Rd, Rd_val);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-427>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    sum1 = SInt(R[n]<15:0>) + SInt(R[m]<15:0>);
+    sum2 = SInt(R[n]<31:16>) + SInt(R[m]<31:16>);
+    R[d]<15:0> = sum1<16:1>;
+    R[d]<31:16> = sum2<16:1>;
+**************************************/
+void _shadd16(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t sum1 = (int32_t)(int16_t)LOW_BIT32(Rn_val, 16) + (int32_t)(int16_t)LOW_BIT32(Rm_val, 16);
+    uint32_t sum2 = (int32_t)(int16_t)LOW_BIT32(Rn_val >> 16, 16) + (int32_t)(int16_t)LOW_BIT32(Rm_val >> 16, 16);
+
+    uint32_t result = LOW_BIT32(sum1 >> 1, 16) | LOW_BIT32(sum2 >> 1, 16) << 16;
+    SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-429>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    diff = SInt(R[n]<15:0>) - SInt(R[m]<31:16>);
+    sum = SInt(R[n]<31:16>) + SInt(R[m]<15:0>);
+    R[d]<15:0> = diff<16:1>;
+    R[d]<31:16> = sum<16:1>;
+**************************************/
+void _shasx(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t diff = (int32_t)(int16_t)LOW_BIT32(Rn_val, 16) - (int32_t)(int16_t)LOW_BIT32(Rm_val >> 16, 16);
+    uint32_t sum = (int32_t)(int16_t)LOW_BIT32(Rn_val >> 16, 16) + (int32_t)(int16_t)LOW_BIT32(Rm_val, 16);
+
+    uint32_t result = LOW_BIT32(diff >> 1, 16) | LOW_BIT32(sum >> 1, 16) << 16;
+    SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-430>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    sum = SInt(R[n]<15:0>) + SInt(R[m]<31:16>);
+    diff = SInt(R[n]<31:16>) - SInt(R[m]<15:0>);
+    R[d]<15:0> = sum<16:1>;
+    R[d]<31:16> = diff<16:1>;
+**************************************/
+void _shsax(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t sum = (int32_t)(int16_t)LOW_BIT32(Rn_val, 16) + (int32_t)(int16_t)LOW_BIT32(Rm_val >> 16, 16);
+    uint32_t diff = (int32_t)(int16_t)LOW_BIT32(Rn_val >> 16, 16) - (int32_t)(int16_t)LOW_BIT32(Rm_val, 16);
+
+    uint32_t result = LOW_BIT32(sum >> 1, 16) | LOW_BIT32(diff >> 1, 16) << 16;
     SET_REG_VAL(regs, Rd, result);
 }
 
