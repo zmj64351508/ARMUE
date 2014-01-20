@@ -391,4 +391,5 @@ void _ldrexb(uint32_t Rn, uint32_t Rt, cpu_t* cpu);
 void _ldrexh(uint32_t Rn, uint32_t Rt, cpu_t* cpu);
 void _pkhbt_pkhtb(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t shift_t, uint32_t shift_n, bool_t tbform, arm_reg_t *regs);
 void _b(int32_t imm32, uint8_t cond, cpu_t* cpu);
+void _bl(int32_t imm32, uint8_t cond, cpu_t *cpu);
 #endif

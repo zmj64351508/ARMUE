@@ -4105,3 +4105,25 @@ void _b(int32_t imm32, uint8_t cond, cpu_t* cpu)
     uint32_t PC_val = GET_REG_VAL(regs, PC_INDEX);
     BranchWritePC(PC_val+imm32, regs);
 }
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-239>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    next_instr_addr = PC;
+    LR = next_instr_addr<31:1> : ¡®1¡¯;
+    BranchWritePC(PC + imm32);
+**************************************/
+void _bl(int32_t imm32, uint8_t cond, cpu_t *cpu)
+{
+    arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
+    if(!ConditionPassed(cond, regs)){
+        return;
+    }
+
+    uint32_t next_addr = GET_REG_VAL(regs, PC_INDEX);
+    SET_REG_VAL(regs, LR_INDEX, next_addr | 0x1ul);
+
+    uint32_t PC_val = GET_REG_VAL(regs, PC_INDEX);
+    BranchWritePC(PC_val+imm32, regs);
+}

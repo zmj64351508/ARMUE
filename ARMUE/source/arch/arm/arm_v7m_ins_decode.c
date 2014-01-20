@@ -3123,6 +3123,42 @@ void _uncon_b_32(uint32_t ins_code, cpu_t *cpu)
     LOG_INSTRUCTION("_uncon_b_32, #0x%x\n", GET_REG_VAL(cpu->regs, PC_INDEX) + (int32_t)imm32);
 }
 
+void _bl_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t J1 = LOW_BIT32(ins_code >> 13, 1);
+    uint32_t S  = LOW_BIT32(ins_code >> 26, 1);
+    uint32_t I1 = !(J1 ^ S);
+
+    uint32_t J2 = LOW_BIT32(ins_code >> 11, 1);
+    uint32_t I2 = !(J2 ^ S);
+
+    uint32_t imm10 = LOW_BIT32(ins_code >> 16, 10);
+    uint32_t imm11 = LOW_BIT32(ins_code, 11);
+
+    uint32_t imm32 =  _ASR32(S << 31 | I1 << 30 | I2 << 29 | imm10 << 19 | imm11 << 8, 7);
+    // targetInstrSet = CurrentInstrSet();
+    CHECK_UNPREDICTABLE(InITBlock(cpu->regs) && !LastInITBlock(cpu->regs), _bl_32);
+    _bl(imm32, 0, cpu);
+    LOG_INSTRUCTION("_bl_32, #0x%x\n", GET_REG_VAL(cpu->regs, PC_INDEX) + (int32_t)imm32);
+}
+
+void _con_b_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t J1 = LOW_BIT32(ins_code >> 13, 1);
+    uint32_t S  = LOW_BIT32(ins_code >> 26, 1);
+
+    uint32_t J2 = LOW_BIT32(ins_code >> 11, 1);
+
+    uint32_t cond = LOW_BIT32(ins_code >> 22, 4);
+    uint32_t imm6 = LOW_BIT32(ins_code >> 16, 6);
+    uint32_t imm11 = LOW_BIT32(ins_code, 11);
+
+    uint32_t imm32 = _ASR32(S << 31 | J1 << 30 | J2 << 29 | imm6 << 23 | imm11 << 12, 11);
+    CHECK_UNPREDICTABLE(InITBlock(cpu->regs), _con_b_32);
+    _b(imm32, cond, cpu);
+    LOG_INSTRUCTION("_con_b_32, #0x%x\n", GET_REG_VAL(cpu->regs, PC_INDEX) + (int32_t)imm32);
+}
+
 thumb_translate32_t branch_misc_ctrl_op1_0x0(uint32_t ins_code, uint32_t op, cpu_t *cpu)
 {
     switch(op){
@@ -3141,7 +3177,7 @@ thumb_translate32_t branch_misc_ctrl_op1_0x0(uint32_t ins_code, uint32_t op, cpu
         // MRS
         break;
     default:
-        // B
+        return (thumb_translate32_t)_con_b_32;
         break;
     }
 }
@@ -3164,8 +3200,7 @@ thumb_translate32_t branch_misc_ctrl(uint32_t ins_code, cpu_t *cpu)
         return (thumb_translate32_t)_uncon_b_32;
     case 0x5:
     case 0x7:
-        //return _bl_32;
-        return;
+        return (thumb_translate32_t)_bl_32;
     }
 }
 
