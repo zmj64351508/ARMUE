@@ -45,7 +45,7 @@ void armv7m_print_reg_val(arm_reg_t* regs)
     printf("xPSR=0x%08x\n\n", regs->xPSR);
 }
 
-/****** Here are some sub-parsing functions *******/
+/****** Here are some 16 bit sub-parsing functions *******/
 /* Most of the sub-parsing function contains the excutable pointer, so we needn't check the type
    of the sub-functions, except `misc 16-bit instructions`. */
 thumb_translate16_t shift_add_sub_mov(uint16_t ins_code, cpu_t* cpu)
@@ -87,6 +87,36 @@ thumb_translate16_t con_branch_svc(uint16_t ins_code, cpu_t* cpu)
     return M_translate_table->con_branch_svc_table16[ins_code >> 8 & 0x0F].translater16;
 }
 
+/****** Here are some 32 bit sub-parsing functions *******/
+/* Generate the nomal decoder function for 32 bit instructions.
+ * func_name  - indicate the function name to generate
+ * table_name - which table to search for the instruction pointer
+ */
+#define GENERATE_NORMAL_DECODER32_FUNC(func_name, table_name) \
+thumb_translate32_t func_name(uint32_t ins_code, cpu_t *cpu)\
+{\
+    thumb_decode_t decode = M_translate_table->table_name[LOW_BIT32(ins_code >> 20, 7)];\
+    if(decode.type == THUMB_EXCUTER){\
+        return decode.translater32;\
+    }else{\
+        return (thumb_translate32_t)decode.translater32(ins_code, cpu);\
+    }\
+}
+
+GENERATE_NORMAL_DECODER32_FUNC(decode32_01x, decode32_01x_table)
+GENERATE_NORMAL_DECODER32_FUNC(decode32_100, decode32_100_table)
+GENERATE_NORMAL_DECODER32_FUNC(decode32_11x, decode32_11x_table)
+
+thumb_translate32_t decode32_101(uint32_t ins_code, cpu_t *cpu)
+{
+    thumb_decode_t decode = M_translate_table->decode32_101_table[0];
+    if(decode.type == THUMB_EXCUTER){
+        return decode.translater32;
+    }else{
+        return (thumb_translate32_t)decode.translater32(ins_code, cpu);
+    }
+}
+
 /****** Here are the final decoders of 16bit instructions ******/
 void _unpredictable_16(uint16_t ins_code, cpu_t* cpu)
 {
@@ -96,6 +126,11 @@ void _unpredictable_16(uint16_t ins_code, cpu_t* cpu)
 void _unpredictable_32(uint32_t ins_code, cpu_t *cpu)
 {
     LOG(LOG_WARN, "ins_code: %x is UNPREDICTABLE, treated as NOP\n", ins_code);
+}
+
+void _undefined_32(uint32_t ins_code, cpu_t *cpu)
+{
+    LOG(LOG_ERROR, "ins_code: %x is UNDEFINED, treated as NOP\n", ins_code);
 }
 
 void _lsl_imm_16(uint16_t ins_code, cpu_t* cpu)
@@ -1480,7 +1515,7 @@ thumb_translate32_t tbb_h_ldrexb_h_32(uint32_t ins_code, cpu_t *cpu)
 #define DATA_PROCESS32_SH(ins_code) LOW_BIT32((ins_code) >> 21, 1)
 
 /* register decoding */
-#define DATA_PROCESS32_OP2(ins_code) LOW_BIT32((ins_code) >> 4, 4)
+#define DATA_PROCESS32_REG_OP2(ins_code) LOW_BIT32((ins_code) >> 4, 4)
 #define DATA_PROCESS32_ROTATE(ins_code) LOW_BIT32((ins_code) >> 4, 2)
 
 inline void get_shift_imm5_32(uint32_t ins_code, _O uint32_t *type, _O uint32_t *imm5)
@@ -2558,7 +2593,7 @@ void _sxth_32(uint32_t ins_code, cpu_t *cpu)
 
 thumb_translate32_t lsl_sxth_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t op2 = DATA_PROCESS32_OP2(ins_code);
+    uint32_t op2 = DATA_PROCESS32_REG_OP2(ins_code);
     uint32_t Rn = DATA_PROCESS32_RN(ins_code);
 
     if(op2 == 0){
@@ -2595,7 +2630,7 @@ void _uxth_32(uint32_t ins_code, cpu_t *cpu)
 
 thumb_translate32_t lsl_uxth_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t op2 = DATA_PROCESS32_OP2(ins_code);
+    uint32_t op2 = DATA_PROCESS32_REG_OP2(ins_code);
     uint32_t Rn = DATA_PROCESS32_RN(ins_code);
 
     if(op2 == 0){
@@ -2644,7 +2679,7 @@ void _sxtb16_32(uint32_t ins_code, cpu_t *cpu)
 
 thumb_translate32_t lsr_sxtb16_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t op2 = DATA_PROCESS32_OP2(ins_code);
+    uint32_t op2 = DATA_PROCESS32_REG_OP2(ins_code);
     uint32_t Rn = DATA_PROCESS32_RN(ins_code);
 
     if(op2 == 0){
@@ -2681,7 +2716,7 @@ void _uxtb16_32(uint32_t ins_code, cpu_t *cpu)
 
 thumb_translate32_t lsr_uxtb16_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t op2 = DATA_PROCESS32_OP2(ins_code);
+    uint32_t op2 = DATA_PROCESS32_REG_OP2(ins_code);
     uint32_t Rn = DATA_PROCESS32_RN(ins_code);
 
     if(op2 == 0){
@@ -2730,7 +2765,7 @@ void _sxtb_32(uint32_t ins_code, cpu_t *cpu)
 
 thumb_translate32_t asr_sxtb_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t op2 = DATA_PROCESS32_OP2(ins_code);
+    uint32_t op2 = DATA_PROCESS32_REG_OP2(ins_code);
     uint32_t Rn = DATA_PROCESS32_RN(ins_code);
 
     if(op2 == 0){
@@ -2767,7 +2802,7 @@ void _uxtb_32(uint32_t ins_code, cpu_t *cpu)
 
 thumb_translate32_t asr_uxtb_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t op2 = DATA_PROCESS32_OP2(ins_code);
+    uint32_t op2 = DATA_PROCESS32_REG_OP2(ins_code);
     uint32_t Rn = DATA_PROCESS32_RN(ins_code);
 
     if(op2 == 0){
@@ -3068,6 +3103,72 @@ thumb_translate32_t parallel_add_sub_misc(uint32_t ins_code, cpu_t *cpu)
     }
 }
 
+/* Encoding T4 */
+void _uncon_b_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t J1 = LOW_BIT32(ins_code >> 13, 1);
+    uint32_t S  = LOW_BIT32(ins_code >> 26, 1);
+    uint32_t I1 = !(J1 ^ S);
+
+    uint32_t J2 = LOW_BIT32(ins_code >> 11, 1);
+    uint32_t I2 = !(J2 ^ S);
+
+    uint32_t imm10 = LOW_BIT32(ins_code >> 16, 10);
+    uint32_t imm11 = LOW_BIT32(ins_code, 11);
+
+    uint32_t imm32 =  _ASR32(S << 31 | I1 << 30 | I2 << 29 | imm10 << 19 | imm11 << 8, 7);
+
+    CHECK_UNPREDICTABLE(InITBlock(cpu->regs) && !LastInITBlock(cpu->regs), _uncon_b_32);
+    _b(imm32, 0, cpu);
+    LOG_INSTRUCTION("_uncon_b_32, #0x%x\n", GET_REG_VAL(cpu->regs, PC_INDEX) + (int32_t)imm32);
+}
+
+thumb_translate32_t branch_misc_ctrl_op1_0x0(uint32_t ins_code, uint32_t op, cpu_t *cpu)
+{
+    switch(op){
+    case 0x38:
+    case 0x39:
+        // MSR
+        break;
+    case 0x3A:
+        // Hint
+        break;
+    case 0x3B:
+        // misc_ctrl
+        break;
+    case 0x3E:
+    case 0x3F:
+        // MRS
+        break;
+    default:
+        // B
+        break;
+    }
+}
+
+thumb_translate32_t branch_misc_ctrl(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op1 = LOW_BIT32(ins_code >> 12, 3);
+    uint32_t op = LOW_BIT32(ins_code >> 20, 7);
+    switch(op1){
+    case 0x0:
+        return branch_misc_ctrl_op1_0x0(ins_code, op, cpu);
+    case 0x2:
+        if(op1 != 0x7F){
+            return branch_misc_ctrl_op1_0x0(ins_code, op, cpu);
+        }else{
+            return (thumb_translate32_t)_undefined_32;
+        }
+    case 0x1:
+    case 0x3:
+        return (thumb_translate32_t)_uncon_b_32;
+    case 0x5:
+    case 0x7:
+        //return _bl_32;
+        return;
+    }
+}
+
 /****** init instruction table ******/
 void init_instruction_table(thumb_instruct_table_t* table)
 {
@@ -3177,108 +3278,114 @@ void init_instruction_table(thumb_instruct_table_t* table)
 
 
     /*************************************** 32 bit thumb instructions *******************************************************/
-    // bit 20~28
-    // load multiple and store multiple A5-171
-    set_base_table_value(table->main_table32, 0x088, 0x088, (thumb_translate_t)_stm_32,       THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x08A, 0x08A, (thumb_translate_t)_stm_32,       THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x089, 0x089, (thumb_translate_t)ldm_pop_32,    THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x08B, 0x08B, (thumb_translate_t)ldm_pop_32,    THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x090, 0x090, (thumb_translate_t)stmdb_push_32, THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x092, 0x092, (thumb_translate_t)stmdb_push_32, THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x091, 0x091, (thumb_translate_t)_ldmdb_32,     THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x093, 0x093, (thumb_translate_t)_ldmdb_32,     THUMB_EXCUTER);
+    set_base_table_value(table->base_table32, 0x2, 0x3, (thumb_translate_t)decode32_01x, THUMB_DECODER);
+    set_base_table_value(table->base_table32, 0x4, 0x4, (thumb_translate_t)decode32_100, THUMB_DECODER);
+    set_base_table_value(table->base_table32, 0x5, 0x5, (thumb_translate_t)decode32_101, THUMB_DECODER);
+    set_base_table_value(table->base_table32, 0x6, 0x7, (thumb_translate_t)decode32_11x, THUMB_DECODER);
 
-    // load store dual or exclusive, table brach A5-172
-    set_base_table_value(table->main_table32, 0x084, 0x084, (thumb_translate_t)_strex_32, THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x085, 0x085, (thumb_translate_t)_ldrex_32, THUMB_EXCUTER);
+    // load multiple and store multiple
+    set_sub_table_value(table->decode32_01x_table, 0x08, 0x08, (thumb_translate_t)_stm_32,         THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_01x_table, 0x0A, 0x0A, (thumb_translate_t)_stm_32,         THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_01x_table, 0x09, 0x09, (thumb_translate_t)ldm_pop_32,      THUMB_DECODER);
+    set_sub_table_value(table->decode32_01x_table, 0x0B, 0x0B, (thumb_translate_t)ldm_pop_32,      THUMB_DECODER);
+    set_sub_table_value(table->decode32_01x_table, 0x10, 0x10, (thumb_translate_t)stmdb_push_32,   THUMB_DECODER);
+    set_sub_table_value(table->decode32_01x_table, 0x12, 0x12, (thumb_translate_t)stmdb_push_32,   THUMB_DECODER);
+    set_sub_table_value(table->decode32_01x_table, 0x11, 0x11, (thumb_translate_t)_ldmdb_32,       THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_01x_table, 0x13, 0x13, (thumb_translate_t)_ldmdb_32,       THUMB_EXCUTER);
 
-    set_base_table_value(table->main_table32, 0x086, 0x086, (thumb_translate_t)_strd_32, THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x08E, 0x08E, (thumb_translate_t)_strd_32, THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x094, 0x094, (thumb_translate_t)_strd_32, THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x096, 0x096, (thumb_translate_t)_strd_32, THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x09C, 0x09C, (thumb_translate_t)_strd_32, THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x09E, 0x09E, (thumb_translate_t)_strd_32, THUMB_EXCUTER);
+    // load store dual or exclusive, table branch
+    set_sub_table_value(table->decode32_01x_table, 0x04, 0x04, (thumb_translate_t)_strex_32,       THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_01x_table, 0x05, 0x05, (thumb_translate_t)_ldrex_32,       THUMB_EXCUTER);
 
-    set_base_table_value(table->main_table32, 0x087, 0x087, (thumb_translate_t)ldrd_32, THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x08F, 0x08F, (thumb_translate_t)ldrd_32, THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x095, 0x095, (thumb_translate_t)ldrd_32, THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x097, 0x097, (thumb_translate_t)ldrd_32, THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x09D, 0x09D, (thumb_translate_t)ldrd_32, THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x09F, 0x09F, (thumb_translate_t)ldrd_32, THUMB_DECODER);
+    set_sub_table_value(table->decode32_01x_table, 0x06, 0x06, (thumb_translate_t)_strd_32,        THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_01x_table, 0x0E, 0x0E, (thumb_translate_t)_strd_32,        THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_01x_table, 0x14, 0x14, (thumb_translate_t)_strd_32,        THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_01x_table, 0x16, 0x16, (thumb_translate_t)_strd_32,        THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_01x_table, 0x1C, 0x1C, (thumb_translate_t)_strd_32,        THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_01x_table, 0x1E, 0x1E, (thumb_translate_t)_strd_32,        THUMB_EXCUTER);
 
-    set_base_table_value(table->main_table32, 0x08C, 0x08C, (thumb_translate_t)strexb_h_32,       THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x08D, 0x08D, (thumb_translate_t)tbb_h_ldrexb_h_32, THUMB_DECODER);
+    set_sub_table_value(table->decode32_01x_table, 0x07, 0x07, (thumb_translate_t)ldrd_32,         THUMB_DECODER);
+    set_sub_table_value(table->decode32_01x_table, 0x0F, 0x0F, (thumb_translate_t)ldrd_32,         THUMB_DECODER);
+    set_sub_table_value(table->decode32_01x_table, 0x15, 0x15, (thumb_translate_t)ldrd_32,         THUMB_DECODER);
+    set_sub_table_value(table->decode32_01x_table, 0x17, 0x17, (thumb_translate_t)ldrd_32,         THUMB_DECODER);
+    set_sub_table_value(table->decode32_01x_table, 0x1D, 0x1D, (thumb_translate_t)ldrd_32,         THUMB_DECODER);
+    set_sub_table_value(table->decode32_01x_table, 0x1F, 0x1F, (thumb_translate_t)ldrd_32,         THUMB_DECODER);
+
+    set_sub_table_value(table->decode32_01x_table, 0x0C, 0x0C, (thumb_translate_t)strexb_h_32,     THUMB_DECODER);
+    set_sub_table_value(table->decode32_01x_table, 0x0D, 0x0D, (thumb_translate_t)tbb_h_ldrexb_h_32,THUMB_DECODER);
+
+    // branches and miscellaneous control
+    set_sub_table_value(table->decode32_101_table, 0,     0,   (thumb_translate_t)branch_misc_ctrl,THUMB_DECODER);
 
     // data processing(shifted register)
-    set_base_table_value(table->main_table32, 0x0A0, 0x0A1, (thumb_translate_t)and_tst_reg_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x0A2, 0x0A3, (thumb_translate_t)_bic_reg_32,     THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x0A4, 0x0A5, (thumb_translate_t)orr_mov_reg_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x0A6, 0x0A7, (thumb_translate_t)orn_mvn_reg_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x0A8, 0x0A9, (thumb_translate_t)eor_teq_reg_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x0AC, 0x0AD, (thumb_translate_t)_pkhbt_pkhtb_32, THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x0B0, 0x0B1, (thumb_translate_t)add_cmn_reg_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x0B4, 0x0B5, (thumb_translate_t)_adc_reg_32,     THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x0B6, 0x0B7, (thumb_translate_t)_sbc_reg_32,     THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x0BA, 0x0BB, (thumb_translate_t)sub_cmp_reg_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x0BC, 0x0BD, (thumb_translate_t)_rsb_reg_32,     THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_01x_table, 0x20, 0x21, (thumb_translate_t)and_tst_reg_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_01x_table, 0x22, 0x23, (thumb_translate_t)_bic_reg_32,     THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_01x_table, 0x24, 0x25, (thumb_translate_t)orr_mov_reg_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_01x_table, 0x26, 0x27, (thumb_translate_t)orn_mvn_reg_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_01x_table, 0x28, 0x29, (thumb_translate_t)eor_teq_reg_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_01x_table, 0x2C, 0x2D, (thumb_translate_t)_pkhbt_pkhtb_32, THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_01x_table, 0x30, 0x31, (thumb_translate_t)add_cmn_reg_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_01x_table, 0x34, 0x35, (thumb_translate_t)_adc_reg_32,     THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_01x_table, 0x36, 0x37, (thumb_translate_t)_sbc_reg_32,     THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_01x_table, 0x3A, 0x3B, (thumb_translate_t)sub_cmp_reg_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_01x_table, 0x3C, 0x3D, (thumb_translate_t)_rsb_reg_32,     THUMB_EXCUTER);
 
     // data processing(modified immediate)
-    set_base_table_value(table->main_table32, 0x100, 0x101, (thumb_translate_t)and_tst_imm_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x140, 0x141, (thumb_translate_t)and_tst_imm_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x102, 0x103, (thumb_translate_t)_bic_imm_32,     THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x142, 0x143, (thumb_translate_t)_bic_imm_32,     THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x104, 0x105, (thumb_translate_t)orr_mov_imm_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x144, 0x145, (thumb_translate_t)orr_mov_imm_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x106, 0x107, (thumb_translate_t)orn_mvn_imm_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x146, 0x147, (thumb_translate_t)orn_mvn_imm_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x108, 0x109, (thumb_translate_t)eor_teq_imm_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x148, 0x149, (thumb_translate_t)eor_teq_imm_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x110, 0x111, (thumb_translate_t)add_cmn_imm_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x150, 0x151, (thumb_translate_t)add_cmn_imm_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x114, 0x115, (thumb_translate_t)_adc_imm_32,     THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x154, 0x155, (thumb_translate_t)_adc_imm_32,     THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x116, 0x116, (thumb_translate_t)_sbc_imm_32,     THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x156, 0x156, (thumb_translate_t)_sbc_imm_32,     THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x11A, 0x11B, (thumb_translate_t)sub_cmp_imm_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x15A, 0x15B, (thumb_translate_t)sub_cmp_imm_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x11C, 0x11D, (thumb_translate_t)_rsb_imm_32,     THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x15C, 0x15D, (thumb_translate_t)_rsb_imm_32,     THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x00, 0x01, (thumb_translate_t)and_tst_imm_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x40, 0x41, (thumb_translate_t)and_tst_imm_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x02, 0x03, (thumb_translate_t)_bic_imm_32,     THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x42, 0x43, (thumb_translate_t)_bic_imm_32,     THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x04, 0x05, (thumb_translate_t)orr_mov_imm_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x44, 0x45, (thumb_translate_t)orr_mov_imm_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x06, 0x07, (thumb_translate_t)orn_mvn_imm_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x46, 0x47, (thumb_translate_t)orn_mvn_imm_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x08, 0x09, (thumb_translate_t)eor_teq_imm_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x48, 0x49, (thumb_translate_t)eor_teq_imm_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x10, 0x11, (thumb_translate_t)add_cmn_imm_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x50, 0x51, (thumb_translate_t)add_cmn_imm_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x14, 0x15, (thumb_translate_t)_adc_imm_32,     THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x54, 0x55, (thumb_translate_t)_adc_imm_32,     THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x16, 0x17, (thumb_translate_t)_sbc_imm_32,     THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x56, 0x57, (thumb_translate_t)_sbc_imm_32,     THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x1A, 0x1B, (thumb_translate_t)sub_cmp_imm_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x5A, 0x5B, (thumb_translate_t)sub_cmp_imm_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x1C, 0x1D, (thumb_translate_t)_rsb_imm_32,     THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x5C, 0x5D, (thumb_translate_t)_rsb_imm_32,     THUMB_EXCUTER);
 
     // TODO: coprocessor instructions
 
     // data processing(plain binary immediate)
-    set_base_table_value(table->main_table32, 0x120, 0x120, (thumb_translate_t)add_adr_imm_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x160, 0x160, (thumb_translate_t)add_adr_imm_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x124, 0x124, (thumb_translate_t)_mov_imm16_32,   THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x164, 0x164, (thumb_translate_t)_mov_imm16_32,   THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x12A, 0x12A, (thumb_translate_t)sub_adr_imm_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x16A, 0x16A, (thumb_translate_t)sub_adr_imm_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x12C, 0x12C, (thumb_translate_t)_movt_32,        THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x16C, 0x16C, (thumb_translate_t)_movt_32,        THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x130, 0x130, (thumb_translate_t)_ssat_32,        THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x170, 0x170, (thumb_translate_t)_ssat_32,        THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x132, 0x132, (thumb_translate_t)ssat_ssat16_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x172, 0x172, (thumb_translate_t)ssat_ssat16_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x134, 0x134, (thumb_translate_t)_sbfx_32,        THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x174, 0x174, (thumb_translate_t)_sbfx_32,        THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x136, 0x136, (thumb_translate_t)bfi_bfc_32,      THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x176, 0x176, (thumb_translate_t)bfi_bfc_32,      THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x138, 0x138, (thumb_translate_t)_usat_32,        THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x178, 0x178, (thumb_translate_t)_usat_32,        THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x13A, 0x13A, (thumb_translate_t)usat_usat16_32,  THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x13C, 0x13C, (thumb_translate_t)_ubfx_32,        THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x17C, 0x17C, (thumb_translate_t)_ubfx_32,        THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x20, 0x20, (thumb_translate_t)add_adr_imm_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x60, 0x60, (thumb_translate_t)add_adr_imm_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x24, 0x24, (thumb_translate_t)_mov_imm16_32,   THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x64, 0x64, (thumb_translate_t)_mov_imm16_32,   THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x2A, 0x2A, (thumb_translate_t)sub_adr_imm_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x6A, 0x6A, (thumb_translate_t)sub_adr_imm_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x2C, 0x2C, (thumb_translate_t)_movt_32,        THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x6C, 0x6C, (thumb_translate_t)_movt_32,        THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x30, 0x30, (thumb_translate_t)_ssat_32,        THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x70, 0x70, (thumb_translate_t)_ssat_32,        THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x32, 0x32, (thumb_translate_t)ssat_ssat16_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x72, 0x72, (thumb_translate_t)ssat_ssat16_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x34, 0x34, (thumb_translate_t)_sbfx_32,        THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x74, 0x74, (thumb_translate_t)_sbfx_32,        THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x36, 0x36, (thumb_translate_t)bfi_bfc_32,      THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x76, 0x76, (thumb_translate_t)bfi_bfc_32,      THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x38, 0x38, (thumb_translate_t)_usat_32,        THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x78, 0x78, (thumb_translate_t)_usat_32,        THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x3A, 0x3A, (thumb_translate_t)usat_usat16_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_100_table, 0x3C, 0x3C, (thumb_translate_t)_ubfx_32,        THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_100_table, 0x7C, 0x7C, (thumb_translate_t)_ubfx_32,        THUMB_EXCUTER);
 
     // data processing(register)
-    set_base_table_value(table->main_table32, 0x1A0, 0x1A0, (thumb_translate_t)lsl_sxth_32,     THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x1A1, 0x1A1, (thumb_translate_t)lsl_uxth_32,     THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x1A2, 0x1A2, (thumb_translate_t)lsr_sxtb16_32,   THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x1A3, 0x1A3, (thumb_translate_t)lsr_uxtb16_32,   THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x1A4, 0x1A4, (thumb_translate_t)asr_sxtb_32,     THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x1A5, 0x1A5, (thumb_translate_t)asr_uxtb_32,     THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x1A6, 0x1A7, (thumb_translate_t)_ror_reg_32,     THUMB_EXCUTER);
-    set_base_table_value(table->main_table32, 0x1A8, 0x1AF, (thumb_translate_t)parallel_add_sub_misc,THUMB_DECODER);
-    set_base_table_value(table->main_table32, 0x1A8, 0x1AF, (thumb_translate_t)parallel_add_sub_misc,THUMB_DECODER);
+    set_sub_table_value(table->decode32_11x_table, 0x20, 0x20, (thumb_translate_t)lsl_sxth_32,     THUMB_DECODER);
+    set_sub_table_value(table->decode32_11x_table, 0x21, 0x21, (thumb_translate_t)lsl_uxth_32,     THUMB_DECODER);
+    set_sub_table_value(table->decode32_11x_table, 0x22, 0x22, (thumb_translate_t)lsr_sxtb16_32,   THUMB_DECODER);
+    set_sub_table_value(table->decode32_11x_table, 0x23, 0x23, (thumb_translate_t)lsr_uxtb16_32,   THUMB_DECODER);
+    set_sub_table_value(table->decode32_11x_table, 0x24, 0x24, (thumb_translate_t)asr_sxtb_32,     THUMB_DECODER);
+    set_sub_table_value(table->decode32_11x_table, 0x25, 0x25, (thumb_translate_t)asr_uxtb_32,     THUMB_DECODER);
+    set_sub_table_value(table->decode32_11x_table, 0x26, 0x27, (thumb_translate_t)_ror_reg_32,     THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_11x_table, 0x28, 0x2F, (thumb_translate_t)parallel_add_sub_misc,THUMB_DECODER);
 
 }
 
@@ -3319,15 +3426,22 @@ thumb_translate16_t thumb_parse_opcode16(uint16_t opcode, cpu_t* cpu)
     }
 }
 
+//thumb_translate32_t thumb_parse_opcode32(uint32_t opcode, cpu_t *cpu)
+//{
+//    /* decode by bit <15 : 28~20> */
+//    thumb_decode_t decode = M_translate_table->main_table32[(LOW_BIT32(opcode >> 15, 1) << 9) | LOW_BIT32(opcode >> 20, 9)];
+//    if(decode.type == THUMB_DECODER){
+//        return (thumb_translate32_t)decode.translater32(opcode, cpu);
+//    }else{
+//        return decode.translater32;
+//    }
+//}
+
 thumb_translate32_t thumb_parse_opcode32(uint32_t opcode, cpu_t *cpu)
 {
-    /* decode by bit 20 to 28 */
-    thumb_decode_t decode = M_translate_table->main_table32[(opcode >> 20) & 0x1FF];
-    if(decode.type == THUMB_DECODER){
-        return (thumb_translate32_t)decode.translater32(opcode, cpu);
-    }else{
-        return decode.translater32;
-    }
+    int decode_op = (LOW_BIT32(opcode >> 27, 2) << 1) | LOW_BIT32(opcode >> 15, 1);
+    thumb_decode_t decode = M_translate_table->base_table32[decode_op];
+    return (thumb_translate32_t)decode.translater32(opcode, cpu);
 }
 
 void armv7m_next_PC_16(arm_reg_t* regs)

@@ -249,6 +249,16 @@ static inline uint32_t BitCount32(uint32_t bits)
     return count;
 }
 
+static inline uint32_t _ASR32(uint32_t val, int amount)
+{
+// MS VC will ASR signed int
+#if defined _MSC_VER || defined __GNUC__
+     return (uint32_t)((int32_t)val >> amount);
+#else
+#error Unknow compiler
+#endif
+}
+
 /* directly operate registers */
 void sync_banked_register(arm_reg_t *regs, int reg_index);
 void restore_banked_register(arm_reg_t *regs, int reg_index);

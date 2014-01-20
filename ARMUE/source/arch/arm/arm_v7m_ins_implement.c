@@ -71,15 +71,7 @@ void LSR_C(uint32_t val, int shift, _O uint32_t* result, _O int *carry_out)
     *result = val >> shift;
 }
 
-inline uint32_t _ASR32(uint32_t val, int amount)
-{
-// MS VC will ASR signed int
-#if defined _MSC_VER || defined __GNUC__
-     return (uint32_t)((int32_t)val >> amount);
-#else
-#error Unknow compiler
-#endif
-}
+
 
 void ASR_C(uint32_t val, int shift, _O uint32_t* result, _O int *carry_out)
 {

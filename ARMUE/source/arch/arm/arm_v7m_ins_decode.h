@@ -34,14 +34,15 @@ typedef struct thumb_decode_t{
 }thumb_decode_t;
 
 #define BASE_TABLE_SIZE_16                64
-#define SHIFT_ADD_SUB_MOV_SIZE_16        64
-#define DATA_PROCESS_SIZE_16            32
+#define SHIFT_ADD_SUB_MOV_SIZE_16         64
+#define DATA_PROCESS_SIZE_16              32
 #define SPDATA_BRANCH_EXCHANGE_SIZE_16    16
-#define LOAD_STORE_SINGLE_SIZE_16        128
-#define MISC_16BIT_INS_SIZE                128
+#define LOAD_STORE_SINGLE_SIZE_16         128
+#define MISC_16BIT_INS_SIZE               128
 #define CON_BRANCH_SVC_SIZE_16            16
 
-#define MAIN_TABLE_SIZE_32                512
+#define MAIN_TABLE_SIZE_32                8
+#define SUB_TABLE_SIZE_32                 128
 
 // all the classifictions are followed by the definition of "ARMv7-m Architecture Reference manual A5-156"
 typedef struct {
@@ -57,7 +58,11 @@ typedef struct {
     thumb_decode_t        con_branch_svc_table16[CON_BRANCH_SVC_SIZE_16];
 
     // the main 32 bit thumb decode table
-    thumb_decode_t        main_table32[MAIN_TABLE_SIZE_32];
+    thumb_decode_t        base_table32[MAIN_TABLE_SIZE_32];
+    thumb_decode_t        decode32_01x_table[SUB_TABLE_SIZE_32];
+    thumb_decode_t        decode32_100_table[SUB_TABLE_SIZE_32];
+    thumb_decode_t        decode32_11x_table[SUB_TABLE_SIZE_32];
+    thumb_decode_t        decode32_101_table[1];
 }thumb_instruct_table_t;
 
 void armv7m_print_reg_val(arm_reg_t* regs);
