@@ -361,6 +361,8 @@ void _push(uint32_t registers, uint32_t bitcount, cpu_t* cpu);
 void _rev(uint32_t Rm, uint32_t Rd, arm_reg_t* regs);
 void _rev16(uint32_t Rm, uint32_t Rd, arm_reg_t* regs);
 void _revsh(uint32_t Rm, uint32_t Rd, arm_reg_t* regs);
+void _rbit(uint32_t Rm, uint32_t Rd, arm_reg_t *regs);
+void _clz(uint32_t Rm, uint32_t Rd, arm_reg_t *regs);
 void _pop(uint32_t registers, uint32_t bitcount, cpu_t* cpu);
 void _it(uint32_t firstcond, uint32_t mask, arm_reg_t* regs, thumb_state* state);
 void _stm(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cpu_t* cpu);

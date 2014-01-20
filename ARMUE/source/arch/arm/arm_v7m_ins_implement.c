@@ -3349,7 +3349,6 @@ void _push(uint32_t registers, uint32_t bitcount, cpu_t* cpu)
         return;
     }
 
-    // EncodingSpecificOperations();
     uint32_t SP_val = GET_REG_VAL(regs, SP_INDEX);
     uint32_t address = SP_val - (bitcount << 2);
 
@@ -3384,7 +3383,6 @@ void _rev(uint32_t Rm, uint32_t Rd, arm_reg_t* regs)
         return;
     }
 
-    // EncodingSpecificOperations();
     uint32_t Rm_val = GET_REG_VAL(regs, Rm);
     uint32_t result;
     result = ((Rm_val&0x0000FFFF) << 16) | ((Rm_val&0xFFFF0000) >> 16);
@@ -3412,7 +3410,6 @@ void _rev16(uint32_t Rm, uint32_t Rd, arm_reg_t* regs)
         return;
     }
 
-    // EncodingSpecificOperations();
     uint32_t Rm_val = GET_REG_VAL(regs, Rm);
     uint32_t result;
     result = ((Rm_val&0x00FF00FF) << 8) | ((Rm_val&0xFF00FF00) >> 8);
@@ -3434,11 +3431,59 @@ void _revsh(uint32_t Rm, uint32_t Rd, arm_reg_t* regs)
         return;
     }
 
-    // EncodingSpecificOperations();
     uint32_t Rm_val = GET_REG_VAL(regs, Rm);
     uint32_t result;
     result = ((Rm_val&0x000000FF) << 8) | ((Rm_val&0x0000FF00) >> 8);
     result = (int16_t)result;
+    SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-401>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    bits(32) result;
+    for i = 0 to 31 do
+    result<31-i> = R[m]<i>;
+    R[d] = result;
+**************************************/
+void _rbit(uint32_t Rm, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t result;
+    result = ((Rm_val&0x0000FFFF) << 16) | ((Rm_val&0xFFFF0000) >> 16);
+    result = ((result&0x00FF00FF) << 8) | ((result&0xFF00FF00) >> 8);
+    result = ((result&0x0F0F0F0F) << 4) | ((result&0xF0F0F0F0) >> 4);
+    result = ((result&0x33333333) << 2) | ((result&0xCCCCCCCC) >> 2);
+    result = ((result&0x55555555) << 1) | ((result&0xAAAAAAAA) >> 1);
+    SET_REG_VAL(regs, Rd, result);
+}
+
+int count_leading_0(uint32_t val)
+{
+    int count = 0;
+    while(val != 0){
+        val >>= 1;
+        count++;
+    }
+    return 32 - count;
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-256>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    result = CountLeadingZeroBits(R[m]);
+    R[d] = result<31:0>;
+**************************************/
+void _clz(uint32_t Rm, uint32_t Rd, arm_reg_t *regs)
+{
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t result = count_leading_0(Rm_val);
     SET_REG_VAL(regs, Rd, result);
 }
 
