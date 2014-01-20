@@ -35,7 +35,6 @@ typedef struct cpu_list_t
 typedef struct run_info_t
 {
     unsigned long long last_pc;
-    unsigned long long next_ins;
     void *cpu_spec_info;
     void *global_info;
     int ins_type;

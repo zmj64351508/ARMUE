@@ -122,7 +122,6 @@ void ExceptionTaken(int excep_num, cpu_t *cpu)
     thumb_state *state = ARMv7m_GET_STATE(cpu);
     cm_NVIC_t *NVIC_info = (cm_NVIC_t *)cpu->cm_NVIC->controller_info;
 
-    cpu->run_info.next_ins = 0;
     state->cur_exception = excep_num;
 
     uint32_t addr = get_vector_value(cpu->cm_NVIC, excep_num);
@@ -210,8 +209,6 @@ void ExceptionReturn(uint32_t exc_return, cpu_t *cpu)
     thumb_state *state = ARMv7m_GET_STATE(cpu);
     arm_reg_t *regs = ARMv7m_GET_REGS(cpu);
     cm_NVIC_t *NVIC_info = (cm_NVIC_t *)cpu->cm_NVIC->controller_info;
-
-    cpu->run_info.next_ins = 0;
 
     /*
     if HaveFPExt(){

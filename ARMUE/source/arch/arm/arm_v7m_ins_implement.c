@@ -183,12 +183,14 @@ inline uint8_t CurrentCond(arm_reg_t* regs)
 
 uint8_t ConditionPassed(uint8_t branch_cond, arm_reg_t* regs)
 {
-    if(!InITBlock(regs)){
-        return 1;
-    }
     uint8_t cond;
+    /* if branch_cond != 0, it means this function was called by conditioned branch instructions.
+       Otherwise, it was called by any other instructions. So if it is not in ITblock, it should
+       always return passed. */
     if(branch_cond != 0){
         cond = branch_cond;
+    }else if(!InITBlock(regs)){
+        return 1;
     }else{
         cond = CurrentCond(regs);
     }

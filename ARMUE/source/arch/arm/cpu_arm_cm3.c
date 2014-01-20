@@ -75,14 +75,12 @@ ins_t decode_armcm3_cpu(cpu_t* cpu, void* opcode)
         ins_info.excute = thumb_parse_opcode16(opcode32, cpu);
         ins_info.length = 16;
         cpu->run_info.ins_type = ARM_INS_THUMB16;
-        cpu->run_info.next_ins = opcode32 >> 16;
     }else{
         /* exchange low and high 16bit */
         ins_info.opcode = ((opcode32 >> 16) & 0x0000FFFF) | ((opcode32 << 16) & 0xFFFF0000);
         LOG(LOG_DEBUG, "decode_armcm3_cpu: 32 bit opcode 0x%0x\n", ins_info.opcode);
         ins_info.excute = thumb_parse_opcode32((uint32_t)ins_info.opcode, cpu);
         ins_info.length = 32;
-        cpu->run_info.next_ins = 0;
         cpu->run_info.ins_type = ARM_INS_THUMB32;
     }
     return ins_info;
@@ -101,13 +99,9 @@ void excute_armcm3_cpu(cpu_t* cpu, ins_t ins_info){
     armv7m_next_PC(cpu, ins_info.length);
     if(ins_info.length == 16){
         ((thumb_translate16_t)ins_info.excute)((uint16_t)ins_info.opcode, cpu);
-        if(armv7m_PC_modified(cpu)){
-            cpu->run_info.next_ins = 0;
-        }
     }else{
         // 32bit insturction
         ((thumb_translate32_t)ins_info.excute)((uint32_t)ins_info.opcode, cpu);
-        return;
     }
 
     if(!check_and_reset_excuting_IT(state) && InITBlock(regs)){
