@@ -19,6 +19,7 @@ fifo_t* create_fifo(size_t fifo_length, size_t data_size);
 void destory_fifo(fifo_t** fifo);
 int fifo_in(fifo_t* fifo, void *in_data);
 int fifo_out(fifo_t* fifo, void *out_data);
+int peek_fifo(fifo_t* fifo, void *out_data);
 
 #ifdef __cplusplus
 }

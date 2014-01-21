@@ -19,6 +19,27 @@ int ICRT(uint8_t* data, int rw_flag, cm_scs_t *scs)
     return 0;
 }
 
+/* Application Interrupt and Reset Control Register */
+int AIRCR(uint8_t *data, int rw_flag, cm_scs_t *scs)
+{
+    if(rw_flag == MEM_READ){
+        int endian = scs->config.endianess;
+        int prigroup = scs->config.prigroup;
+        *(uint32_t *)data = (0xFA05 << 16) | (endian << 15) | (prigroup << 8);
+        return 0;
+    }else{
+        uint32_t val = *(uint32_t *)data;
+        uint32_t vectorkey = LOW_BIT32(val >> 16, 16);
+        if(vectorkey == 0x05FA){
+            scs->config.endianess = LOW_BIT32(val >> 15, 1);
+            scs->config.prigroup  = LOW_BIT32(val >> 8,  3);
+            return 0;
+        }else{
+            return -1;
+        }
+    }
+}
+
 /* Auxiliary Control Register */
 
 /* Software Triggered Interrupt Register */
@@ -28,6 +49,7 @@ int STIR(uint8_t *data, int rw_flag, cm_scs_t *scs)
     scs->NVIC->throw_exception(excep_num & 0x1FF, scs->NVIC);
     return 0;
 }
+
 
 cm_scs_t* create_cm_scs()
 {
@@ -96,6 +118,7 @@ int cm_scs_read(uint32_t offset, uint8_t *buffer, int size, memory_region_t *reg
     case 0xD08:
         // VTOR
     case 0xD0C:
+        return AIRCR(buffer, MEM_READ, scs);
         // AIRCR
     case 0xD10:
         // SCR
@@ -255,6 +278,10 @@ int cm_scs_init(cpu_t *cpu) //,soc_conf_t* config)
     region->read = cm_scs_read;
     region->write = cm_scs_write;
     region->type = MEMORY_REGION_SYS;
+
+    /* some configs */
+    scs->config.endianess = LITTLE_ENDIAN;
+    scs->config.prigroup  = 1;
 
     return SUCCESS;
 

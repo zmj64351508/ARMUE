@@ -362,7 +362,7 @@ bool_t FindPriv(arm_reg_t* regs, thumb_state* state)
 {
     bool_t ispriv;
     if(state->mode == MODE_HANDLER ||
-        (state->mode == MODE_THREAD && GET_CONTROL_PRIV(regs) == 0)){
+        (state->mode == MODE_THREAD && GET_CONTROL_nPRIV(regs) == 0)){
         ispriv = TRUE;
     }else{
         ispriv = FALSE;
@@ -4126,4 +4126,113 @@ void _bl(int32_t imm32, uint8_t cond, cpu_t *cpu)
 
     uint32_t PC_val = GET_REG_VAL(regs, PC_INDEX);
     BranchWritePC(PC_val+imm32, regs);
+}
+
+
+
+/* <<ARMv7-M Architecture Reference Manual 619>> */
+bool_t CurrentModeIsPrivileged(cpu_t *cpu)
+{
+    arm_reg_t *regs = ARMv7m_GET_REGS(cpu);
+    thumb_state* state = ARMv7m_GET_STATE(cpu);
+    int CurrentMode = state->mode;
+    int nPRIV = GET_CONTROL_nPRIV(regs);
+    return (CurrentMode == MODE_HANDLER || nPRIV == 0);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-805>>
+**************************************/
+void _msr(uint32_t SYSm, uint32_t mask, uint32_t Rn, cpu_t *cpu)
+{
+    arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
+    thumb_state *state = ARMv7m_GET_STATE(cpu);
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+
+    switch(LOW_BIT32(SYSm >> 3, 4)){
+    /* xPSR access */
+    case 0:
+        if(LOW_BIT32(SYSm >> 2, 1) == 0){
+            /* GE[3:0] bits */
+            if(LOW_BIT32(mask, 1) == 1){
+                // if !HaveDSPExt()
+                //      unpredictable
+                // else
+                //  APSR<19:16> = Rn<19:16>
+                return;
+            }
+            /* N, Z, C, V, Q bits */
+            if(LOW_BIT32(mask >> 1, 1) == 1){
+                uint32_t setval = HIGH_BIT32(Rn_val, 5);
+                SET_APSR(regs, setval);
+            }
+        }
+        break;
+    /* SP access */
+    case 0x1:
+        if(CurrentModeIsPrivileged(cpu)){
+            switch(LOW_BIT32(SYSm, 2)){
+            case 0:
+                SET_REG_VAL_BANKED(regs, SP_INDEX, BANK_INDEX_MSP, Rn_val);
+                break;
+            case 1:
+                SET_REG_VAL_BANKED(regs, SP_INDEX, BANK_INDEX_PSP, Rn_val);
+                break;
+            default:
+                break;
+            }
+        }
+        break;
+    /* priority mask or CONTROL access */
+    case 0x2:
+        switch(LOW_BIT32(SYSm, 2)){
+        case 0:
+            if(CurrentModeIsPrivileged(cpu)){
+                uint32_t primask = GET_PRIMASK(regs);
+                primask &= ~1ul;
+                primask |= LOW_BIT32(Rn_val, 1);
+                SET_PRIMASK(regs, primask);
+            }
+            break;
+        case 0x1:
+            if(CurrentModeIsPrivileged(cpu)){
+                uint32_t basepri = GET_BASEPRI(regs);
+                basepri &= ~0xFFul;
+                basepri |= LOW_BIT32(Rn_val, 8);
+                SET_BASEPRI(regs, basepri);
+            }
+        case 0x2:
+            if(CurrentModeIsPrivileged(cpu)){
+                uint32_t basepri = GET_BASEPRI(regs);
+                if( LOW_BIT32(Rn_val, 8) != 0){ // This is confusing in the reference manual
+                    basepri &= ~0xFFul;
+                    basepri |= LOW_BIT32(Rn_val, 8);
+                    SET_BASEPRI(regs, basepri);
+                }
+            }
+            break;
+        case 0x3:
+            if(CurrentModeIsPrivileged(cpu) && ExecutionPriority(cpu) > -1){
+                uint32_t faultmask = GET_FAULTMASK(regs);
+                faultmask &= ~0x1ul;
+                faultmask |= LOW_BIT32(Rn_val, 1);
+                SET_FAULTMASK(regs, faultmask);
+            }
+            break;
+        case 0x4:
+            if(CurrentModeIsPrivileged(cpu)){
+                SET_CONTROL_nPRIV(regs, LOW_BIT32(Rn_val, 1));
+                if(state->mode == MODE_THREAD){
+                    SET_CONTROL_SPSEL(regs, LOW_BIT32(Rn_val >> 1, 1));
+                }
+                // if HaveFPExt() then CONTROL.FPCA = R[n]<2>
+            }
+        default:
+            break;
+        }
+        break;
+    }
 }

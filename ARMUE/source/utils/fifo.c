@@ -5,7 +5,7 @@
 
 fifo_t* create_fifo(size_t fifo_length, size_t data_size)
 {
-    fifo_t* fifo = (fifo_t*)malloc(sizeof(fifo));
+    fifo_t* fifo = (fifo_t*)malloc(sizeof(fifo_t));
     if(fifo == NULL){
         goto fifo_null;
     }
@@ -37,11 +37,11 @@ void destory_fifo(fifo_t** fifo)
 
 int fifo_in(fifo_t* fifo, void *in_data)
 {
-    if(fifo->in_index == fifo->out_index && !fifo->empty){
+    if(in_data == NULL || (fifo->in_index == fifo->out_index && !fifo->empty)){
         return -1;
     }
     uint8_t *data = (uint8_t*)fifo->data;
-    int index = fifo->in_index * fifo->data_size; 
+    int index = fifo->in_index * fifo->data_size;
     uint8_t *addr = data + index;
     memcpy(addr, in_data, fifo->data_size);
     fifo->in_index = (fifo->in_index + 1)%fifo->length;
@@ -58,10 +58,26 @@ int fifo_out(fifo_t* fifo, void *out_data)
     uint8_t *data = (uint8_t*)fifo->data;
     int index = fifo->out_index * fifo->data_size;
     uint8_t *addr = data + index;
-    memcpy(out_data, addr, fifo->data_size);
+    if(out_data != NULL){
+        memcpy(out_data, addr, fifo->data_size);
+    }
     fifo->out_index = (fifo->out_index +1) % fifo->length;
     if(fifo->in_index == fifo->out_index){
         fifo->empty = 0;
+    }
+    return 0;
+}
+
+int peek_fifo(fifo_t* fifo, void *out_data)
+{
+    if(fifo->empty){
+        return -1;
+    }
+    uint8_t *data = (uint8_t*)fifo->data;
+    int index = fifo->out_index * fifo->data_size;
+    uint8_t *addr = data + index;
+    if(out_data != NULL){
+        memcpy(out_data, addr, fifo->data_size);
     }
     return 0;
 }

@@ -65,7 +65,7 @@ typedef struct {
     thumb_decode_t        decode32_101_table[1];
 }thumb_instruct_table_t;
 
-void armv7m_print_reg_val(arm_reg_t* regs);
+void armv7m_print_state(cpu_t* cpu);
 
 bool_t is_16bit_code(uint16_t opcode);
 uint32_t align_address(uint32_t address);

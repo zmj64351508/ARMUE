@@ -18,6 +18,7 @@ int startup_soc(soc_t* soc)
 
     return retval;
 }
+
 #include "arm_v7m_ins_decode.h"
 uint32_t run_soc(soc_t* soc)
 {
@@ -33,7 +34,7 @@ uint32_t run_soc(soc_t* soc)
         cpu->exceptions->handle_exception(vector_num, cpu);
     }
     add_cycle(cpu);
-    LOG_REG((arm_reg_t*)cpu->regs);
+    LOG_REG(cpu);
     getchar();
     return opcode;
 }

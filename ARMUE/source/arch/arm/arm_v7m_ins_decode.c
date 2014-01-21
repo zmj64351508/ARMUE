@@ -1,5 +1,6 @@
 #include "_types.h"
 #include "arm_v7m_ins_decode.h"
+#include "cm_NVIC.h"
 #include "cpu.h"
 #include <stdlib.h>
 #include <assert.h>
@@ -32,8 +33,10 @@ error_code_t set_base_table_value(thumb_decode_t* table, int start, int end, thu
 }
 #define set_sub_table_value set_base_table_value
 
-void armv7m_print_reg_val(arm_reg_t* regs)
+void armv7m_print_state(cpu_t *cpu)
 {
+    arm_reg_t *regs = ARMv7m_GET_REGS(cpu);
+    thumb_state *state = ARMv7m_GET_STATE(cpu);
     int i;
     for(i = 0; i < 13; i++){
         printf("R%-3d=0x%08x\n", i, regs->R[i]);
@@ -42,7 +45,15 @@ void armv7m_print_reg_val(arm_reg_t* regs)
     printf("MSP =0x%08x\n", regs->MSP);
     printf("LR  =0x%08x\n", regs->LR);
     printf("PC  =0x%08x\n", regs->PC);
-    printf("xPSR=0x%08x\n\n", regs->xPSR);
+    printf("xPSR=0x%08x\n", regs->xPSR);
+    printf("System: BASEPRI = 0x%x; PRIMASK = 0x%x; FAULTMASK = 0x%x; Control = 0x%x\n",
+           GET_BASEPRI(regs),
+           GET_PRIMASK(regs),
+           GET_FAULTMASK(regs),
+           GET_CONTROL(regs));
+    printf("Mode: %s  Stack: %s\n",
+           state->mode == MODE_THREAD ? "Thread" : "Handler",
+           regs->sp_in_use == BANK_INDEX_MSP ? "MSP" : "PSP");
 }
 
 /****** Here are some 16 bit sub-parsing functions *******/
@@ -3159,12 +3170,25 @@ void _con_b_32(uint32_t ins_code, cpu_t *cpu)
     LOG_INSTRUCTION("_con_b_32, #0x%x\n", GET_REG_VAL(cpu->regs, PC_INDEX) + (int32_t)imm32);
 }
 
+void _msr_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = LOW_BIT32(ins_code >> 16, 4);
+    uint32_t SYSm = LOW_BIT32(ins_code, 8);
+    uint32_t mask = LOW_BIT32(ins_code >> 10, 2);
+
+    bool_t unpredict1 = mask == 0 || (mask != 0x2 && !IN_RANGE(SYSm, 0, 3));
+    bool_t unpredict2 = IN_RANGE(Rn, 13, 15) || !(IN_RANGE(SYSm, 0, 3) || IN_RANGE(SYSm, 5, 9) || IN_RANGE(SYSm, 16, 20));
+    CHECK_UNPREDICTABLE(unpredict1 || unpredict2, _msr_32);
+    _msr(SYSm, mask, Rn, cpu);
+    LOG_INSTRUCTION("_msr_32, R%d, R%d\n", SYSm, Rn);
+}
+
 thumb_translate32_t branch_misc_ctrl_op1_0x0(uint32_t ins_code, uint32_t op, cpu_t *cpu)
 {
     switch(op){
     case 0x38:
     case 0x39:
-        // MSR
+        return (thumb_translate32_t)_msr_32;
         break;
     case 0x3A:
         // Hint
@@ -3529,7 +3553,22 @@ error_code_t destory_arm_regs(arm_reg_t** regs)
 
 thumb_state* create_thumb_state()
 {
-    return (thumb_state*)malloc(sizeof(thumb_state))    ;
+    fifo_t *cur_exception = create_fifo(NVIC_MAX_EXCEPTION, sizeof(int));
+    if(cur_exception == NULL){
+        goto cur_exception_error;
+    }
+
+    thumb_state *state = (thumb_state*)malloc(sizeof(thumb_state));
+    if(state == NULL){
+        goto state_error;
+    }
+    state->cur_exception = cur_exception;
+    return state;
+
+state_error:
+    destory_fifo(&cur_exception);
+cur_exception_error:
+    return NULL;
 }
 
 int destory_thumb_state(thumb_state** state)

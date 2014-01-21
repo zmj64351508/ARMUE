@@ -10,7 +10,17 @@ extern "C"{
 #define CM_SCS_BASE 0xE000E000
 #define CM_SCS_SIZE 4096
 
+
+#define LITTLE_ENDIAN   0
+#define BIG_ENDIAN      1
+
+typedef struct cm_config_t{
+    int endianess;
+    int prigroup;
+}cm_config_t;
+
 typedef struct cm_scs_t{
+    cm_config_t config;
     void* user_defined_data;
     vector_exception_t *NVIC;
     //cm_systick_t *systick;

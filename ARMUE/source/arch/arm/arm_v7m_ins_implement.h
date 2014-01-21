@@ -6,6 +6,7 @@
 #include "memory_map.h"
 #include "list.h"
 #include <stdint.h>
+#include <assert.h>
 
 typedef enum{
     SRType_LSL,
@@ -65,7 +66,8 @@ typedef struct{
 typedef struct thumb_state{
     int excuting_IT;    // the flag of whether in IT block or not
     int mode;           // current working mode
-    int cur_exception;  // current exception
+    //int cur_exception;  // current exception
+    fifo_t *cur_exception;
 }thumb_state;
 
 /* exclusive state */
@@ -106,13 +108,16 @@ typedef struct thumb_global_state{
 #define BIT_0    (0x1UL)
 
 #define SET_PSR(regs, val) ((regs)->xPSR = (val))
-#define SET_IPSR(regs, val) ((regs)->xPSR = ((regs)->xPSR & ~0x1FFul) | (val))
+#define SET_APSR(regs, val) ((regs)->xPSR = ((regs)->xPSR & ~0xF8000000ul) | (val))
+#define SET_IPSR(regs, val) ((regs)->xPSR = ((regs)->xPSR & ~0x000001FFul) | (val))
 #define SET_APSR_N(regs, result_reg) set_bit(&(regs)->xPSR, PSR_N, (result_reg) & BIT_31)
 #define SET_APSR_Z(regs, result_reg) set_bit(&(regs)->xPSR, PSR_Z, (result_reg) == 0 ? 1 : 0)
 #define SET_APSR_C(regs, carry) set_bit(&(regs)->xPSR, PSR_C, (carry))
 #define SET_APSR_V(regs, overflow) set_bit(&(regs)->xPSR, PSR_V, (overflow))
 #define SET_APSR_Q(regs, Q) set_bit(&(regs)->xPSR, PSR_Q, (Q))
-//#define SET_APSR_GE(regs, GE) set_bits(&(regs)->xPSR, PSR_GE_MASK, PSR_GE_OFFSET, (GE))
+#define SET_PRIMASK(regs, val) ((regs)->PRIMASK = (val));
+#define SET_BASEPRI(regs, val) ((regs)->BASEPRI = (val));
+#define SET_FAULTMASK(regs, val) ((regs)->FAULTMASK= (val));
 #define SET_APSR_GE16(regs, sum_low, sum_high) do{ \
     uint8_t __ge_1_0 = sum_low >= 0 ? 0x3 : 0; \
     uint8_t __ge_3_2 = sum_high >= 0 ? 0x3 : 0; \
@@ -127,15 +132,22 @@ typedef struct thumb_global_state{
 }while(0)
 #define SET_EPSR_T(regs, bit) set_bit(&(regs)->xPSR, PSR_T, (bit))
 #define SET_CONTROL_SPSEL(regs, bit) set_bit(&(regs)->CONTROL, CONTROL_SPSEL, (bit))
+#define SET_CONTROL_nPRIV(regs, bit) set_bit(&(regs)->CONTROL, CONTROL_nPRIV, (bit))
 
 #define GET_PSR(regs) ((regs)->xPSR)
-#define GET_IPSR(regs) ((regs)->xPSR & 0x1FFul)
+#define GET_APSR(regs) ((regs)->xPSR & 0xF8000000ul)
+#define GET_IPSR(regs) ((regs)->xPSR & 0x000001FFul)
 #define GET_APSR_N(regs) get_bit(&(regs)->xPSR, PSR_N)
 #define GET_APSR_Z(regs) get_bit(&(regs)->xPSR, PSR_Z)
 #define GET_APSR_C(regs) get_bit(&(regs)->xPSR, PSR_C)
 #define GET_APSR_V(regs) get_bit(&(regs)->xPSR, PSR_V)
-#define GET_CONTROL_PRIV(regs) get_bit(&(regs)->CONTROL, CONTROL_nPRIV)
+
+#define GET_CONTROL_nPRIV(regs) get_bit(&(regs)->CONTROL, CONTROL_nPRIV)
 #define GET_CONTROL_SPSEL(regs) get_bit(&(regs)->CONTROL, CONTROL_SPSEL)
+#define GET_CONTROL(regs) ((regs)->CONTROL)
+#define GET_PRIMASK(regs) ((regs)->PRIMASK)
+#define GET_BASEPRI(regs) ((regs)->BASEPRI)
+#define GET_FAULTMASK(regs) ((regs)->FAULTMASK)
 
 #define GET_REG_VAL_UNCON(regs, Rx) (*(&(regs)->R[0]+(Rx)))
 #define SET_REG_VAL_UNCON(regs, Rx, val) (*(&(regs)->R[0]+(Rx)) = (val))
@@ -216,6 +228,16 @@ static inline void SET_REG_VAL(arm_reg_t* regs, uint32_t Rx, uint32_t val){
         break;
     }
     SET_REG_VAL_UNCON(regs, Rx, modified);
+}
+
+static inline void SET_REG_VAL_BANKED(arm_reg_t *regs, uint32_t Rx, int banked_index, uint32_t val)
+{
+    if(Rx == SP_INDEX){
+        regs->SP_bank[banked_index] = DOWN_ALIGN(val, 2);
+        if(regs->sp_in_use == banked_index){
+            SET_REG_VAL(regs, SP_INDEX, val);
+        }
+    }
 }
 
 static inline uint8_t get_bit(uint32_t* reg, uint32_t bit_pos)
@@ -392,4 +414,5 @@ void _ldrexh(uint32_t Rn, uint32_t Rt, cpu_t* cpu);
 void _pkhbt_pkhtb(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t shift_t, uint32_t shift_n, bool_t tbform, arm_reg_t *regs);
 void _b(int32_t imm32, uint8_t cond, cpu_t* cpu);
 void _bl(int32_t imm32, uint8_t cond, cpu_t *cpu);
+void _msr(uint32_t SYSm, uint32_t mask, uint32_t Rn, cpu_t *cpu);
 #endif

@@ -1,6 +1,7 @@
 #include "cpu.h"
 #include "arm_v7m_ins_decode.h"
 #include "cm_NVIC.h"
+#include "cm_system_control_space.h"
 #include <stdlib.h>
 
 enum cm_NVIC_prio{
@@ -122,7 +123,11 @@ void ExceptionTaken(int excep_num, cpu_t *cpu)
     thumb_state *state = ARMv7m_GET_STATE(cpu);
     cm_NVIC_t *NVIC_info = (cm_NVIC_t *)cpu->cm_NVIC->controller_info;
 
-    state->cur_exception = excep_num;
+    int ret = fifo_in(state->cur_exception, &excep_num);
+    if(ret < 0){
+        LOG(LOG_WARN, "ExceptionTaken: can't add exception #%d\n", excep_num);
+        return;
+    }
 
     uint32_t addr = get_vector_value(cpu->cm_NVIC, excep_num);
     SET_REG_VAL(regs, PC_INDEX, addr & 0xFFFFFFFE);
@@ -217,7 +222,13 @@ void ExceptionReturn(uint32_t exc_return, cpu_t *cpu)
         if((exc_return & 0x00FFFFF0) != 0x00FFFFF0) unpredictable
     }
     */
-    int ret_excep_num = state->cur_exception;
+    int ret_excep_num;
+    int ret = fifo_out(state->cur_exception, &ret_excep_num);
+    if(ret < 0){
+        LOG(LOG_WARN, "ExceptionReturn: unknow exception returned\n");
+        return;
+    }
+
     uint8_t nested_activation = NVIC_info->nested_exception;
     if(NVIC_info->exception_active[ret_excep_num] == 0){
         DeActivate(ret_excep_num, cpu);
@@ -285,6 +296,52 @@ usage_fault:
     SET_REG_VAL(regs, LR_INDEX, 0xF0000000 + exc_return);
     cpu->cm_NVIC->throw_exception(CM_NVIC_VEC_USAGEFAULT, cpu->cm_NVIC);
     return;
+}
+
+int ExecutionPriority(cpu_t *cpu)
+{
+    arm_reg_t *regs = ARMv7m_GET_REGS(cpu);
+    thumb_state *state = ARMv7m_GET_STATE(cpu);
+    cm_scs_t *scs = (cm_scs_t *)cpu->system_info;
+
+    int cur_excep;
+    int highest_pri = 256;
+    int boosted_pri = 256;
+    int ret = peek_fifo(state->cur_exception, &cur_excep);
+    if(ret < 0){
+        return highest_pri;
+    }
+
+    vector_exception_t *vector_excep = cpu->cm_NVIC;
+    highest_pri = vector_excep->prio_table[cur_excep];
+
+    int group_val = 0x2ul << scs->config.prigroup;
+    int sub_group_val = highest_pri % group_val;
+    highest_pri -= sub_group_val;
+
+    uint32_t basepri = GET_BASEPRI(regs);
+    if(LOW_BIT32(basepri, 8) != 0){
+        boosted_pri = LOW_BIT32(basepri, 8);
+        sub_group_val = boosted_pri % group_val;
+        boosted_pri -= sub_group_val;
+    }
+
+    if(LOW_BIT32(GET_PRIMASK(regs), 1) == 1){
+        boosted_pri = 0;
+    }
+
+    if(LOW_BIT32(GET_FAULTMASK(regs), 1) == 1){
+        boosted_pri = -1;
+    }
+
+    int priority;
+    if(boosted_pri < highest_pri){
+        priority = boosted_pri;
+    }else{
+        priority = highest_pri;
+    }
+
+    return priority;
 }
 /* ARMv7-M defined operation end */
 
@@ -444,11 +501,13 @@ int cm_NVIC_check_exception(cpu_t* cpu)
     /* mod_prio is defined as: exception number | (priority << 9)*/
     int prio = mod_prio >> 9;
     thumb_state* state = ARMv7m_GET_STATE(cpu);
+    int cur_exception;
+    peek_fifo(state->cur_exception, &cur_exception);
 
     /* If in handler, check preempt priority for the preemption */
     if(state->mode == MODE_HANDLER){
         int preempt_prio = cm_NVIC_get_preempt_proi(prio, NVIC_info);
-        int handling_preempt_prio = cm_NVIC_get_preempt_proi(cpu->cm_NVIC->prio_table[state->cur_exception], NVIC_info);
+        int handling_preempt_prio = cm_NVIC_get_preempt_proi(cpu->cm_NVIC->prio_table[cur_exception], NVIC_info);
         if(preempt_prio < handling_preempt_prio){
             bheap_delete_top(NVIC_info->pending_list, &mod_prio, bheap_compare_int_smaller);
             retval = mod_prio & 0x1FFul;

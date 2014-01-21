@@ -24,6 +24,7 @@ typedef struct cm_NVIC_t
 }cm_NVIC_t;
 
 void ExceptionReturn(uint32_t exc_return, cpu_t *cpu);
+int ExecutionPriority(cpu_t *cpu);
 
 vector_exception_t* cm_NVIC_init(cpu_t* cpu);
 int cm_NVIC_startup(cpu_t *cpu);
