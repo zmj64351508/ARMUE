@@ -113,7 +113,7 @@ void PushStack(int excep_num, cpu_t *cpu)
     if(state->mode == MODE_HANDLER){
         SET_REG_VAL(regs, LR_INDEX, 0xFFFFFFF1);
     }else{
-        SET_REG_VAL(regs, LR_INDEX, 0xFFFFFFF9 | (GET_CONTROL_SPSEL(regs) << 3));
+        SET_REG_VAL(regs, LR_INDEX, 0xFFFFFFF9 | (GET_CONTROL_SPSEL(regs) << 2));
     }
 }
 

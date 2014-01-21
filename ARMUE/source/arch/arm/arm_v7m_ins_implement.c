@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
+/* sync to the banked field */
 void sync_banked_register(arm_reg_t *regs, int reg_index)
 {
     switch(reg_index){
@@ -17,6 +18,7 @@ void sync_banked_register(arm_reg_t *regs, int reg_index)
     }
 }
 
+/* restore from banked field */
 void restore_banked_register(arm_reg_t *regs, int reg_index)
 {
     switch(reg_index){
@@ -321,7 +323,7 @@ void BXWritePC(uint32_t address, cpu_t* cpu)
     int CurrentMode = state->mode;
     if(CurrentMode == MODE_HANDLER &&
         ((address >> 28) & 0xFul) == 0xFul){
-        ExceptionReturn(address & 0x00FFFFFF, cpu);
+        ExceptionReturn(LOW_BIT32(address, 28), cpu);
     }else{
         Tflag = address & 0x1ul;
         SET_EPSR_T(regs, Tflag);
@@ -4174,7 +4176,7 @@ void _msr(uint32_t SYSm, uint32_t mask, uint32_t Rn, cpu_t *cpu)
     /* SP access */
     case 0x1:
         if(CurrentModeIsPrivileged(cpu)){
-            switch(LOW_BIT32(SYSm, 2)){
+            switch(LOW_BIT32(SYSm, 3)){
             case 0:
                 SET_REG_VAL_BANKED(regs, SP_INDEX, BANK_INDEX_MSP, Rn_val);
                 break;
@@ -4188,7 +4190,7 @@ void _msr(uint32_t SYSm, uint32_t mask, uint32_t Rn, cpu_t *cpu)
         break;
     /* priority mask or CONTROL access */
     case 0x2:
-        switch(LOW_BIT32(SYSm, 2)){
+        switch(LOW_BIT32(SYSm, 3)){
         case 0:
             if(CurrentModeIsPrivileged(cpu)){
                 uint32_t primask = GET_PRIMASK(regs);

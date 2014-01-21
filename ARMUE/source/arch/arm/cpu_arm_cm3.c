@@ -29,8 +29,8 @@ int armcm3_startup(cpu_t* cpu)
     // set register initial value
     // TODO: Following statements need to be pack in another function which should be in armv7m module
     // reset behaviour refering to B1-642
-    regs->MSP = get_vector_value(cpu->cm_NVIC, 0);
     regs->sp_in_use = BANK_INDEX_MSP;
+    SET_REG_VAL_BANKED(regs, SP_INDEX, BANK_INDEX_MSP, get_vector_value(cpu->cm_NVIC, 0));
     regs->PC = align_address(get_vector_value(cpu->cm_NVIC, 1));
     regs->xPSR = 0x0;
     SET_EPSR_T(regs, get_vector_value(cpu->cm_NVIC, 1) & BIT_0);

@@ -42,7 +42,7 @@ void armv7m_print_state(cpu_t *cpu)
         printf("R%-3d=0x%08x\n", i, regs->R[i]);
     }
 
-    printf("MSP =0x%08x\n", regs->MSP);
+    printf("SP  =0x%08x\n", regs->MSP);
     printf("LR  =0x%08x\n", regs->LR);
     printf("PC  =0x%08x\n", regs->PC);
     printf("xPSR=0x%08x\n", regs->xPSR);

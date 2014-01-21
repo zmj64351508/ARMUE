@@ -63,7 +63,7 @@ int fifo_out(fifo_t* fifo, void *out_data)
     }
     fifo->out_index = (fifo->out_index +1) % fifo->length;
     if(fifo->in_index == fifo->out_index){
-        fifo->empty = 0;
+        fifo->empty = 1;
     }
     return 0;
 }

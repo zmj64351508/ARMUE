@@ -40,6 +40,7 @@ typedef struct{
         struct {
             uint32_t R0, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12;
             union{
+                uint32_t SP;
                 uint32_t MSP;
                 uint32_t PSP;
             };
@@ -81,6 +82,27 @@ typedef struct thumb_global_state{
     list_t *local_exclusive;    // stores arm_exclusive_t
     list_t *global_exclusive;   // stores arm_exclusive_t
 }thumb_global_state;
+
+static inline uint8_t get_bit(uint32_t* reg, uint32_t bit_pos)
+{
+    return (*reg & bit_pos) == 0 ? 0: 1;
+}
+
+// if bit_val != 0 then set bit to 1. bit_pos is defined above
+static inline void set_bit(uint32_t* reg, uint32_t bit_pos,int bit_val)
+{
+    if(bit_val == 0){
+        *reg &= ~bit_pos;
+    }else{
+        *reg |= bit_pos;
+    }
+}
+
+static inline void set_bits(uint32_t* reg, uint32_t mask, uint32_t offset, uint32_t bits_value)
+{
+    *reg &= ~(mask << offset);
+    *reg |= bits_value << offset;
+}
 
 #define HIGH_BIT32(value, bit_num) (assert(bit_num < 32 && bit_num > 0), ((value) & (0xFFFFFFFF << (32-(bit_num)))))
 #define LOW_BIT32(value, bit_num) (assert(bit_num < 32 && bit_num > 0), ((value) & (0xFFFFFFFF >> (32-(bit_num)))))
@@ -131,7 +153,15 @@ typedef struct thumb_global_state{
     set_bits(&(regs)->xPSR, PSR_GE_MASK, PSR_GE_OFFSET, __ge_3 << 3 | __ge_2 << 2 | __ge_1 << 1 | __ge_0);\
 }while(0)
 #define SET_EPSR_T(regs, bit) set_bit(&(regs)->xPSR, PSR_T, (bit))
-#define SET_CONTROL_SPSEL(regs, bit) set_bit(&(regs)->CONTROL, CONTROL_SPSEL, (bit))
+
+static inline void SET_CONTROL_SPSEL(arm_reg_t *regs, int bit)
+{
+    set_bit(&regs->CONTROL, CONTROL_SPSEL, bit);
+    /* Exchange banked SP */
+    regs->SP_bank[regs->sp_in_use] = regs->SP;
+    regs->sp_in_use = bit;
+    regs->SP = regs->SP_bank[bit];
+}
 #define SET_CONTROL_nPRIV(regs, bit) set_bit(&(regs)->CONTROL, CONTROL_nPRIV, (bit))
 
 #define GET_PSR(regs) ((regs)->xPSR)
@@ -240,26 +270,7 @@ static inline void SET_REG_VAL_BANKED(arm_reg_t *regs, uint32_t Rx, int banked_i
     }
 }
 
-static inline uint8_t get_bit(uint32_t* reg, uint32_t bit_pos)
-{
-    return (*reg & bit_pos) == 0 ? 0: 1;
-}
 
-// if bit_val != 0 then set bit to 1. bit_pos is defined above
-static inline void set_bit(uint32_t* reg, uint32_t bit_pos,int bit_val)
-{
-    if(bit_val == 0){
-        *reg &= ~bit_pos;
-    }else{
-        *reg |= bit_pos;
-    }
-}
-
-static inline void set_bits(uint32_t* reg, uint32_t mask, uint32_t offset, uint32_t bits_value)
-{
-    *reg &= ~(mask << offset);
-    *reg |= bits_value << offset;
-}
 
 static inline uint32_t BitCount32(uint32_t bits)
 {
