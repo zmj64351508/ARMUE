@@ -982,6 +982,7 @@ void _nop_16(uint16_t ins_code, cpu_t* cpu)
 {
     // nop: do nothing
 }
+#define _nop_32 _nop_16
 
 /* This is a sub-function with type of THUMB_DECODER */
 thumb_translate16_t _it_hint_16(uint16_t ins_code, cpu_t* cpu)
@@ -3183,6 +3184,54 @@ void _msr_32(uint32_t ins_code, cpu_t *cpu)
     LOG_INSTRUCTION("_msr_32, R%d, R%d\n", SYSm, Rn);
 }
 
+void _mrs_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rd = LOW_BIT32(ins_code >> 8, 4);
+    uint32_t SYSm = LOW_BIT32(ins_code, 8);
+
+    bool_t unpredict = IN_RANGE(Rd, 13, 15) || !(IN_RANGE(SYSm, 0, 3) || IN_RANGE(SYSm, 5, 9) || IN_RANGE(SYSm, 16, 20));
+    CHECK_UNPREDICTABLE(unpredict, _mrs_32);
+    _mrs(SYSm, Rd, cpu);
+    LOG_INSTRUCTION("_msr_32, R%d, R%d\n", Rd, SYSm);
+}
+
+thumb_translate32_t hint_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op1 = LOW_BIT32(ins_code >> 8, 3);
+    uint32_t op2 = LOW_BIT32(ins_code, 8);
+    if(op1 == 0){
+
+        // not implemented yet
+        return (thumb_translate32_t)_nop_32;
+        // treated as nop defaultly
+
+//        switch(op2){
+//        case 0:
+//            return _nop_32;
+//        case 0x1:
+//            return _nop_32;//_yield_32;
+//        }
+    }else{
+        return (thumb_translate32_t)_undefined_32;
+    }
+}
+
+void _clrex_32(uint32_t ins_code, cpu_t *cpu)
+{
+    _clrex(cpu);
+    LOG_INSTRUCTION("_clrex_32\n");
+}
+
+thumb_translate32_t misc_control_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op = LOW_BIT32(ins_code >> 4, 4);
+    switch(op){
+    case 0x2:
+        return (thumb_translate32_t)_clrex_32;
+
+    }
+}
+
 thumb_translate32_t branch_misc_ctrl_op1_0x0(uint32_t ins_code, uint32_t op, cpu_t *cpu)
 {
     switch(op){
@@ -3191,14 +3240,16 @@ thumb_translate32_t branch_misc_ctrl_op1_0x0(uint32_t ins_code, uint32_t op, cpu
         return (thumb_translate32_t)_msr_32;
         break;
     case 0x3A:
+        return hint_32(ins_code, cpu);
         // Hint
         break;
     case 0x3B:
+        return misc_control_32(ins_code, cpu);
         // misc_ctrl
         break;
     case 0x3E:
     case 0x3F:
-        // MRS
+        return (thumb_translate32_t)_mrs_32;
         break;
     default:
         return (thumb_translate32_t)_con_b_32;
@@ -3583,28 +3634,17 @@ int destory_thumb_state(thumb_state** state)
     return SUCCESS;
 }
 
-thumb_global_state* create_thumb_global_state()
+thumb_global_state* create_thumb_global_state(soc_conf_t *config)
 {
     thumb_global_state *gstate = (thumb_global_state*)calloc(1, sizeof(thumb_global_state));
     if(gstate == NULL){
         goto gstate_null;
     }
-
-    gstate->local_exclusive = list_create_empty();
-    if(gstate->local_exclusive == NULL){
-        goto local_exclusive_null;
-    }
-    gstate->global_exclusive = list_create_empty();
-    if(gstate->global_exclusive == NULL){
-        goto gloabl_exclusive_null;
-    }
-
+    /* set exclusive state */
+    gstate->exclusive_state.low_addr  = config->exclusive_low_address;
+    gstate->exclusive_state.high_addr = config->exclusive_high_address;
     return gstate;
 
-gloabl_exclusive_null:
-    list_delete(gstate->local_exclusive);
-local_exclusive_null:
-    free(gstate);
 gstate_null:
     return NULL;
 }
@@ -3632,7 +3672,7 @@ void desotry_instruction_table(thumb_instruct_table_t **table)
 }
 
 /* create and initialize the instruction as well as the cpu state */
-int ins_thumb_init(_IO cpu_t* cpu)
+int ins_thumb_init(_IO cpu_t* cpu, soc_conf_t *config)
 {
     thumb_state* state = create_thumb_state();
     if(state == NULL){
@@ -3640,7 +3680,7 @@ int ins_thumb_init(_IO cpu_t* cpu)
     }
     set_cpu_spec_info(cpu, state);
 
-    thumb_global_state *global_state = create_thumb_global_state();
+    thumb_global_state *global_state = create_thumb_global_state(config);
     if(global_state == NULL){
         goto global_state_error;
     }

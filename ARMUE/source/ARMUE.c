@@ -49,6 +49,8 @@ int main(int argc, char **argv)
     soc_conf.has_GIC = 0;
     soc_conf.memory_map_num = 1;
     soc_conf.memories[0] = memory_map;
+    soc_conf.exclusive_high_address = 0xFFFFFFFF;
+    soc_conf.exclusive_low_address = 0;
 
     // soc
     uint32_t opcode;

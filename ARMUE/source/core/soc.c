@@ -46,7 +46,10 @@ static soc_t* create_single_cpu_soc(cpu_t* cpu, memory_map_t *memory_space, memo
         return NULL;
     }
 
+    /* cpu id starts from 0 */
+    cpu->cid = 0;
     soc->cpu[0] = cpu;
+    soc->cpu_num = 1;
     soc->cpu[0]->memory_space = memory_space;
     soc->cpu[0]->io_space = io_space;
 
@@ -129,7 +132,7 @@ error_code_t destory_soc(soc_t **soc)
     }
 
     int i;
-    for(i = 0; i < SOC_CPU_MAX; i++){
+    for(i = 0; i < (*soc)->cpu_num; i++){
         module_t* cpu_module = (module_t*)get_cpu_module((*soc)->cpu[i]);
         if(cpu_module != NULL){
             cpu_module->destory_cpu(&(*soc)->cpu[i]);

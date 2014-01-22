@@ -3,6 +3,7 @@
 
 #include "_types.h"
 #include "cpu.h"
+#include "soc.h"
 #include "memory_map.h"
 #include "list.h"
 #include <stdint.h>
@@ -75,12 +76,18 @@ typedef struct thumb_state{
 typedef struct arm_exclusive_t{
     uint32_t low_addr;
     uint32_t high_addr;
-    int cpuid;
+
+    uint32_t local_exclusive[MAX_CPU_NUM];        // store the exclusive address in CPU[id]
+    uint32_t global_exclusive;                    // store the global exclusive address;
+    bool_t   local_exclusive_enable[MAX_CPU_NUM]; // indicate whether CPU[id] is exclusive
+    bool_t   global_exclusive_enable;             // indicate whether the global is exclusive
 }arm_exclusive_t;
 
 typedef struct thumb_global_state{
-    list_t *local_exclusive;    // stores arm_exclusive_t
-    list_t *global_exclusive;   // stores arm_exclusive_t
+    //list_t *local_exclusive;    // stores arm_exclusive_t
+    //list_t *global_exclusive;   // stores arm_exclusive_t
+
+    arm_exclusive_t exclusive_state;
 }thumb_global_state;
 
 static inline uint8_t get_bit(uint32_t* reg, uint32_t bit_pos)
@@ -193,6 +200,12 @@ do{\
 void DecodeImmShift(uint32_t type, uint32_t imm5, _O uint32_t *shift_t, _O uint32_t *shift_n);
 int ThumbExpandImm_C(uint32_t imm12, uint32_t carry_in, uint32_t *imm32, int*carry_out);
 
+/* TODO: the real FP extension */
+static inline bool_t HaveFPExt(cpu_t *cpu)
+{
+    return FALSE;
+}
+
 static inline uint32_t InITBlock(arm_reg_t* regs)
 {
     uint8_t ITstate = GET_ITSTATE(regs);
@@ -270,6 +283,19 @@ static inline void SET_REG_VAL_BANKED(arm_reg_t *regs, uint32_t Rx, int banked_i
     }
 }
 
+static inline uint32_t GET_REG_VAL_BANKED(arm_reg_t *regs, uint32_t Rx, int banked_index)
+{
+    if(Rx == SP_INDEX){
+        if(banked_index == regs->sp_in_use){
+            return GET_REG_VAL(regs, SP_INDEX);
+        }else{
+            return regs->SP_bank[banked_index];
+        }
+    }else{
+        LOG(LOG_WARN, "Unknown banked register access\n");
+        return 0;
+    }
+}
 
 
 static inline uint32_t BitCount32(uint32_t bits)
@@ -426,4 +452,6 @@ void _pkhbt_pkhtb(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t shift_t, uint3
 void _b(int32_t imm32, uint8_t cond, cpu_t* cpu);
 void _bl(int32_t imm32, uint8_t cond, cpu_t *cpu);
 void _msr(uint32_t SYSm, uint32_t mask, uint32_t Rn, cpu_t *cpu);
+void _mrs(uint32_t SYSm, uint32_t Rd, cpu_t *cpu);
+void _clrex(cpu_t *cpu);
 #endif

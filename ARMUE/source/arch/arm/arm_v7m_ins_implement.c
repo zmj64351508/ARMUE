@@ -3715,70 +3715,40 @@ void _ldmdb(uint32_t Rn, uint32_t registers, uint32_t bitcount, bool_t wback, cp
 
 }
 
-arm_exclusive_t *create_arm_exlusive(uint32_t low_addr, uint32_t high_addr, int cpuid)
+int ProcessorID(cpu_t *cpu)
 {
-    arm_exclusive_t *ex = (arm_exclusive_t*)malloc(sizeof(arm_exclusive_t));
-    if(ex == NULL){
-        goto ex_null;
-    }
+    return cpu->cid;
+}
 
-    ex->cpuid = cpuid;
-    ex->low_addr = low_addr;
-    ex->high_addr = high_addr;
-    return ex;
+static void ClearExclusiveLocal(int cpuid, cpu_t *cpu)
+{
+    thumb_global_state* gstate = ARMv7m_GET_GLOBAL_STATE(cpu);
+    arm_exclusive_t *excl_state = &gstate->exclusive_state;
 
-ex_null:
-    return NULL;
+    excl_state->local_exclusive_enable[cpuid] = FALSE;
 }
 
 static int IsExclusiveLocal(uint32_t address, int cpuid, int size, cpu_t *cpu)
 {
     thumb_global_state* gstate = ARMv7m_GET_GLOBAL_STATE(cpu);
+    arm_exclusive_t *excl_state = &gstate->exclusive_state;
 
-    list_t *cur;
-    arm_exclusive_t *record;
-    for_each_list_node(cur, gstate->local_exclusive){
-        record = (arm_exclusive_t*)cur->data.pdata;
-        if(IN_RANGE(address, record->low_addr, record->high_addr) && record->cpuid == cpuid){
-            free(record);
-            list_delete(cur);
-            return TRUE;
-        }
+    if(excl_state->local_exclusive_enable[cpuid] == TRUE &&
+       address == excl_state->local_exclusive[cpuid])
+    {
+        excl_state->local_exclusive[cpuid] = 0;
+        return TRUE;
     }
-
     return FALSE;
 }
 
-static int MarkExclusiveLocal(uint32_t address, int cpuid, int size, cpu_t *cpu)
+static void MarkExclusiveLocal(uint32_t address, int cpuid, int size, cpu_t *cpu)
 {
     thumb_global_state* gstate = ARMv7m_GET_GLOBAL_STATE(cpu);
+    arm_exclusive_t *excl_state = &gstate->exclusive_state;
 
-    /* find if the address is already makred exlusive */
-    list_t *cur;
-    arm_exclusive_t *record;
-    for_each_list_node(cur, gstate->local_exclusive){
-        record = (arm_exclusive_t*)cur->data.pdata;
-        if(IN_RANGE(address, record->low_addr, record->high_addr && record->cpuid == cpuid)){
-            return SUCCESS;
-        }
-    }
-
-    /* add the exclusive mark */
-    arm_exclusive_t *exdata = create_arm_exlusive(address, address, cpuid);
-    if(exdata == NULL){
-        goto exdata_null;
-    }
-    list_t *new_node = list_create_node_ptr(exdata);
-    if(new_node == NULL){
-        goto node_null;
-    }
-    list_append(gstate->local_exclusive, new_node);
-    return SUCCESS;
-
-node_null:
-    free(exdata);
-exdata_null:
-    return -1;
+    excl_state->local_exclusive_enable[cpuid] = TRUE;
+    excl_state->local_exclusive[cpuid] = address;
 }
 
 /* B2-698 */
@@ -3791,24 +3761,22 @@ static int ExclusiveMonitorPass(uint32_t address, int size, cpu_t *cpu)
         // memaddresc = ValidateAddress()
     }
 
-   // TODO: int cpuid = ProcessorID();
-    int cpuid = 0;
+    int cpuid = ProcessorID(cpu);
     int passed = IsExclusiveLocal(address, cpuid, size, cpu);
     // TODO: the rest check;
 
     return passed;
 }
 
-static int SetExclusiveMonitor(uint32_t address, int size, cpu_t *cpu)
+static void SetExclusiveMonitor(uint32_t address, int size, cpu_t *cpu)
 {
     // TODO: MPU
     // memaddrdesc = memaddrdesc = ValidateAddress(address, FindPriv(), FALSE);
     // if memaddrdesc.memattrs.shareable then
     //      MarkExclusiveGlobal(memaddrdesc.physicaladdress, ProcessorID(), size);
 
-    // TODO: int cpuid = ProcessorID();
-    int cpuid = 0;
-    return MarkExclusiveLocal(address, cpuid, size, cpu);
+    int cpuid = ProcessorID(cpu);
+    MarkExclusiveLocal(address, cpuid, size, cpu);
 }
 
 /***********************************
@@ -4238,3 +4206,90 @@ void _msr(uint32_t SYSm, uint32_t mask, uint32_t Rn, cpu_t *cpu)
         break;
     }
 }
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-803>>
+**************************************/
+void _mrs(uint32_t SYSm, uint32_t Rd, cpu_t *cpu)
+{
+    arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t result = 0;
+    switch(LOW_BIT32(SYSm >> 3, 4)){
+    /* xPSR access */
+    case 0:
+        if(LOW_BIT32(SYSm, 1) == 1){
+            uint32_t IPSR = GET_IPSR(regs);
+            result |= LOW_BIT32(IPSR, 9);
+        }
+        if(LOW_BIT32(SYSm >> 1, 1) == 1){
+            // Rd<26:24> = 0
+            // Rd<15:10> = 0
+            // So do nothing
+        }
+        if(LOW_BIT32(SYSm >> 2, 1) == 0){
+            uint32_t APSR = GET_APSR(regs);
+            result |= HIGH_BIT32(APSR, 5);
+        }
+        break;
+    /* SP access */
+    case 0x1:
+        if(CurrentModeIsPrivileged(cpu)){
+            switch(LOW_BIT32(SYSm, 3)){
+            case 0:
+                result = GET_REG_VAL_BANKED(regs, SP_INDEX, BANK_INDEX_MSP);
+                break;
+            case 1:
+                result = GET_REG_VAL_BANKED(regs, SP_INDEX, BANK_INDEX_PSP);
+                break;
+            }
+        }
+        break;
+    /* Priority mask and CONTROL access */
+    case 0x2:
+        switch(LOW_BIT32(SYSm, 3)){
+        case 0:
+            result |= CurrentModeIsPrivileged(cpu) ? LOW_BIT32(GET_PRIMASK(regs), 1) : 0;
+            break;
+        case 0x1:
+        case 0x2:
+            result |= CurrentModeIsPrivileged(cpu) ? LOW_BIT32(GET_BASEPRI(regs), 8) : 0;
+            break;
+        case 0x3:
+            result |= CurrentModeIsPrivileged(cpu) ? LOW_BIT32(GET_FAULTMASK(regs), 1) : 0;
+            break;
+        case 0x4:
+            if(HaveFPExt(cpu)){
+                result |= LOW_BIT32(GET_CONTROL(regs), 3);
+            }else{
+                result |= LOW_BIT32(GET_CONTROL(regs), 2);
+            }
+            break;
+
+        }
+        break;
+    }
+
+    SET_REG_VAL(regs, Rd, result);
+}
+
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-803>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    ClearExclusiveLocal(ProcessorID());
+**************************************/
+void _clrex(cpu_t *cpu)
+{
+    arm_reg_t* regs = ARMv7m_GET_REGS(cpu);
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    ClearExclusiveLocal(ProcessorID(cpu), cpu);
+}
+

@@ -7,12 +7,14 @@ extern "C"{
 #include "cpu.h"
 #include "memory_map.h"
 #include "error_code.h"
+#include "soc.h"
 
-#define SOC_CPU_MAX 2
+#define MAX_CPU_NUM 2
 #define MEMORY_NUM_MAX 2
 
 typedef struct {
-    cpu_t *cpu[SOC_CPU_MAX];
+    int cpu_num;
+    cpu_t *cpu[MAX_CPU_NUM];
     void *global_info;
 }soc_t;
 
@@ -29,6 +31,10 @@ typedef struct soc_conf_t{
 
     int memory_map_num;
     memory_map_t* memories[MEMORY_NUM_MAX];
+
+    /* thumb specific configuration */
+    uint32_t exclusive_high_address;   // exclusive addr
+    uint32_t exclusive_low_address;
 }soc_conf_t;
 
 soc_t* create_soc(soc_conf_t* config);

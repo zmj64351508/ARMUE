@@ -116,7 +116,7 @@ int init_armcm3_cpu(cpu_t *cpu, soc_conf_t* config)
     int retval;
 
     /* init thumb instrction */
-    retval = ins_thumb_init(cpu);
+    retval = ins_thumb_init(cpu, config);
     if(retval < 0){
         goto init_ins_fail;
     }

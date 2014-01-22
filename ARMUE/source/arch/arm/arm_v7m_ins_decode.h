@@ -74,5 +74,5 @@ thumb_translate32_t thumb_parse_opcode32(uint32_t opcode, cpu_t *cpu);
 void armv7m_next_PC(cpu_t* cpu, int ins_length);
 int armv7m_PC_modified(cpu_t* cpu);
 int ins_thumb_destory(cpu_t* cpu);
-int ins_thumb_init(_IO cpu_t* cpu);
+int ins_thumb_init(_IO cpu_t* cpu, soc_conf_t *config);
 #endif
