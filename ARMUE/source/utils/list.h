@@ -35,7 +35,7 @@ list_t*     list_create_empty();
 int         list_insert(list_t *node, list_t *insert);
 int         list_append(list_t *head, list_t *append);
 int         list_ahead(list_t *head, list_t *ahead);
-list_data_t list_delete(list_t *node);
+list_data_t list_delete(list_t **node);
 
 #ifdef __cplusplus
 }

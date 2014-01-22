@@ -83,17 +83,22 @@ int list_ahead(list_t *head, list_t *ahead)
     list_insert(head, ahead);
 }
 
-
-list_data_t list_delete(list_t *node)
+/* Delete the node and pointer the parameter to next list node.
+   Return the data which the deleted node contains */
+list_data_t list_delete(list_t **node_to_delete)
 {
-    if(node == NULL){
+    if(node_to_delete == NULL || *node_to_delete == NULL){
         return (list_data_t)NULL;
     }
+
+    list_t *node = *node_to_delete;
+    list_t *next = node->next;
 
     node->prev->next = node->next;
     node->next->prev = node->prev;
     list_data_t data = node->data;
-    list_destory_node(&node);
+    list_destory_node(node_to_delete);
 
+    *node_to_delete = next;
     return data;
 }
