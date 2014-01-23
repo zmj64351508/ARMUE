@@ -12,6 +12,8 @@ ram_t* create_ram(size_t size)
     if(ram->data == NULL){
         goto data_null;
     }
+
+    memset(ram->data, 0, size);
     return ram;
 
 data_null:
