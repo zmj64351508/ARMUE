@@ -5,6 +5,8 @@
 #define _I    const
 #define _O
 
+#include <stdint.h>
+
 #ifdef FALSE
 #undef FALSE
 #endif
@@ -13,8 +15,7 @@
 #undef TRUE
 #endif
 #define TRUE 1
-typedef int bool_t;
+typedef int8_t bool_t;
 
 
-#include <stdint.h>
 #endif

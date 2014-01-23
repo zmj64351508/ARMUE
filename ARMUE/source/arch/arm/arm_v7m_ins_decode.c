@@ -3198,12 +3198,14 @@ void _mrs_32(uint32_t ins_code, cpu_t *cpu)
 thumb_translate32_t hint_32(uint32_t ins_code, cpu_t *cpu)
 {
     uint32_t op1 = LOW_BIT32(ins_code >> 8, 3);
-    uint32_t op2 = LOW_BIT32(ins_code, 8);
+    //uint32_t op2 = LOW_BIT32(ins_code, 8);
     if(op1 == 0){
 
         // not implemented yet
         return (thumb_translate32_t)_nop_32;
         // treated as nop defaultly
+
+    //TODO: hit instructions
 
 //        switch(op2){
 //        case 0:
@@ -3228,7 +3230,13 @@ thumb_translate32_t misc_control_32(uint32_t ins_code, cpu_t *cpu)
     switch(op){
     case 0x2:
         return (thumb_translate32_t)_clrex_32;
-
+    /* TODO: DSB DMB ISB treated as nop for there is no implementation of the out-of-order excution */
+    case 0x4:
+    case 0x5:
+    case 0x6:
+        return (thumb_translate32_t)_nop_32;
+    default:
+        return (thumb_translate32_t)_undefined_32;
     }
 }
 
@@ -3238,22 +3246,15 @@ thumb_translate32_t branch_misc_ctrl_op1_0x0(uint32_t ins_code, uint32_t op, cpu
     case 0x38:
     case 0x39:
         return (thumb_translate32_t)_msr_32;
-        break;
     case 0x3A:
         return hint_32(ins_code, cpu);
-        // Hint
-        break;
     case 0x3B:
         return misc_control_32(ins_code, cpu);
-        // misc_ctrl
-        break;
     case 0x3E:
     case 0x3F:
         return (thumb_translate32_t)_mrs_32;
-        break;
     default:
         return (thumb_translate32_t)_con_b_32;
-        break;
     }
 }
 
@@ -3276,8 +3277,191 @@ thumb_translate32_t branch_misc_ctrl(uint32_t ins_code, cpu_t *cpu)
     case 0x5:
     case 0x7:
         return (thumb_translate32_t)_bl_32;
+    default:
+        return (thumb_translate32_t)_undefined_32;
     }
 }
+
+#define MEM_ACCESS32_RT(ins_code) LOW_BIT32((ins_code) >> 12, 4)
+#define MEM_ACCESS32_RN(ins_code) LOW_BIT32((ins_code) >> 16, 4)
+#define MEM_ACCESS32_RM(ins_code) LOW_BIT32((ins_code), 4)
+#define MEM_ACCESS32_IMM2(ins_code) LOW_BIT32((ins_code) >> 4, 2)
+#define MEM_ACCESS32_IMM12(ins_code) LOW_BIT32((ins_code), 12)
+#define MEM_ACCESS32_IMM8(ins_code) LOW_BIT32((ins_code), 8)
+#define MEM_ACCESS32_P(ins_code) LOW_BIT32((ins_code) >> 10, 1)
+#define MEM_ACCESS32_U(ins_code) LOW_BIT32((ins_code) >> 9, 1)
+#define MEM_ACCESS32_W(ins_code) LOW_BIT32((ins_code) >> 8, 1)
+
+/* Encoding T2 */
+void _strb_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
+    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
+    uint32_t imm32 = MEM_ACCESS32_IMM12(ins_code);
+    bool_t index = TRUE;
+    bool_t add   = TRUE;
+    bool_t wback = FALSE;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rt, 13, 15), _strb_imm_32);
+    _strb_imm(imm32, Rn, Rt, add, index, wback, cpu);
+    LOG_INSTRUCTION("_strb_imm_32, R%d, [R%d, #%d]\n", Rt, Rn, imm32);
+}
+
+/* Encoding T3 */
+void _strb_imm_32_T3(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
+    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
+    uint32_t imm32 = MEM_ACCESS32_IMM8(ins_code);
+    bool_t index = MEM_ACCESS32_P(ins_code);
+    bool_t add   = MEM_ACCESS32_U(ins_code);
+    bool_t wback = MEM_ACCESS32_W(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rt, 13, 15) || (wback && Rn == Rt), _strb_imm_32_T3);
+    _strb_imm(imm32, Rn, Rt, add, index, wback, cpu);
+    if(wback){
+        LOG_INSTRUCTION("_strb_imm_32, R%d, [R%d, %c#%d]!\n", Rt, Rn, add ? '+' : '-', imm32);
+    }else{
+        LOG_INSTRUCTION("_strb_imm_32, R%d, [R%d], %c#%d\n", Rt, Rn, add ? '+' : '-', imm32);
+    }
+}
+
+#define STR_SINGLE_OP2(ins_code) LOW_BIT32((ins_code) >> 11, 1)
+void _strb_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
+    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
+    uint32_t Rm = MEM_ACCESS32_RM(ins_code);
+    uint32_t shift_n = MEM_ACCESS32_IMM2(ins_code);
+    uint32_t shift_t = SRType_LSL;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rt, 13, 15) || IN_RANGE(Rm, 13, 15), _strb_reg_32);
+    _strb_reg(Rm, Rn, Rt, shift_t, shift_n, cpu);
+    LOG_INSTRUCTION("_strb_reg_32, R%d, [R%d, R%d, SRType%d #%d]\n", Rt, Rn, Rm, shift_t, shift_n);
+}
+
+thumb_translate32_t strb_imm_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op2 = STR_SINGLE_OP2(ins_code);
+    if(op2 == 1){
+        return (thumb_translate32_t)_strb_imm_32_T3;
+    }else{
+        return (thumb_translate32_t)_strb_reg_32;
+    }
+}
+
+/* Encoding T2 */
+void _strh_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
+    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
+    uint32_t imm32 = MEM_ACCESS32_IMM8(ins_code);
+    bool_t index = TRUE;
+    bool_t add   = TRUE;
+    bool_t wback = FALSE;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rt, 13, 15), _strh_imm_32);
+    _strh_imm(imm32, Rn, Rt, add, index, wback, cpu);
+    LOG_INSTRUCTION("_strh_imm_32, R%d, [R%d, #%d]\n", Rt, Rn, imm32);
+}
+
+void _strh_imm_32_T3(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
+    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
+    uint32_t imm32 = MEM_ACCESS32_IMM8(ins_code);
+    bool_t index = MEM_ACCESS32_P(ins_code);
+    bool_t add   = MEM_ACCESS32_U(ins_code);
+    bool_t wback = MEM_ACCESS32_W(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rt, 13, 15) || (wback && Rn == Rt), _strh_imm_32_T3);
+    _strh_imm(imm32, Rn, Rt, add, index, wback, cpu);
+    if(wback){
+        LOG_INSTRUCTION("_strh_imm_32, R%d, [R%d, %c#%d]!\n", Rt, Rn, add ? '+' : '-', imm32);
+    }else{
+        LOG_INSTRUCTION("_strh_imm_32, R%d, [R%d], %c#%d\n", Rt, Rn, add ? '+' : '-', imm32);
+    }
+}
+
+void _strh_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
+    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
+    uint32_t Rm = MEM_ACCESS32_RM(ins_code);
+    uint32_t shift_n = MEM_ACCESS32_IMM2(ins_code);
+    uint32_t shift_t = SRType_LSL;
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rt, 13, 15) || IN_RANGE(Rm, 13, 15), _strh_reg_32);
+    _strh_reg(Rm, Rn, Rt, shift_t, shift_n, cpu);
+    LOG_INSTRUCTION("_strh_reg_32, R%d, [R%d, R%d, SRType%d #%d]\n", Rt, Rn, Rm, shift_t, shift_n);
+}
+
+thumb_translate32_t strh_imm_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op2 = STR_SINGLE_OP2(ins_code);
+    if(op2 == 1){
+        return (thumb_translate32_t)_strh_imm_32_T3;
+    }else{
+        return (thumb_translate32_t)_strh_reg_32;
+    }
+}
+
+/* Encoding T3 */
+void _str_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
+    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
+    uint32_t imm32 = MEM_ACCESS32_IMM8(ins_code);
+    bool_t index = TRUE;
+    bool_t add   = TRUE;
+    bool_t wback = FALSE;
+
+    CHECK_UNPREDICTABLE(Rt == 15, _str_imm_32);
+    _str_imm(imm32, Rn, Rt, add, index, wback, cpu);
+    LOG_INSTRUCTION("_str_imm_32, R%d, [R%d, #%d]\n", Rt, Rn, imm32);
+}
+
+void _str_imm_32_T4(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
+    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
+    uint32_t imm32 = MEM_ACCESS32_IMM8(ins_code);
+    bool_t index = MEM_ACCESS32_P(ins_code);
+    bool_t add   = MEM_ACCESS32_U(ins_code);
+    bool_t wback = MEM_ACCESS32_W(ins_code);
+
+    CHECK_UNPREDICTABLE(Rt == 15 || (wback && Rn == Rt), _strh_imm_32_T4);
+    _str_imm(imm32, Rn, Rt, add, index, wback, cpu);
+    if(wback){
+        LOG_INSTRUCTION("_str_imm_32, R%d, [R%d, %c#%d]!\n", Rt, Rn, add ? '+' : '-', imm32);
+    }else{
+        LOG_INSTRUCTION("_str_imm_32, R%d, [R%d], %c#%d\n", Rt, Rn, add ? '+' : '-', imm32);
+    }
+}
+
+void _str_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
+    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
+    uint32_t Rm = MEM_ACCESS32_RM(ins_code);
+    uint32_t shift_n = MEM_ACCESS32_IMM2(ins_code);
+    uint32_t shift_t = SRType_LSL;
+
+    CHECK_UNPREDICTABLE(Rt == 15 || IN_RANGE(Rm, 13, 15), _str_reg_32);
+    _str_reg(Rm, Rn, Rt, shift_t, shift_n, cpu);
+    LOG_INSTRUCTION("_str_reg_32, R%d, [R%d, R%d, SRType%d #%d]\n", Rt, Rn, Rm, shift_t, shift_n);
+}
+
+thumb_translate32_t str_imm_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op2 = STR_SINGLE_OP2(ins_code);
+    if(op2 == 1){
+        return (thumb_translate32_t)_str_imm_32_T4;
+    }else{
+        return (thumb_translate32_t)_str_reg_32;
+    }
+}
+
 
 /****** init instruction table ******/
 void init_instruction_table(thumb_instruct_table_t* table)
@@ -3487,6 +3671,15 @@ void init_instruction_table(thumb_instruct_table_t* table)
     set_sub_table_value(table->decode32_100_table, 0x3C, 0x3C, (thumb_translate_t)_ubfx_32,        THUMB_EXCUTER);
     set_sub_table_value(table->decode32_100_table, 0x7C, 0x7C, (thumb_translate_t)_ubfx_32,        THUMB_EXCUTER);
 
+    // store single data item
+    set_sub_table_value(table->decode32_11x_table, 0x08, 0x08, (thumb_translate_t)_strb_imm_32,    THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_11x_table, 0x00, 0x00, (thumb_translate_t)strb_imm_reg_32, THUMB_DECODER);
+    set_sub_table_value(table->decode32_11x_table, 0x0A, 0x0A, (thumb_translate_t)_strh_imm_32,    THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_11x_table, 0x02, 0x02, (thumb_translate_t)strh_imm_reg_32, THUMB_DECODER);
+    set_sub_table_value(table->decode32_11x_table, 0x0C, 0x0C, (thumb_translate_t)_str_imm_32,     THUMB_EXCUTER);
+    set_sub_table_value(table->decode32_11x_table, 0x04, 0x04, (thumb_translate_t)str_imm_reg_32,  THUMB_DECODER);
+
+
     // data processing(register)
     set_sub_table_value(table->decode32_11x_table, 0x20, 0x20, (thumb_translate_t)lsl_sxth_32,     THUMB_DECODER);
     set_sub_table_value(table->decode32_11x_table, 0x21, 0x21, (thumb_translate_t)lsl_uxth_32,     THUMB_DECODER);
@@ -3535,17 +3728,6 @@ thumb_translate16_t thumb_parse_opcode16(uint16_t opcode, cpu_t* cpu)
         return decode.translater16;
     }
 }
-
-//thumb_translate32_t thumb_parse_opcode32(uint32_t opcode, cpu_t *cpu)
-//{
-//    /* decode by bit <15 : 28~20> */
-//    thumb_decode_t decode = M_translate_table->main_table32[(LOW_BIT32(opcode >> 15, 1) << 9) | LOW_BIT32(opcode >> 20, 9)];
-//    if(decode.type == THUMB_DECODER){
-//        return (thumb_translate32_t)decode.translater32(opcode, cpu);
-//    }else{
-//        return decode.translater32;
-//    }
-//}
 
 thumb_translate32_t thumb_parse_opcode32(uint32_t opcode, cpu_t *cpu)
 {
