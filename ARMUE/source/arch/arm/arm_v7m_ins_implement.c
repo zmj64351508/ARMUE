@@ -397,6 +397,11 @@ int MemU_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv,
     return retval;
 }
 
+inline int MemU_unpriv(uint32_t address, int size, _IO uint8_t *buffer, int type, cpu_t *cpu)
+{
+    return MemU_with_priv(address, size, buffer, FALSE, type, cpu);
+}
+
 /* TODO: Memory access is not complete for checking some flags like ALIGN and ENDIANs */
 /* <<ARMv7-M Architecture Reference Manual B2-696>> */
 int MemU(uint32_t address, int size, _IO uint8_t* buffer, int type, cpu_t* cpu)
@@ -2090,6 +2095,95 @@ void _blx(uint32_t Rm, cpu_t* cpu)
     BXWritePC(target, cpu);
 }
 
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-300>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    address = R[n] + imm32;
+    R[t] = ZeroExtend(MemU_unpriv[address,1],32);
+**************************************/
+void _ldrbt(uint32_t imm32, uint32_t Rn, uint32_t Rt, cpu_t *cpu)
+{
+    arm_reg_t* regs = (arm_reg_t*)cpu->regs;
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t address = Rn_val + imm32;
+    uint8_t data;
+    MemU_unpriv(address, 1, &data, MEM_READ, cpu);
+    SET_REG_VAL(regs, Rt, data);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-323>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    address = R[n] + imm32;
+    R[t] = SignExtend(MemU_unpriv[address,1], 32);
+**************************************/
+void _ldrsbt(uint32_t imm32, uint32_t Rn, uint32_t Rt, cpu_t *cpu)
+{
+    arm_reg_t* regs = (arm_reg_t*)cpu->regs;
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t address = Rn_val + imm32;
+    uint8_t data;
+    MemU_unpriv(address, 1, &data, MEM_READ, cpu);
+    SET_REG_VAL(regs, Rt, (int8_t)data);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-296>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    base = Align(PC,4);
+    address = if add then (base + imm32) else (base - imm32);
+    R[t] = ZeroExtend(MemU[address,1], 32);
+**************************************/
+void _ldrb_literal(uint32_t imm32, uint32_t Rt, bool_t add, cpu_t *cpu)
+{
+    arm_reg_t* regs = (arm_reg_t*)cpu->regs;
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t base = GET_REG_VAL(regs, PC_INDEX);
+    base = DOWN_ALIGN(base, 2);
+    uint32_t address = add ? base + imm32 : base - imm32;
+
+    uint8_t data;
+    MemU(address, 1, &data, MEM_READ, cpu);
+    SET_REG_VAL(regs, Rt, data);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-319>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    base = Align(PC,4);
+    address = if add then (base + imm32) else (base - imm32);
+    R[t] = SignExtend(MemU[address,1], 32);
+**************************************/
+void _ldrsb_literal(uint32_t imm32, uint32_t Rt, bool_t add, cpu_t *cpu)
+{
+    arm_reg_t* regs = (arm_reg_t*)cpu->regs;
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t base = GET_REG_VAL(regs, PC_INDEX);
+    base = DOWN_ALIGN(base, 2);
+    uint32_t address = add ? base + imm32 : base - imm32;
+
+    uint8_t data;
+    MemU(address, 1, &data, MEM_READ, cpu);
+    SET_REG_VAL(regs, Rt, (int8_t)data);
+}
 
 /***********************************
 <<ARMv7-M Architecture Reference Manual A7-289>>
@@ -2490,6 +2584,33 @@ void _ldrb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index
 }
 
 /***********************************
+<<ARMv7-M Architecture Reference Manual A7-318>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    offset_addr = if add then (R[n] + imm32) else (R[n] - imm32);
+    address = if index then offset_addr else R[n];
+    R[t] = SignExtend(MemU[address,1], 32);
+    if wback then R[n] = offset_addr;
+**************************************/
+void _ldrsb_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt, bool_t add, bool_t index, bool_t wback, cpu_t *cpu)
+{
+    arm_reg_t* regs = (arm_reg_t*)cpu->regs;
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t offset_addr = add ? Rn_val + imm32 : Rn_val - imm32;
+    uint32_t address = index ? offset_addr : Rn_val;
+    uint8_t data;
+    MemU(address, 1, &data, MEM_READ, cpu);
+    SET_REG_VAL(regs, Rt, (int8_t)data);
+    if(wback){
+        SET_REG_VAL(regs, Rn, offset_addr);
+    }
+}
+
+/***********************************
 <<ARMv7-M Architecture Reference Manual A7-489>>
 if ConditionPassed() then
     EncodingSpecificOperations();
@@ -2542,6 +2663,7 @@ void _ldrh_imm(uint32_t imm32, uint32_t Rn, uint32_t Rt,bool_t add, bool_t index
     }
     SET_REG_VAL(regs, Rt, data);
 }
+
 
 /***********************************
 <<ARMv7-M Architecture Reference Manual A7-229>>
