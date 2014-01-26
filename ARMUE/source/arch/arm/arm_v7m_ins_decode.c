@@ -6,10 +6,12 @@
 #include <assert.h>
 
 #define CHECK_UNPREDICTABLE(condition, instruction_name)\
-if(condition){\
-    LOG_INSTRUCTION("UNPREDICTABLE: " #instruction_name " treated as NOP\n");\
-    return;\
-}
+do{\
+    if(condition){\
+        LOG_INSTRUCTION("UNPREDICTABLE: " #instruction_name " treated as NOP\n");\
+        return;\
+    }\
+}while(0)
 
 thumb_instruct_table_t *M_translate_table; // table for ARMvX-M
 thumb_instruct_table_t *R_translate_table; // table for ARMvX-R, implement in the future
@@ -3295,15 +3297,69 @@ thumb_translate32_t branch_misc_ctrl(uint32_t ins_code, cpu_t *cpu)
 #define MEM_ACCESS32_NORMAL_U(ins_code) LOW_BIT32((ins_code) >> 9, 1)
 #define MEM_ACCESS32_LITERAL_U(ins_code) LOW_BIT32((ins_code) >> 23, 1)
 
+/* parameters for the instructions with imm12 using immediate */
+inline void get_mem_access32_imm1_params(uint32_t ins_code, uint32_t *Rn, uint32_t *Rt, uint32_t *imm32, bool_t *index, bool_t *add, bool_t *wback)
+{
+    *Rn = MEM_ACCESS32_RN(ins_code);
+    *Rt = MEM_ACCESS32_RT(ins_code);
+    *imm32 = MEM_ACCESS32_IMM12(ins_code);
+    *index = TRUE;
+    *add   = TRUE;
+    *wback = FALSE;
+}
+
+/* parameters for the instructions with U & P & W & imm8 using immediate */
+inline void get_mem_access32_imm2_params(uint32_t ins_code, uint32_t *Rn, uint32_t *Rt, uint32_t *imm32, bool_t *index, bool_t *add, bool_t *wback)
+{
+    *Rn = MEM_ACCESS32_RN(ins_code);
+    *Rt = MEM_ACCESS32_RT(ins_code);
+    *imm32 = MEM_ACCESS32_IMM8(ins_code);
+    *index = MEM_ACCESS32_P(ins_code);
+    *add   = MEM_ACCESS32_NORMAL_U(ins_code);
+    *wback = MEM_ACCESS32_W(ins_code);
+}
+
+/* parameters for the instructions using register */
+inline void get_mem_access32_reg_params(uint32_t ins_code, uint32_t *Rn, uint32_t *Rt, uint32_t *Rm, uint32_t *shift_t, uint32_t *shift_n)
+{
+    *Rn = MEM_ACCESS32_RN(ins_code);
+    *Rt = MEM_ACCESS32_RT(ins_code);
+    *Rm = MEM_ACCESS32_RM(ins_code);
+    *shift_n = MEM_ACCESS32_IMM2(ins_code);
+    *shift_t = SRType_LSL;
+}
+
+inline void get_mem_access32_literal_params(uint32_t ins_code, uint32_t *Rt, uint32_t *imm32, bool_t *add)
+{
+    *Rt = MEM_ACCESS32_RT(ins_code);
+    *imm32 = MEM_ACCESS32_IMM12(ins_code);
+    *add = MEM_ACCESS32_LITERAL_U(ins_code);
+}
+
+inline void get_mem_access32_unprivileged_params(uint32_t ins_code, uint32_t *Rn, uint32_t *Rt, uint32_t *imm32)
+{
+    *Rt = MEM_ACCESS32_RT(ins_code);
+    *Rn = MEM_ACCESS32_RN(ins_code);
+    *imm32 = MEM_ACCESS32_IMM8(ins_code);
+}
+
+#define LOG_INSTRUCTION_MEM_ACCESS32_IMM2(Rn, Rt, imm32, index, add, wback, ins_name) \
+do{ \
+    if((wback) && (index)){\
+        LOG_INSTRUCTION(#ins_name ", R%d, [R%d, #%c%d]!\n", Rt, Rn, (add) ? ' ' : '-', imm32);\
+    }else if((wback) && !(index)){\
+        LOG_INSTRUCTION(#ins_name ", R%d, [R%d], #%c%d\n", Rt, Rn, (add) ? ' ' : '-', imm32);\
+    }else{\
+        LOG_INSTRUCTION(#ins_name ", R%d, [R%d], #%c%d\n", Rt, Rn, (add) ? ' ' : '-', imm32);\
+    }\
+}while(0)
+
 /* Encoding T2 */
 void _strb_imm_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
-    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
-    uint32_t imm32 = MEM_ACCESS32_IMM12(ins_code);
-    bool_t index = TRUE;
-    bool_t add   = TRUE;
-    bool_t wback = FALSE;
+    uint32_t Rn, Rt, imm32;
+    bool_t index, add, wback;
+    get_mem_access32_imm1_params(ins_code, &Rn, &Rt, &imm32, &index, &add, &wback);
 
     CHECK_UNPREDICTABLE(IN_RANGE(Rt, 13, 15), _strb_imm_32);
     _strb_imm(imm32, Rn, Rt, add, index, wback, cpu);
@@ -3313,38 +3369,26 @@ void _strb_imm_32(uint32_t ins_code, cpu_t *cpu)
 /* Encoding T3 */
 void _strb_imm_32_T3(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
-    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
-    uint32_t imm32 = MEM_ACCESS32_IMM8(ins_code);
-    bool_t index = MEM_ACCESS32_P(ins_code);
-    bool_t add   = MEM_ACCESS32_NORMAL_U(ins_code);
-    bool_t wback = MEM_ACCESS32_W(ins_code);
+    uint32_t Rn, Rt, imm32;
+    bool_t index, add, wback;
+    get_mem_access32_imm2_params(ins_code, &Rn, &Rt, &imm32, &index, &add, &wback);
 
     CHECK_UNPREDICTABLE(IN_RANGE(Rt, 13, 15) || (wback && Rn == Rt), _strb_imm_32_T3);
     _strb_imm(imm32, Rn, Rt, add, index, wback, cpu);
-    if(wback && index){
-        LOG_INSTRUCTION("_strb_imm_32, R%d, [R%d, #%c%d]!\n", Rt, Rn, add ? '+' : '-', imm32);
-    }else if(wback && !index){
-        LOG_INSTRUCTION("_strb_imm_32, R%d, [R%d], #%c%d\n", Rt, Rn, add ? '+' : '-', imm32);
-    }else{
-        LOG_INSTRUCTION("_strb_imm_32, R%d, [R%d], #%c%d\n", Rt, Rn, add ? '+' : '-', imm32);
-    }
+    LOG_INSTRUCTION_MEM_ACCESS32_IMM2(Rn, Rt, imm32, index, add, wback, _strb_imm32_T3);
 }
 
-#define STR_SINGLE_OP2(ins_code) LOW_BIT32((ins_code) >> 11, 1)
 void _strb_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
-    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
-    uint32_t Rm = MEM_ACCESS32_RM(ins_code);
-    uint32_t shift_n = MEM_ACCESS32_IMM2(ins_code);
-    uint32_t shift_t = SRType_LSL;
+    uint32_t Rn, Rt, Rm, shift_n, shift_t;
+    get_mem_access32_reg_params(ins_code, &Rn, &Rt, &Rm, &shift_t, &shift_n);
 
     CHECK_UNPREDICTABLE(IN_RANGE(Rt, 13, 15) || IN_RANGE(Rm, 13, 15), _strb_reg_32);
     _strb_reg(Rm, Rn, Rt, shift_t, shift_n, cpu);
     LOG_INSTRUCTION("_strb_reg_32, R%d, [R%d, R%d, SRType%d #%d]\n", Rt, Rn, Rm, shift_t, shift_n);
 }
 
+#define STR_SINGLE_OP2(ins_code) LOW_BIT32((ins_code) >> 11, 1)
 thumb_translate32_t strb_imm_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
     uint32_t op2 = STR_SINGLE_OP2(ins_code);
@@ -3358,12 +3402,9 @@ thumb_translate32_t strb_imm_reg_32(uint32_t ins_code, cpu_t *cpu)
 /* Encoding T2 */
 void _strh_imm_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
-    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
-    uint32_t imm32 = MEM_ACCESS32_IMM12(ins_code);
-    bool_t index = TRUE;
-    bool_t add   = TRUE;
-    bool_t wback = FALSE;
+    uint32_t Rn, Rt, imm32;
+    bool_t index, add, wback;
+    get_mem_access32_imm1_params(ins_code, &Rn, &Rt, &imm32, &index, &add, &wback);
 
     CHECK_UNPREDICTABLE(IN_RANGE(Rt, 13, 15), _strh_imm_32);
     _strh_imm(imm32, Rn, Rt, add, index, wback, cpu);
@@ -3372,31 +3413,19 @@ void _strh_imm_32(uint32_t ins_code, cpu_t *cpu)
 
 void _strh_imm_32_T3(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
-    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
-    uint32_t imm32 = MEM_ACCESS32_IMM8(ins_code);
-    bool_t index = MEM_ACCESS32_P(ins_code);
-    bool_t add   = MEM_ACCESS32_NORMAL_U(ins_code);
-    bool_t wback = MEM_ACCESS32_W(ins_code);
+    uint32_t Rn, Rt, imm32;
+    bool_t index, add, wback;
+    get_mem_access32_imm2_params(ins_code, &Rn, &Rt, &imm32, &index, &add, &wback);
 
     CHECK_UNPREDICTABLE(IN_RANGE(Rt, 13, 15) || (wback && Rn == Rt), _strh_imm_32_T3);
     _strh_imm(imm32, Rn, Rt, add, index, wback, cpu);
-    if(wback && index){
-        LOG_INSTRUCTION("_strh_imm_32, R%d, [R%d, #%c%d]!\n", Rt, Rn, add ? '+' : '-', imm32);
-    }else if(wback && !index){
-        LOG_INSTRUCTION("_strh_imm_32, R%d, [R%d], #%c%d\n", Rt, Rn, add ? '+' : '-', imm32);
-    }else{
-        LOG_INSTRUCTION("_strh_imm_32, R%d, [R%d], #%c%d\n", Rt, Rn, add ? '+' : '-', imm32);
-    }
+    LOG_INSTRUCTION_MEM_ACCESS32_IMM2(Rn, Rt, imm32, index, add, wback, _strh_imm32_T3);
 }
 
 void _strh_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
-    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
-    uint32_t Rm = MEM_ACCESS32_RM(ins_code);
-    uint32_t shift_n = MEM_ACCESS32_IMM2(ins_code);
-    uint32_t shift_t = SRType_LSL;
+    uint32_t Rn, Rt, Rm, shift_n, shift_t;
+    get_mem_access32_reg_params(ins_code, &Rn, &Rt, &Rm, &shift_t, &shift_n);
 
     CHECK_UNPREDICTABLE(IN_RANGE(Rt, 13, 15) || IN_RANGE(Rm, 13, 15), _strh_reg_32);
     _strh_reg(Rm, Rn, Rt, shift_t, shift_n, cpu);
@@ -3416,12 +3445,9 @@ thumb_translate32_t strh_imm_reg_32(uint32_t ins_code, cpu_t *cpu)
 /* Encoding T3 */
 void _str_imm_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
-    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
-    uint32_t imm32 = MEM_ACCESS32_IMM12(ins_code);
-    bool_t index = TRUE;
-    bool_t add   = TRUE;
-    bool_t wback = FALSE;
+    uint32_t Rn, Rt, imm32;
+    bool_t index, add, wback;
+    get_mem_access32_imm1_params(ins_code, &Rn, &Rt, &imm32, &index, &add, &wback);
 
     CHECK_UNPREDICTABLE(Rt == 15, _str_imm_32);
     _str_imm(imm32, Rn, Rt, add, index, wback, cpu);
@@ -3430,31 +3456,20 @@ void _str_imm_32(uint32_t ins_code, cpu_t *cpu)
 
 void _str_imm_32_T4(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
-    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
-    uint32_t imm32 = MEM_ACCESS32_IMM8(ins_code);
-    bool_t index = MEM_ACCESS32_P(ins_code);
-    bool_t add   = MEM_ACCESS32_NORMAL_U(ins_code);
-    bool_t wback = MEM_ACCESS32_W(ins_code);
+    uint32_t Rn, Rt, imm32;
+    bool_t index, add, wback;
+    get_mem_access32_imm2_params(ins_code, &Rn, &Rt, &imm32, &index, &add, &wback);
 
-    CHECK_UNPREDICTABLE(Rt == 15 || (wback && Rn == Rt), _strh_imm_32_T4);
+    CHECK_UNPREDICTABLE(Rt == 15 || (wback && Rn == Rt), _str_imm_32_T4);
     _str_imm(imm32, Rn, Rt, add, index, wback, cpu);
-    if(wback && index){
-        LOG_INSTRUCTION("_str_imm_32, R%d, [R%d, #%c%d]!\n", Rt, Rn, add ? '+' : '-', imm32);
-    }else if(wback && !index){
-        LOG_INSTRUCTION("_str_imm_32, R%d, [R%d], #%c%d\n", Rt, Rn, add ? '+' : '-', imm32);
-    }else{
-        LOG_INSTRUCTION("_str_imm_32, R%d, [R%d], #%c%d\n", Rt, Rn, add ? '+' : '-', imm32);
-    }
+    LOG_INSTRUCTION_MEM_ACCESS32_IMM2(Rn, Rt, imm32, index, add, wback, _str_imm32_T4);
+
 }
 
 void _str_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
-    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
-    uint32_t Rm = MEM_ACCESS32_RM(ins_code);
-    uint32_t shift_n = MEM_ACCESS32_IMM2(ins_code);
-    uint32_t shift_t = SRType_LSL;
+    uint32_t Rn, Rt, Rm, shift_n, shift_t;
+    get_mem_access32_reg_params(ins_code, &Rn, &Rt, &Rm, &shift_t, &shift_n);
 
     CHECK_UNPREDICTABLE(Rt == 15 || IN_RANGE(Rm, 13, 15), _str_reg_32);
     _str_reg(Rm, Rn, Rt, shift_t, shift_n, cpu);
@@ -3471,12 +3486,10 @@ thumb_translate32_t str_imm_reg_32(uint32_t ins_code, cpu_t *cpu)
     }
 }
 
-
 void _ldrb_literal_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
-    uint32_t imm32 = MEM_ACCESS32_IMM12(ins_code);
-    bool_t add = MEM_ACCESS32_LITERAL_U(ins_code);
+    uint32_t Rt, imm32; bool_t add;
+    get_mem_access32_literal_params(ins_code, &Rt, &imm32, &add);
 
     CHECK_UNPREDICTABLE(Rt == 13, _ldrb_literal_32);
     _ldrb_literal(imm32, Rt, add, cpu);
@@ -3486,12 +3499,9 @@ void _ldrb_literal_32(uint32_t ins_code, cpu_t *cpu)
 /* Encoding T2 */
 void _ldrb_imm_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
-    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
-    uint32_t imm32 = MEM_ACCESS32_IMM12(ins_code);
-    bool_t index = TRUE;
-    bool_t add   = TRUE;
-    bool_t wback = FALSE;
+    uint32_t Rn, Rt, imm32;
+    bool_t index, add, wback;
+    get_mem_access32_imm1_params(ins_code, &Rn, &Rt, &imm32, &index, &add, &wback);
 
     CHECK_UNPREDICTABLE(Rt == 13, _ldrb_imm_32);
     _ldrb_imm(imm32, Rn, Rt, add, index, wback, cpu);
@@ -3500,31 +3510,21 @@ void _ldrb_imm_32(uint32_t ins_code, cpu_t *cpu)
 
 void _ldrb_imm_32_T3(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
-    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
-    uint32_t imm32 = MEM_ACCESS32_IMM8(ins_code);
-    bool_t index = MEM_ACCESS32_P(ins_code);
-    bool_t add   = MEM_ACCESS32_NORMAL_U(ins_code);
-    bool_t wback = MEM_ACCESS32_W(ins_code);
+    uint32_t Rn, Rt, imm32;
+    bool_t index, add, wback;
+    get_mem_access32_imm2_params(ins_code, &Rn, &Rt, &imm32, &index, &add, &wback);
 
     bool_t unpredict1 = Rt == 13 || (wback && Rn == Rt);
     bool_t unpredict2 = Rt == 15 && (index == 0 || add == 1 || wback == 1);
     CHECK_UNPREDICTABLE(unpredict1 || unpredict2, _ldr_imm_32_T3);
     _ldrb_imm(imm32, Rn, Rt, add, index, wback, cpu);
-    if(wback && index){
-        LOG_INSTRUCTION("_ldrb_imm_32_T3, R%d, [R%d, #%c%d]!\n", Rt, Rn, add ? '+' : '-', imm32);
-    }else if(wback && !index){
-        LOG_INSTRUCTION("_ldrb_imm_32_T3, R%d, [R%d], #%c%d\n", Rt, Rn, add ? '+' : '-', imm32);
-    }else{
-        LOG_INSTRUCTION("_ldrb_imm_32_T3, R%d, [R%d, #%c%d]\n", Rt, Rn, add ? '+' : '-', imm32);
-    }
+    LOG_INSTRUCTION_MEM_ACCESS32_IMM2(Rn, Rt, imm32, index, add, wback, _ldr_imm_32_T3);
 }
 
 void _ldrbt_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
-    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
-    uint32_t imm32 = MEM_ACCESS32_IMM8(ins_code);
+    uint32_t Rn, Rt, imm32;
+    get_mem_access32_unprivileged_params(ins_code, &Rn, &Rt, &imm32);
 
     CHECK_UNPREDICTABLE(IN_RANGE(Rt, 13, 15), _ldrbt_32);
     _ldrbt(imm32, Rn, Rt, cpu);
@@ -3533,13 +3533,11 @@ void _ldrbt_32(uint32_t ins_code, cpu_t *cpu)
 
 void _ldrb_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
-    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
-    uint32_t Rm = MEM_ACCESS32_RM(ins_code);
+    uint32_t Rn, Rt, Rm, shift_n, shift_t;
+    get_mem_access32_reg_params(ins_code, &Rn, &Rt, &Rm, &shift_t, &shift_n);
+
+    bool_t add = TRUE;
     bool_t index = TRUE;
-    bool_t add   = TRUE;
-    uint32_t shift_t = SRType_LSL;
-    uint32_t shift_n = MEM_ACCESS32_IMM2(ins_code);
 
     CHECK_UNPREDICTABLE(Rt == 13 || IN_RANGE(Rm, 13, 15), _ldrb_reg_32);
     _ldrb_reg(Rm, Rn, Rt, add, index, shift_t, shift_n, cpu);
@@ -3548,9 +3546,8 @@ void _ldrb_reg_32(uint32_t ins_code, cpu_t *cpu)
 
 void _ldrsb_literal_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
-    uint32_t imm32 = MEM_ACCESS32_IMM12(ins_code);
-    bool_t add = MEM_ACCESS32_LITERAL_U(ins_code);
+    uint32_t Rt, imm32; bool_t add;
+    get_mem_access32_literal_params(ins_code, &Rt, &imm32, &add);
 
     CHECK_UNPREDICTABLE(Rt == 13, _ldrsb_literal_32);
     _ldrsb_literal(imm32, Rt, add, cpu);
@@ -3561,12 +3558,9 @@ void _ldrsb_literal_32(uint32_t ins_code, cpu_t *cpu)
 /* Encoding T1 */
 void _ldrsb_imm_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
-    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
-    uint32_t imm32 = MEM_ACCESS32_IMM12(ins_code);
-    bool_t index = TRUE;
-    bool_t add = TRUE;
-    bool_t wback = FALSE;
+    uint32_t Rn, Rt, imm32;
+    bool_t index, add, wback;
+    get_mem_access32_imm1_params(ins_code, &Rn, &Rt, &imm32, &index, &add, &wback);
 
     CHECK_UNPREDICTABLE(Rt == 13, _ldrsb_imm_32);
     _ldrsb_imm(imm32, Rn, Rt, add, index, wback, cpu);
@@ -3576,31 +3570,21 @@ void _ldrsb_imm_32(uint32_t ins_code, cpu_t *cpu)
 /* Encoding T2 */
 void _ldrsb_imm_32_T2(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
-    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
-    uint32_t imm32 = MEM_ACCESS32_IMM8(ins_code);
-    bool_t index = MEM_ACCESS32_P(ins_code);
-    bool_t add   = MEM_ACCESS32_NORMAL_U(ins_code);
-    bool_t wback = MEM_ACCESS32_W(ins_code);
+    uint32_t Rn, Rt, imm32;
+    bool_t index, add, wback;
+    get_mem_access32_imm2_params(ins_code, &Rn, &Rt, &imm32, &index, &add, &wback);
 
     bool_t unpredict1 = Rt == 13 || (wback && Rn == Rt);
     bool_t unpredict2 = Rt == 15 && (index == 0 || add == 1 || wback == 1);
     CHECK_UNPREDICTABLE(unpredict1 || unpredict2, _ldrsb_imm_32_T2);
     _ldrsb_imm(imm32, Rn, Rt, add, index, wback, cpu);
-    if(wback && index){
-        LOG_INSTRUCTION("_ldrsb_imm_32_T2, R%d, [R%d, #%c%d]!\n", Rt, Rn, add ? '+' : '-', imm32);
-    }else if(wback && !index){
-        LOG_INSTRUCTION("_ldrsb_imm_32_T2, R%d, [R%d], #%c%d\n", Rt, Rn, add ? '+' : '-', imm32);
-    }else{
-        LOG_INSTRUCTION("_ldrsb_imm_32_T2, R%d, [R%d, #%c%d]\n", Rt, Rn, add ? '+' : '-', imm32);
-    }
+    LOG_INSTRUCTION_MEM_ACCESS32_IMM2(Rn, Rt, imm32, index, add, wback, _ldrsb_imm_32_T2);
 }
 
 void _ldrsbt_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
-    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
-    uint32_t imm32 = MEM_ACCESS32_IMM8(ins_code);
+    uint32_t Rn, Rt, imm32;
+    get_mem_access32_unprivileged_params(ins_code, &Rn, &Rt, &imm32);
 
     CHECK_UNPREDICTABLE(IN_RANGE(Rt, 13, 15), _ldrsbt_32);
     _ldrsbt(imm32, Rn, Rt, cpu);
@@ -3609,16 +3593,11 @@ void _ldrsbt_32(uint32_t ins_code, cpu_t *cpu)
 
 void _ldrsb_reg_32(uint32_t ins_code, cpu_t *cpu)
 {
-    uint32_t Rt = MEM_ACCESS32_RT(ins_code);
-    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
-    uint32_t Rm = MEM_ACCESS32_RM(ins_code);
-    bool_t index = TRUE;
-    bool_t add   = TRUE;
-    uint32_t shift_t = SRType_LSL;
-    uint32_t shift_n = MEM_ACCESS32_IMM2(ins_code);
+    uint32_t Rn, Rt, Rm, shift_n, shift_t;
+    get_mem_access32_reg_params(ins_code, &Rn, &Rt, &Rm, &shift_t, &shift_n);
 
     CHECK_UNPREDICTABLE(Rt == 13 || IN_RANGE(Rm, 13, 15), _ldrsb_reg_32);
-    _ldrsb_reg(Rm, Rn, Rt, add, index, shift_t, shift_n, cpu);
+    _ldrsb_reg(Rm, Rn, Rt, TRUE, TRUE, shift_t, shift_n, cpu);
     LOG_INSTRUCTION("_ldrsb_reg_32, R%d, [R%d, R%d, SRType%d %d]\n", Rt, Rn, Rm, shift_t, shift_n);
 }
 
@@ -3741,18 +3720,139 @@ thumb_translate32_t load_byte_mem_hint(uint32_t ins_code, cpu_t *cpu)
     }
 }
 
+void _ldrh_literal_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rt, imm32; bool_t add;
+    get_mem_access32_literal_params(ins_code, &Rt, &imm32, &add);
+
+    CHECK_UNPREDICTABLE(Rt == 13, _ldrh_literal_32);
+    _ldrh_literal(imm32, Rt, add, cpu);
+    LOG_INSTRUCTION("_ldrh_literal_32, R%d, #0x%x\n", Rt, imm32);
+}
+
+/* Encoding T3 */
+void _ldrh_imm_32_T3(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn, Rt, imm32;
+    bool_t index, add, wback;
+    get_mem_access32_imm2_params(ins_code, &Rn, &Rt, &imm32, &index, &add, &wback);
+
+    bool_t unpredict1 = Rt == 13 || (wback && Rn == Rt);
+    bool_t unpredict2 = Rt == 15 && (index == 0 || add == 1 || wback == 1);
+    CHECK_UNPREDICTABLE(unpredict1 || unpredict2, _ldrh_imm_32_T3);
+    _ldrh_imm(imm32, Rn, Rt, add, index, wback, cpu);
+    LOG_INSTRUCTION_MEM_ACCESS32_IMM2(Rn, Rt, imm32, index, add, wback, _ldrh_imm_32_T3);
+}
+
+/* Encoding T2 */
+void _ldrh_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn, Rt, imm32;
+    bool_t index, add, wback;
+    get_mem_access32_imm1_params(ins_code, &Rn, &Rt, &imm32, &index, &add, &wback);
+
+    CHECK_UNPREDICTABLE(Rt == 13, _ldrh_imm32);
+    _ldrh_imm(imm32, Rn, Rt, add, index, wback, cpu);
+    LOG_INSTRUCTION("_ldrh_imm_32, R%d, [R%d, #%d]\n", Rt, Rn, imm32);
+}
+
+void _ldrh_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn, Rt, Rm, shift_n, shift_t;
+    get_mem_access32_reg_params(ins_code, &Rn, &Rt, &Rm, &shift_t, &shift_n);
+
+    bool_t index = TRUE;
+    bool_t add   = TRUE;
+    bool_t wback = FALSE;
+
+    CHECK_UNPREDICTABLE(Rt == 13 || IN_RANGE(Rm, 13, 15), _ldrh_reg_32);
+    _ldrh_reg(Rm, Rn, Rt, add, index, wback, shift_t, shift_n, cpu);
+    LOG_INSTRUCTION("_ldrh_reg_32, R%d, [R%d, R%d, SRType%d %d]\n", Rt, Rn, Rm, shift_t, shift_n);
+}
+
+void _ldrht_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn, Rt, imm32;
+    get_mem_access32_unprivileged_params(ins_code, &Rn, &Rt, &imm32);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rt, 13, 15), _ldrht_32);
+    _ldrht(imm32, Rn, Rt, cpu);
+    LOG_INSTRUCTION("_ldrht_32, R%d, [R%d, #%d]\n", Rt, Rn, imm32);
+}
+
+/* Encoding T2 */
+void _ldrsh_imm_32_T2(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn, Rt, imm32;
+    bool_t index, add, wback;
+    get_mem_access32_imm2_params(ins_code, &Rn, &Rt, &imm32, &index, &add, &wback);
+
+    bool_t unpredict1 = Rt == 13 || (wback && Rn == Rt);
+    bool_t unpredict2 = Rt == 15 && (index == 0 || add == 1 || wback == 1);
+    CHECK_UNPREDICTABLE(unpredict1 || unpredict2, _ldrsh_imm_32_T2);
+    _ldrsh_imm(imm32, Rn, Rt, add, index, wback, cpu);
+    LOG_INSTRUCTION_MEM_ACCESS32_IMM2(Rn, Rt, imm32, index, add, wback, _ldrsh_imm_32_T2);
+}
+
+/* Encoding T1 */
+void _ldrsh_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn, Rt, imm32;
+    bool_t index, add, wback;
+    get_mem_access32_imm1_params(ins_code, &Rn, &Rt, &imm32, &index, &add, &wback);
+
+    CHECK_UNPREDICTABLE(Rt == 13, _ldrsh_imm_32);
+    _ldrsh_imm(imm32, Rn, Rt, add, index, wback, cpu);
+    LOG_INSTRUCTION("_ldrsh_imm_32, R%d, [R%d, #%d]\n", Rt, Rn, imm32);
+}
+
+void _ldrsh_literal_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rt, imm32; bool_t add;
+    get_mem_access32_literal_params(ins_code, &Rt, &imm32, &add);
+
+    CHECK_UNPREDICTABLE(Rt == 13, _ldrh_literal_32);
+    _ldrsh_literal(imm32, Rt, add, cpu);
+    LOG_INSTRUCTION("_ldrsh_literal_32, R%d, #0x%x\n", Rt, imm32);
+}
+
+void _ldrsh_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn, Rt, Rm, shift_n, shift_t;
+    get_mem_access32_reg_params(ins_code, &Rn, &Rt, &Rm, &shift_t, &shift_n);
+
+    bool_t index = TRUE;
+    bool_t add   = TRUE;
+    bool_t wback = FALSE;
+
+    CHECK_UNPREDICTABLE(Rt == 13 || IN_RANGE(Rm, 13, 15), _ldrsh_reg_32);
+    _ldrsh_reg(Rm, Rn, Rt, add, index, wback, shift_t, shift_n, cpu);
+    LOG_INSTRUCTION("_ldrsh_reg_32, R%d, [R%d, R%d, SRType%d %d]\n", Rt, Rn, Rm, shift_t, shift_n);
+}
+
+void _ldrsht_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn, Rt, imm32;
+    get_mem_access32_unprivileged_params(ins_code, &Rn, &Rt, &imm32);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rt, 13, 15), _ldrsht_32);
+    _ldrsht(imm32, Rn, Rt, cpu);
+    LOG_INSTRUCTION("_ldrsht_32, R%d, [R%d, #%d]\n", Rt, Rn, imm32);
+}
+
 thumb_translate32_t load_hbyte_mem_hint(uint32_t ins_code, cpu_t *cpu)
 {
     uint32_t op2 = LOW_BIT32(ins_code >> 6, 6);
     uint32_t first_decode = COMBINE_MEM_ACCESS_RN_RT_OP1(ins_code);
 
     switch(first_decode){
+    /* ldrh */
     case 0x8:
     case 0x9:
-        // LDRH literal
+        return (thumb_translate32_t)_ldrh_literal_32;
     case 0x0:
         if(op2 == 0){
-            // LDRH reg
+            return (thumb_translate32_t)_ldrh_reg_32;
         }else{
             switch(op2 >> 2){
             case 0x9:
@@ -3760,18 +3860,23 @@ thumb_translate32_t load_hbyte_mem_hint(uint32_t ins_code, cpu_t *cpu)
             case 0xD:
             case 0xF:
             case 0xC:
-                // LDRH imm T3
+                return (thumb_translate32_t)_ldrh_imm_32_T3;
             case 0xE:
-                // LDRHT
+                return (thumb_translate32_t)_ldrht_32;
             default:
                 return (thumb_translate32_t)_unpredictable_32;
             }
         }
     case 0x1:
-        // LDRH imm T2
+        return (thumb_translate32_t)_ldrh_imm_32;
+
+    /* ldrsh */
+    case 0xA:
+    case 0xB:
+        return (thumb_translate32_t)_ldrsh_literal_32;
     case 0x2:
         if(op2 == 0){
-            // LDRSH regs
+            return (thumb_translate32_t)_ldrsh_reg_32;
         }else{
             switch(op2 >> 2){
             case 0x9:
@@ -3779,18 +3884,17 @@ thumb_translate32_t load_hbyte_mem_hint(uint32_t ins_code, cpu_t *cpu)
             case 0xD:
             case 0xF:
             case 0xC:
-                // LDRSH imm T2
+                return (thumb_translate32_t)_ldrsh_imm_32_T2;
             case 0xE:
-                // LDRSHT
+                return (thumb_translate32_t)_ldrsht_32;
             default:
                 return (thumb_translate32_t)_unpredictable_32;
             }
         }
-    case 0xA:
-    case 0xB:
-        // LDRSH literal
+    case 0x3:
+        return (thumb_translate32_t)_ldrsh_imm_32;
 
-    /* all other encodings are treated as unpredictable */
+    /* all other encodings are treated as unpredictable while there should be unpredictable and undefined in the book */
     default:
         return (thumb_translate32_t)_unpredictable_32;
     }
