@@ -1,4 +1,5 @@
 #include "list.h"
+#include <stdlib.h>
 #include <stdio.h>
 
 list_t* list_create_node(list_data_t data)
@@ -53,6 +54,7 @@ int list_insert(list_t *node, list_t *insert)
     insert->next = node->next;
     node->next = insert;
     insert->prev = node;
+    return 0;
 }
 
 /* append after the last element */
@@ -68,6 +70,7 @@ int list_append(list_t *head, list_t *append)
     head = head->prev;
 
     list_insert(head, append);
+    return 0;
 }
 
 /* insert before the first element */
@@ -81,6 +84,7 @@ int list_ahead(list_t *head, list_t *ahead)
     }
 
     list_insert(head, ahead);
+    return 0;
 }
 
 /* Delete the node and pointer the parameter to next list node.
