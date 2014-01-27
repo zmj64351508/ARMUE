@@ -130,6 +130,24 @@ thumb_translate32_t decode32_101(uint32_t ins_code, cpu_t *cpu)
     }
 }
 
+inline char *to_string_shift_t(uint32_t shift_t)
+{
+    switch(shift_t){
+    case SRType_LSL:
+        return "LSL";
+    case SRType_LSR:
+        return "LSR";
+    case SRType_ASR:
+        return "ASR";
+    case SRType_ROR:
+        return "ROR";
+    case SRType_RRX:
+        return "RRX";
+    default:
+        return "UNKNOW SRType";
+    }
+}
+
 /****** Here are the final decoders of 16bit instructions ******/
 void _unpredictable_16(uint16_t ins_code, cpu_t* cpu)
 {
@@ -1572,7 +1590,7 @@ void _and_reg_32(uint32_t ins_code, cpu_t *cpu)
     }
 
     _and_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
-    LOG_INSTRUCTION("_and_reg_32, R%d, R%d, R%d, SRType%d #%d\n",Rd, Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_and_reg_32, R%d, R%d, R%d, %s #%d\n",Rd, Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 void _tst_reg_32(uint32_t ins_code, cpu_t *cpu)
@@ -1588,7 +1606,7 @@ void _tst_reg_32(uint32_t ins_code, cpu_t *cpu)
     }
 
     _tst_reg(Rm, Rn, shift_t, shift_n, cpu->regs);
-    LOG_INSTRUCTION("_tst_reg_32, R%d, R%d, SRType%d #%d\n",Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_tst_reg_32, R%d, R%d, %s #%d\n",Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 thumb_translate32_t and_tst_reg_32(uint32_t ins_code, cpu_t *cpu)
@@ -1620,7 +1638,7 @@ void _bic_reg_32(uint32_t ins_code, cpu_t *cpu)
     }
 
     _bic_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
-    LOG_INSTRUCTION("_bic_reg_32, R%d, R%d, R%d, SRType%d #%d\n",Rd, Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_bic_reg_32, R%d, R%d, R%d, %s #%d\n",Rd, Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 void _orr_reg_32(uint32_t ins_code, cpu_t *cpu)
@@ -1638,7 +1656,7 @@ void _orr_reg_32(uint32_t ins_code, cpu_t *cpu)
     }
 
     _orr_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
-    LOG_INSTRUCTION("_orr_reg_32, R%d, R%d, R%d, SRType%d #%d\n",Rd, Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_orr_reg_32, R%d, R%d, R%d, %s #%d\n",Rd, Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 void _mov_reg_32(uint32_t ins_code, cpu_t *cpu)
@@ -1790,7 +1808,7 @@ void _orn_reg_32(uint32_t ins_code, cpu_t *cpu)
     }
 
     _orn_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
-    LOG_INSTRUCTION("_orn_reg_32, R%d, R%d, R%d, SRType%d #%d\n",Rd, Rm, Rn, shift_t, shift_n);
+    LOG_INSTRUCTION("_orn_reg_32, R%d, R%d, R%d, %s #%d\n",Rd, Rm, Rn, to_string_shift_t(shift_t), shift_n);
 }
 
 void _mvn_reg_32(uint32_t ins_code, cpu_t *cpu)
@@ -1807,7 +1825,7 @@ void _mvn_reg_32(uint32_t ins_code, cpu_t *cpu)
     }
 
     _mvn_reg(Rm, Rd, shift_t, shift_n, setflags, cpu->regs);
-    LOG_INSTRUCTION("_mvn_reg_32, R%d, R%d, SRType%d #%d\n",Rd, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_mvn_reg_32, R%d, R%d, %s #%d\n",Rd, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 thumb_translate32_t orn_mvn_reg_32(uint32_t ins_code, cpu_t *cpu)
@@ -1836,7 +1854,7 @@ void _eor_reg_32(uint32_t ins_code, cpu_t *cpu)
     }
 
     _eor_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
-    LOG_INSTRUCTION("_eor_reg_32, R%d, R%d, R%d, SRType%d #%d\n",Rd, Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_eor_reg_32, R%d, R%d, R%d, %s #%d\n",Rd, Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 void _teq_reg_32(uint32_t ins_code, cpu_t *cpu)
@@ -1852,7 +1870,7 @@ void _teq_reg_32(uint32_t ins_code, cpu_t *cpu)
     }
 
     _teq_reg(Rm, Rn, shift_t, shift_n, cpu->regs);
-    LOG_INSTRUCTION("_teq_reg_32, R%d, R%d, SRType%d #%d\n", Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_teq_reg_32, R%d, R%d, %s #%d\n", Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 thumb_translate32_t eor_teq_reg_32(uint32_t ins_code, cpu_t *cpu)
@@ -1890,7 +1908,7 @@ void _pkhbt_pkhtb_32(uint32_t ins_code, cpu_t *cpu)
     DecodeImmShift(tbform << 1, imm3 << 2 | imm2, &shift_t, &shift_n);
 
     _pkhbt_pkhtb(Rm, Rn, Rd, shift_t, shift_n, tbform, cpu->regs);
-    LOG_INSTRUCTION("_pkhbt_pkhtb_32, R%d, R%d, R%d, SRType%d #%d\n", Rd, Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_pkhbt_pkhtb_32, R%d, R%d, R%d, %s #%d\n", Rd, Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 void _add_reg_32(uint32_t ins_code, cpu_t *cpu)
@@ -1908,7 +1926,7 @@ void _add_reg_32(uint32_t ins_code, cpu_t *cpu)
     }
 
     _add_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
-    LOG_INSTRUCTION("_add_reg_32, R%d, R%d, R%d, SRType%d #%d\n", Rd, Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_add_reg_32, R%d, R%d, R%d, %s #%d\n", Rd, Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 void _cmn_reg_32(uint32_t ins_code, cpu_t *cpu)
@@ -1924,7 +1942,7 @@ void _cmn_reg_32(uint32_t ins_code, cpu_t *cpu)
     }
 
     _cmn_reg(Rm, Rn, shift_t, shift_n, cpu->regs);
-    LOG_INSTRUCTION("_cmn_reg_32, R%d, R%d, SRType%d #%d\n", Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_cmn_reg_32, R%d, R%d, %s #%d\n", Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 thumb_translate32_t add_cmn_reg_32(uint32_t ins_code, cpu_t *cpu)
@@ -1956,7 +1974,7 @@ void _adc_reg_32(uint32_t ins_code, cpu_t *cpu)
     }
 
     _adc_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
-    LOG_INSTRUCTION("_adc_reg_32, R%d, R%d, R%d, SRType%d #%d\n", Rd, Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_adc_reg_32, R%d, R%d, R%d, %s #%d\n", Rd, Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 void _sbc_reg_32(uint32_t ins_code, cpu_t *cpu)
@@ -1974,7 +1992,7 @@ void _sbc_reg_32(uint32_t ins_code, cpu_t *cpu)
     }
 
     _sbc_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
-    LOG_INSTRUCTION("_sbc_reg_32, R%d, R%d, R%d, SRType%d #%d\n", Rd, Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_sbc_reg_32, R%d, R%d, R%d, %s #%d\n", Rd, Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 void _sub_reg_32(uint32_t ins_code, cpu_t *cpu)
@@ -1989,7 +2007,7 @@ void _sub_reg_32(uint32_t ins_code, cpu_t *cpu)
     CHECK_UNPREDICTABLE(Rd == 13 || (Rd == 15 && setflags == 0) || Rn == 15 || IN_RANGE(Rm, 13, 15), _sub_reg_32);
     _sub_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
 
-    LOG_INSTRUCTION("_sub_reg_32, R%d, R%d, R%d, SRType%d #%d\n", Rd, Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_sub_reg_32, R%d, R%d, R%d, %s #%d\n", Rd, Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 void _cmp_reg_32(uint32_t ins_code, cpu_t *cpu)
@@ -2002,7 +2020,7 @@ void _cmp_reg_32(uint32_t ins_code, cpu_t *cpu)
     CHECK_UNPREDICTABLE(Rn == 15 || IN_RANGE(Rm, 13, 15), _cmp_reg_32);
     _cmp_reg(Rm, Rn, shift_t, shift_n, cpu->regs);
 
-    LOG_INSTRUCTION("_cmp_reg_32, R%d, R%d, SRType%d #%d\n", Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_cmp_reg_32, R%d, R%d, %s #%d\n", Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 thumb_translate32_t sub_cmp_reg_32(uint32_t ins_code, cpu_t *cpu)
@@ -2031,7 +2049,7 @@ void _rsb_reg_32(uint32_t ins_code, cpu_t *cpu)
     CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15), _rsb_reg_32);
     _rsb_reg(Rm, Rn, Rd, shift_t, shift_n, setflags, cpu->regs);
 
-    LOG_INSTRUCTION("_rsb_reg_32, R%d, R%d, R%d, SRType%d #%d\n", Rd, Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_rsb_reg_32, R%d, R%d, R%d, %s #%d\n", Rd, Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 
@@ -2447,7 +2465,7 @@ void _ssat_32(uint32_t ins_code, cpu_t *cpu)
 
     CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15), _ssat_32);
     _ssat(saturate_to, Rn, Rd, shift_n, shift_t, cpu->regs);
-    LOG_INSTRUCTION("_ssat_32, R%d, #%d, R%d, SRType%d #%d\n", Rd, saturate_to, Rn, shift_t, shift_n);
+    LOG_INSTRUCTION("_ssat_32, R%d, #%d, R%d, %s #%d\n", Rd, saturate_to, Rn, to_string_shift_t(shift_t), shift_n);
 }
 
 void _ssat16_32(uint32_t ins_code, cpu_t *cpu)
@@ -2535,7 +2553,7 @@ void _usat_32(uint32_t ins_code, cpu_t *cpu)
 
     CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15), _usat_32);
     _usat(saturate_to, Rn, Rd, shift_n, shift_t, cpu->regs);
-    LOG_INSTRUCTION("_usat_32, R%d, #%d, R%d, SRType%d #%d\n", Rd, saturate_to, Rn, shift_t, shift_n);
+    LOG_INSTRUCTION("_usat_32, R%d, #%d, R%d, %s #%d\n", Rd, saturate_to, Rn, to_string_shift_t(shift_t), shift_n);
 }
 
 void _usat16_32(uint32_t ins_code, cpu_t *cpu)
@@ -3385,7 +3403,7 @@ void _strb_reg_32(uint32_t ins_code, cpu_t *cpu)
 
     CHECK_UNPREDICTABLE(IN_RANGE(Rt, 13, 15) || IN_RANGE(Rm, 13, 15), _strb_reg_32);
     _strb_reg(Rm, Rn, Rt, shift_t, shift_n, cpu);
-    LOG_INSTRUCTION("_strb_reg_32, R%d, [R%d, R%d, SRType%d #%d]\n", Rt, Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_strb_reg_32, R%d, [R%d, R%d, %s #%d]\n", Rt, Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 #define STR_SINGLE_OP2(ins_code) LOW_BIT32((ins_code) >> 11, 1)
@@ -3429,7 +3447,7 @@ void _strh_reg_32(uint32_t ins_code, cpu_t *cpu)
 
     CHECK_UNPREDICTABLE(IN_RANGE(Rt, 13, 15) || IN_RANGE(Rm, 13, 15), _strh_reg_32);
     _strh_reg(Rm, Rn, Rt, shift_t, shift_n, cpu);
-    LOG_INSTRUCTION("_strh_reg_32, R%d, [R%d, R%d, SRType%d #%d]\n", Rt, Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_strh_reg_32, R%d, [R%d, R%d, %s #%d]\n", Rt, Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 thumb_translate32_t strh_imm_reg_32(uint32_t ins_code, cpu_t *cpu)
@@ -3473,7 +3491,7 @@ void _str_reg_32(uint32_t ins_code, cpu_t *cpu)
 
     CHECK_UNPREDICTABLE(Rt == 15 || IN_RANGE(Rm, 13, 15), _str_reg_32);
     _str_reg(Rm, Rn, Rt, shift_t, shift_n, cpu);
-    LOG_INSTRUCTION("_str_reg_32, R%d, [R%d, R%d, SRType%d #%d]\n", Rt, Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_str_reg_32, R%d, [R%d, R%d, %s #%d]\n", Rt, Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 thumb_translate32_t str_imm_reg_32(uint32_t ins_code, cpu_t *cpu)
@@ -3541,7 +3559,7 @@ void _ldrb_reg_32(uint32_t ins_code, cpu_t *cpu)
 
     CHECK_UNPREDICTABLE(Rt == 13 || IN_RANGE(Rm, 13, 15), _ldrb_reg_32);
     _ldrb_reg(Rm, Rn, Rt, add, index, shift_t, shift_n, cpu);
-    LOG_INSTRUCTION("_ldrb_reg_32, R%d, [R%d, R%d, SRType%d %d]\n", Rt, Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_ldrb_reg_32, R%d, [R%d, R%d, %s %d]\n", Rt, Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 void _ldrsb_literal_32(uint32_t ins_code, cpu_t *cpu)
@@ -3598,7 +3616,7 @@ void _ldrsb_reg_32(uint32_t ins_code, cpu_t *cpu)
 
     CHECK_UNPREDICTABLE(Rt == 13 || IN_RANGE(Rm, 13, 15), _ldrsb_reg_32);
     _ldrsb_reg(Rm, Rn, Rt, TRUE, TRUE, shift_t, shift_n, cpu);
-    LOG_INSTRUCTION("_ldrsb_reg_32, R%d, [R%d, R%d, SRType%d %d]\n", Rt, Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_ldrsb_reg_32, R%d, [R%d, R%d, %s %d]\n", Rt, Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 /* decode by [Rn:Rt:op1] first
@@ -3767,7 +3785,7 @@ void _ldrh_reg_32(uint32_t ins_code, cpu_t *cpu)
 
     CHECK_UNPREDICTABLE(Rt == 13 || IN_RANGE(Rm, 13, 15), _ldrh_reg_32);
     _ldrh_reg(Rm, Rn, Rt, add, index, wback, shift_t, shift_n, cpu);
-    LOG_INSTRUCTION("_ldrh_reg_32, R%d, [R%d, R%d, SRType%d %d]\n", Rt, Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_ldrh_reg_32, R%d, [R%d, R%d, %s %d]\n", Rt, Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 void _ldrht_32(uint32_t ins_code, cpu_t *cpu)
@@ -3827,7 +3845,7 @@ void _ldrsh_reg_32(uint32_t ins_code, cpu_t *cpu)
 
     CHECK_UNPREDICTABLE(Rt == 13 || IN_RANGE(Rm, 13, 15), _ldrsh_reg_32);
     _ldrsh_reg(Rm, Rn, Rt, add, index, wback, shift_t, shift_n, cpu);
-    LOG_INSTRUCTION("_ldrsh_reg_32, R%d, [R%d, R%d, SRType%d %d]\n", Rt, Rn, Rm, shift_t, shift_n);
+    LOG_INSTRUCTION("_ldrsh_reg_32, R%d, [R%d, R%d, %s %d]\n", Rt, Rn, Rm, to_string_shift_t(shift_t), shift_n);
 }
 
 void _ldrsht_32(uint32_t ins_code, cpu_t *cpu)
@@ -3897,6 +3915,104 @@ thumb_translate32_t load_hbyte_mem_hint(uint32_t ins_code, cpu_t *cpu)
     /* all other encodings are treated as unpredictable while there should be unpredictable and undefined in the book */
     default:
         return (thumb_translate32_t)_unpredictable_32;
+    }
+}
+
+/* Encoding T3 */
+void _ldr_imm_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn, Rt, imm32;
+    bool_t index, add, wback;
+    get_mem_access32_imm1_params(ins_code, &Rn, &Rt, &imm32, &index, &add, &wback);
+
+    CHECK_UNPREDICTABLE(Rt == 15 && InITBlock(cpu->regs) && !LastInITBlock(cpu->regs), _ldr_imm_32);
+    _ldr_imm(imm32, Rn, Rt, add, index, wback, cpu);
+    LOG_INSTRUCTION("_ldr_imm_32, R%d, [R%d, #%d]\n", Rt, Rn, imm32);
+}
+
+void _ldr_imm_32_T4(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn, Rt, imm32;
+    bool_t index, add, wback;
+    get_mem_access32_imm2_params(ins_code, &Rn, &Rt, &imm32, &index, &add, &wback);
+
+    bool_t unpredict1 = wback && Rn == Rt;
+    bool_t unpredict2 = Rt == 15 && InITBlock(cpu->regs) && !LastInITBlock(cpu->regs);
+    CHECK_UNPREDICTABLE(unpredict1 || unpredict2, _ldr_imm_32_T4);
+    _ldr_imm(imm32, Rn, Rt, add, index, wback, cpu);
+    LOG_INSTRUCTION_MEM_ACCESS32_IMM2(Rn, Rt, imm32, index, add, wback, _ldr_imm_32_T4);
+}
+
+void _ldrt_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn, Rt, imm32;
+    get_mem_access32_unprivileged_params(ins_code, &Rn, &Rt, &imm32);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rt, 13, 15), _ldrt_32);
+    _ldrt(imm32, Rn, Rt, cpu);
+    LOG_INSTRUCTION("_ldrt_32, R%d, [R%d, #%d]\n", Rt, Rn, imm32);
+}
+
+void _ldr_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn, Rt, Rm, shift_n, shift_t;
+    get_mem_access32_reg_params(ins_code, &Rn, &Rt, &Rm, &shift_t, &shift_n);
+
+    bool_t index = TRUE;
+    bool_t add   = TRUE;
+    bool_t wback = FALSE;
+
+    CHECK_UNPREDICTABLE(Rt == 13 || IN_RANGE(Rm, 13, 15), _ldr_reg_32);
+    _ldr_reg(Rm, Rn, Rt, add, index, wback, shift_t, shift_n, cpu);
+    LOG_INSTRUCTION("_ldr_reg_32, R%d, [R%d, R%d, %s #%d]\n", Rt, Rn, Rm, to_string_shift_t(shift_t), shift_n);
+}
+
+void _ldr_literal_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rt, imm32; bool_t add;
+    get_mem_access32_literal_params(ins_code, &Rt, &imm32, &add);
+
+    CHECK_UNPREDICTABLE(Rt == 13, _ldr_literal_32);
+    _ldr_literal(imm32, Rt, add, cpu);
+    LOG_INSTRUCTION("_ldr_literal_32, R%d, #0x%x\n", Rt, imm32);
+}
+
+thumb_translate32_t load_word(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = MEM_ACCESS32_RN(ins_code);
+    uint32_t op2 = LOW_BIT32(ins_code >> 6, 6);
+    uint32_t op1 = LOW_BIT32(ins_code >> 23, 2);
+
+    if(Rn != 0xF){
+        switch(op1){
+        case 1:
+            return (thumb_translate32_t)_ldr_imm_32;
+        case 0:
+            switch(op2 >> 2){
+            case 0x0:
+                return (thumb_translate32_t)_ldr_reg_32;
+            case 0x9:
+            case 0xB:
+            case 0xD:
+            case 0xF:
+            case 0xC:
+                return (thumb_translate32_t)_ldr_imm_32_T4;
+            case 0xE:
+                return (thumb_translate32_t)_ldrt_32;
+            default:
+                return (thumb_translate32_t)_undefined_32;
+            }
+        default:
+            return (thumb_translate32_t)_undefined_32;
+        }
+    }else{
+        switch(op1){
+        case 0:
+        case 1:
+            return (thumb_translate32_t)_ldr_literal_32;
+        default:
+            return (thumb_translate32_t)_undefined_32;
+        }
     }
 }
 
@@ -4127,6 +4243,12 @@ void init_instruction_table(thumb_instruct_table_t* table)
     set_sub_table_value(table->decode32_11x_table, 0x0B, 0x0B, (thumb_translate_t)load_hbyte_mem_hint, THUMB_DECODER);
     set_sub_table_value(table->decode32_11x_table, 0x13, 0x13, (thumb_translate_t)load_hbyte_mem_hint, THUMB_DECODER);
     set_sub_table_value(table->decode32_11x_table, 0x1B, 0x1B, (thumb_translate_t)load_hbyte_mem_hint, THUMB_DECODER);
+
+    // load word
+    set_sub_table_value(table->decode32_11x_table, 0x05, 0x05, (thumb_translate_t)load_word, THUMB_DECODER);
+    set_sub_table_value(table->decode32_11x_table, 0x0D, 0x0D, (thumb_translate_t)load_word, THUMB_DECODER);
+    set_sub_table_value(table->decode32_11x_table, 0x15, 0x15, (thumb_translate_t)load_word, THUMB_DECODER);
+    set_sub_table_value(table->decode32_11x_table, 0x1D, 0x1D, (thumb_translate_t)load_word, THUMB_DECODER);
 
     // data processing(register)
     set_sub_table_value(table->decode32_11x_table, 0x20, 0x20, (thumb_translate_t)lsl_sxth_32,     THUMB_DECODER);

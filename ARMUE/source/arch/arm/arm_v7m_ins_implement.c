@@ -2096,6 +2096,28 @@ void _blx(uint32_t Rm, cpu_t* cpu)
 }
 
 /***********************************
+<<ARMv7-M Architecture Reference Manual A7-332>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    address = R[n] + imm32;
+    data = MemU_unpriv[address,4];
+    R[t] = data;
+**************************************/
+void _ldrt(uint32_t imm32, uint32_t Rn, uint32_t Rt, cpu_t *cpu)
+{
+    arm_reg_t* regs = (arm_reg_t*)cpu->regs;
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t address = Rn_val + imm32;
+    uint32_t data;
+    MemU_unpriv(address, 4, (uint8_t *)&data, MEM_READ, cpu);
+    SET_REG_VAL(regs, Rt, data);
+}
+
+/***********************************
 <<ARMv7-M Architecture Reference Manual A7-300>>
 if ConditionPassed() then
     EncodingSpecificOperations();

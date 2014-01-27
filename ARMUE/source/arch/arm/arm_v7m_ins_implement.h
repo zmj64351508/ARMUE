@@ -380,6 +380,7 @@ void _bfi(uint32_t lsbit, uint32_t msbit, uint32_t Rn, uint32_t Rd, arm_reg_t *r
 void _bfc(uint32_t lsbit, uint32_t msbit, uint32_t Rd, arm_reg_t *regs);
 void _bx(uint32_t Rm, cpu_t* cpu);
 void _blx(uint32_t Rm, cpu_t* cpu);
+void _ldrt(uint32_t imm32, uint32_t Rn, uint32_t Rt, cpu_t *cpu);
 void _ldrbt(uint32_t imm32, uint32_t Rn, uint32_t Rt, cpu_t *cpu);
 void _ldrsbt(uint32_t imm32, uint32_t Rn, uint32_t Rt, cpu_t *cpu);
 void _ldrht(uint32_t imm32, uint32_t Rn, uint32_t Rt, cpu_t *cpu);
