@@ -13,7 +13,7 @@
 #define GET_NVIC_INFO(scs) ((cm_NVIC_t*)(scs)->NVIC->controller_info)
 
 /* Interrupt Controller Type Register */
-int ICRT(uint8_t* data, int rw_flag, cm_scs_t *scs)
+int ICTR(uint8_t* data, int rw_flag, cm_scs_t *scs)
 {
     *(uint32_t*)data = GET_NVIC_INFO(scs)->interrupt_lines;
     return 0;
@@ -64,7 +64,7 @@ int cm_scs_read(uint32_t offset, uint8_t *buffer, int size, memory_region_t *reg
     switch(offset){
     /* system control not in SCB */
     case 0x004:
-        return ICRT(buffer, MEM_READ, scs);
+        return ICTR(buffer, MEM_READ, scs);
     case 0x008:
         return ud_read(offset, buffer, size, scs);
 

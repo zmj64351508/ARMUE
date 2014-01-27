@@ -4016,6 +4016,181 @@ thumb_translate32_t load_word(uint32_t ins_code, cpu_t *cpu)
     }
 }
 
+#define MUL_DIFF32_OP2(ins_code) LOW_BIT32((ins_code) >> 4, 2)
+#define MUL_DIFF32_Ra(ins_code) LOW_BIT32((ins_code) >> 12, 4)
+#define MUL_DIFF32_Rn(ins_code) LOW_BIT32((ins_code) >> 16, 4)
+#define MUL_DIFF32_Rd(ins_code) LOW_BIT32((ins_code) >> 8, 4)
+#define MUL_DIFF32_Rm(ins_code) LOW_BIT32((ins_code), 4)
+
+void _mla_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rm = MUL_DIFF32_Rm(ins_code);
+    uint32_t Rn = MUL_DIFF32_Rn(ins_code);
+    uint32_t Rd = MUL_DIFF32_Rd(ins_code);
+    uint32_t Ra = MUL_DIFF32_Ra(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15) || Ra == 13, _mla_reg_32);
+    _mla_reg(Rm, Rn, Rd, Ra, FALSE, cpu->regs);
+    LOG_INSTRUCTION("_mla_reg_32, R%d, R%d, R%d, R%d\n", Rd, Rn, Rm, Ra);
+}
+
+void _mul_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rm = MUL_DIFF32_Rm(ins_code);
+    uint32_t Rn = MUL_DIFF32_Rn(ins_code);
+    uint32_t Rd = MUL_DIFF32_Rd(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15), _mul_reg_32);
+    _mul_reg(Rm, Rn, Rd, FALSE, cpu->regs);
+    LOG_INSTRUCTION("_mul_reg_32, R%d, R%d, R%d\n", Rd, Rn, Rm);
+}
+
+void _mls_reg_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rm = MUL_DIFF32_Rm(ins_code);
+    uint32_t Rn = MUL_DIFF32_Rn(ins_code);
+    uint32_t Rd = MUL_DIFF32_Rd(ins_code);
+    uint32_t Ra = MUL_DIFF32_Ra(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15) || Ra == 13, _mls_reg_32);
+    _mls_reg(Rm, Rn, Rd, Ra, cpu->regs);
+    LOG_INSTRUCTION("_mls_reg_32, R%d, R%d, R%d, R%d\n", Rd, Rn, Rm, Ra);
+}
+
+thumb_translate32_t mla_mul_mls_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op2 = MUL_DIFF32_OP2(ins_code);
+    uint32_t Ra  = MUL_DIFF32_Ra(ins_code);
+
+    if(op2 == 0){
+        if(Ra != 0xF){
+            return (thumb_translate32_t)_mla_reg_32;
+        }else{
+            return (thumb_translate32_t)_mul_reg_32;
+        }
+    }else if(op2 == 1){
+        return (thumb_translate32_t)_mls_reg_32;
+    }else{
+        return (thumb_translate32_t)_undefined_32;
+    }
+}
+
+#define LONG_MUL_DIV32_OP2(ins_code) LOW_BIT32((ins_code) >> 4, 4)
+#define LONG_MUL_DIV32_Rd(ins_code) LOW_BIT32((ins_code) >> 8, 4)
+#define LONG_MUL_DIV32_Rm(ins_code) LOW_BIT32((ins_code), 4)
+#define LONG_MUL_DIV32_Rn(ins_code) LOW_BIT32((ins_code) >> 16, 4)
+#define LONG_MUL_DIV32_RdLo(ins_code) LOW_BIT32((ins_code) >> 12, 4)
+#define LONG_MUL_DIV32_RdHi(ins_code) LOW_BIT32((ins_code) >> 8, 4)
+
+void _smull_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = LONG_MUL_DIV32_Rn(ins_code);
+    uint32_t Rm = LONG_MUL_DIV32_Rm(ins_code);
+    uint32_t RdLo = LONG_MUL_DIV32_RdLo(ins_code);
+    uint32_t RdHi= LONG_MUL_DIV32_RdHi(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(RdLo, 13, 15) || IN_RANGE(RdHi, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15), _smull_32);
+    _smull(Rm, Rn, RdLo, RdHi, FALSE, cpu->regs);
+    LOG_INSTRUCTION("_smull_32, R%d, R%d, R%d, R%d\n", RdLo, RdHi, Rn, Rm);
+}
+
+thumb_translate32_t signed_mull_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op2 = LONG_MUL_DIV32_OP2(ins_code);
+    if(op2 == 0){
+        return (thumb_translate32_t)_smull_32;
+    }else{
+        return (thumb_translate32_t)_undefined_32;
+    }
+}
+
+void _sdiv_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = LONG_MUL_DIV32_Rn(ins_code);
+    uint32_t Rm = LONG_MUL_DIV32_Rm(ins_code);
+    uint32_t Rd = LONG_MUL_DIV32_Rd(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rn, 13, 15) || IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15), _sdiv_32);
+    _sdiv(Rm, Rn, Rd, cpu->regs);
+    LOG_INSTRUCTION("_sdiv_32, R%d, R%d, R%d\n", Rd, Rn, Rm);
+}
+
+thumb_translate32_t signed_div_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op2 = LONG_MUL_DIV32_OP2(ins_code);
+    if(op2 == 0xF){
+        return (thumb_translate32_t)_sdiv_32;
+    }else{
+        return (thumb_translate32_t)_undefined_32;
+    }
+}
+
+void _umull_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = LONG_MUL_DIV32_Rn(ins_code);
+    uint32_t Rm = LONG_MUL_DIV32_Rm(ins_code);
+    uint32_t RdLo = LONG_MUL_DIV32_RdLo(ins_code);
+    uint32_t RdHi= LONG_MUL_DIV32_RdHi(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(RdLo, 13, 15) || IN_RANGE(RdHi, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15), _umull_32);
+    _umull(Rm, Rn, RdLo, RdHi, FALSE, cpu->regs);
+    LOG_INSTRUCTION("_umull_32, R%d, R%d, R%d, R%d\n", RdLo, RdHi, Rn, Rm);
+}
+
+thumb_translate32_t unsigned_mull_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op2 = LONG_MUL_DIV32_OP2(ins_code);
+    if(op2 == 0){
+        return (thumb_translate32_t)_umull_32;
+    }else{
+        return (thumb_translate32_t)_undefined_32;
+    }
+}
+
+void _udiv_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = LONG_MUL_DIV32_Rn(ins_code);
+    uint32_t Rm = LONG_MUL_DIV32_Rm(ins_code);
+    uint32_t Rd = LONG_MUL_DIV32_Rd(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(Rn, 13, 15) || IN_RANGE(Rd, 13, 15) || IN_RANGE(Rm, 13, 15), _udiv_32);
+    _udiv(Rm, Rn, Rd, cpu->regs);
+    LOG_INSTRUCTION("_udiv_32, R%d, R%d, R%d\n", Rd, Rn, Rm);
+}
+
+thumb_translate32_t unsigned_div_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op2 = LONG_MUL_DIV32_OP2(ins_code);
+    if(op2 == 0xF){
+        return (thumb_translate32_t)_udiv_32;
+    }else{
+        return (thumb_translate32_t)_undefined_32;
+    }
+}
+
+void _smlal_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t Rn = LONG_MUL_DIV32_Rn(ins_code);
+    uint32_t Rm = LONG_MUL_DIV32_Rm(ins_code);
+    uint32_t RdLo = LONG_MUL_DIV32_RdLo(ins_code);
+    uint32_t RdHi= LONG_MUL_DIV32_RdHi(ins_code);
+
+    CHECK_UNPREDICTABLE(IN_RANGE(RdLo, 13, 15) || IN_RANGE(RdHi, 13, 15) || IN_RANGE(Rn, 13, 15) || IN_RANGE(Rm, 13, 15), _smlal_32);
+    _smlal(Rm, Rn, RdLo, RdHi, FALSE, cpu->regs);
+    LOG_INSTRUCTION("_smlal_32, R%d, R%d, R%d, R%d\n", RdLo, RdHi, Rn, Rm);
+}
+
+thumb_translate32_t signed_mul_acc_32(uint32_t ins_code, cpu_t *cpu)
+{
+    uint32_t op2 = LONG_MUL_DIV32_OP2(ins_code);
+    switch(op2){
+    case 0:
+        return (thumb_translate32_t)_smlal_32;
+    default:
+        return (thumb_translate32_t)_undefined_32;
+    }
+}
+
 /****** init instruction table ******/
 void init_instruction_table(thumb_instruct_table_t* table)
 {
@@ -4260,6 +4435,15 @@ void init_instruction_table(thumb_instruct_table_t* table)
     set_sub_table_value(table->decode32_11x_table, 0x26, 0x27, (thumb_translate_t)_ror_reg_32,     THUMB_EXCUTER);
     set_sub_table_value(table->decode32_11x_table, 0x28, 0x2F, (thumb_translate_t)parallel_add_sub_misc,THUMB_DECODER);
 
+    // multiply, multiply accumulate, and absolute difference
+    set_sub_table_value(table->decode32_11x_table, 0x30, 0x30, (thumb_translate_t)mla_mul_mls_32,  THUMB_DECODER);
+
+    // long multiply, long multiply accumulate, and divide
+    set_sub_table_value(table->decode32_11x_table, 0x38, 0x38, (thumb_translate_t)signed_mull_32,   THUMB_DECODER);
+    set_sub_table_value(table->decode32_11x_table, 0x39, 0x39, (thumb_translate_t)signed_div_32,    THUMB_DECODER);
+    set_sub_table_value(table->decode32_11x_table, 0x3A, 0x3A, (thumb_translate_t)unsigned_mull_32, THUMB_DECODER);
+    set_sub_table_value(table->decode32_11x_table, 0x3B, 0x3B, (thumb_translate_t)unsigned_div_32,  THUMB_DECODER);
+    set_sub_table_value(table->decode32_11x_table, 0x3C, 0x3C, (thumb_translate_t)signed_mul_acc_32,THUMB_DECODER);
 }
 
 bool_t is_16bit_code(uint16_t opcode)

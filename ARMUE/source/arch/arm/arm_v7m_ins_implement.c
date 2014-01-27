@@ -1638,7 +1638,6 @@ void _mul_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflags, arm_reg_
         return;
     }
 
-    // EncodingSpecificOperations();
     int32_t operand1 = (int32_t)GET_REG_VAL(regs, Rn);
     int32_t operand2 = (int32_t)GET_REG_VAL(regs, Rm);
     int32_t result = operand1 * operand2;
@@ -1648,6 +1647,192 @@ void _mul_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflags, arm_reg_
         SET_APSR_N(regs, result);
         SET_APSR_Z(regs, result);
     }
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-345>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    operand1 = SInt(R[n]); // operand1 = UInt(R[n]) produces the same final results
+    operand2 = SInt(R[m]); // operand2 = UInt(R[m]) produces the same final results
+    addend = SInt(R[a]); // addend = UInt(R[a]) produces the same final results
+    result = operand1 * operand2 + addend;
+    R[d] = result<31:0>;
+    if setflags then
+        APSR.N = result<31>;
+        APSR.Z = IsZeroBit(result);
+        // APSR.C unchanged
+        // APSR.V unchanged
+**************************************/
+void _mla_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t Ra, bool_t setflags, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    int32_t operand1 = (int32_t)GET_REG_VAL(regs, Rn);
+    int32_t operand2 = (int32_t)GET_REG_VAL(regs, Rm);
+    int32_t addend   = (int32_t)GET_REG_VAL(regs, Ra);
+    int32_t result = operand1 * operand2 + addend;
+
+    SET_REG_VAL(regs, Rd, result);
+    if(setflags){
+        SET_APSR_N(regs, result);
+        SET_APSR_Z(regs, result);
+    }
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-346>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    operand1 = SInt(R[n]); // operand1 = UInt(R[n]) produces the same final results
+    operand2 = SInt(R[m]); // operand2 = UInt(R[m]) produces the same final results
+    addend = SInt(R[a]); // addend = UInt(R[a]) produces the same final results
+    result = addend - operand1 * operand2;
+    R[d] = result<31:0>;
+**************************************/
+void _mls_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t Ra, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    int32_t operand1 = (int32_t)GET_REG_VAL(regs, Rn);
+    int32_t operand2 = (int32_t)GET_REG_VAL(regs, Rm);
+    int32_t addend   = (int32_t)GET_REG_VAL(regs, Ra);
+    int32_t result = addend - operand1 * operand2;
+
+    SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-457>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    result = SInt(R[n]) * SInt(R[m]);
+    R[dHi] = result<63:32>;
+    R[dLo] = result<31:0>;
+**************************************/
+void _smull(uint32_t Rm, uint32_t Rn, uint32_t RdLo, uint32_t RdHi, bool_t setflags, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    int64_t op1 = (int32_t)GET_REG_VAL(regs, Rn);
+    int64_t op2 = (int32_t)GET_REG_VAL(regs, Rm);
+    int64_t result = op1 * op2;
+    SET_REG_VAL(regs, RdHi, (uint64_t)result >> 32);
+    SET_REG_VAL(regs, RdLo, result & 0xFFFFFFFF);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-538>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    result = UInt(R[n]) * UInt(R[m]);
+    R[dHi] = result<63:32>;
+    R[dLo] = result<31:0>;
+**************************************/
+void _umull(uint32_t Rm, uint32_t Rn, uint32_t RdLo, uint32_t RdHi, bool_t setflags, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint64_t op1 = GET_REG_VAL(regs, Rn);
+    uint64_t op2 = GET_REG_VAL(regs, Rm);
+    uint64_t result = op1 * op2;
+    SET_REG_VAL(regs, RdHi, result >> 32);
+    SET_REG_VAL(regs, RdLo, result & 0xFFFFFFFF);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-437>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    result = SInt(R[n]) * SInt(R[m]) + SInt(R[dHi]:R[dLo]);
+    R[dHi] = result<63:32>;
+    R[dLo] = result<31:0>;
+**************************************/
+void _smlal(uint32_t Rm, uint32_t Rn, uint32_t RdLo, uint32_t RdHi, bool_t setflags, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    int64_t op1 = (int32_t)GET_REG_VAL(regs, Rn);
+    int64_t op2 = (int32_t)GET_REG_VAL(regs, Rm);
+    int64_t add = (int64_t)GET_REG_VAL(regs, RdHi) << 32 | (int64_t)GET_REG_VAL(regs, RdLo);
+    int64_t result = op1 * op2 + add;
+
+    SET_REG_VAL(regs, RdHi, (uint64_t)result >> 32);
+    SET_REG_VAL(regs, RdLo, result & 0xFFFFFFFF);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-423>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    if SInt(R[m]) == 0 then
+        if IntegerZeroDivideTrappingEnabled() then
+            GenerateIntegerZeroDivide();
+        else
+            result = 0;
+    else
+        result = RoundTowardsZero(SInt(R[n]) / SInt(R[m]));
+    R[d] = result<31:0>;
+**************************************/
+void _sdiv(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    int32_t Rm_val = GET_REG_VAL(regs, Rm);
+    int32_t Rn_val = GET_REG_VAL(regs, Rn);
+    int32_t result;
+    if(Rm_val == 0){
+        // TODO: interger zero divided trapping
+        result = 0;
+    }else{
+        result = Rn_val / Rm_val;
+    }
+
+    SET_REG_VAL(regs, Rd, result);
+}
+
+/***********************************
+<<ARMv7-M Architecture Reference Manual A7-529>>
+if ConditionPassed() then
+    EncodingSpecificOperations();
+    if UInt(R[m]) == 0 then
+        if IntegerZeroDivideTrappingEnabled() then
+            GenerateIntegerZeroDivide();
+        else
+            result = 0;
+    else
+        result = RoundTowardsZero(UInt(R[n]) / UInt(R[m]));
+    R[d] = result<31:0>;
+**************************************/
+void _udiv(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs)
+{
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    uint32_t Rm_val = GET_REG_VAL(regs, Rm);
+    uint32_t Rn_val = GET_REG_VAL(regs, Rn);
+    uint32_t result;
+    if(Rm_val == 0){
+        // TODO: interger zero divided trapping
+        result = 0;
+    }else{
+        result = Rn_val / Rm_val;
+    }
+
+    SET_REG_VAL(regs, Rd, result);
 }
 
 /***********************************

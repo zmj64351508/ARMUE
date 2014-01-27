@@ -363,6 +363,13 @@ void _orr_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, bool_t setflags, int car
 void _orn_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs);
 void _orn_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, bool_t setflags, int carry, arm_reg_t *regs);
 void _mul_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t setflags, arm_reg_t* regs);
+void _mla_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t Ra, bool_t setflags, arm_reg_t *regs);
+void _mls_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, uint32_t Ra, arm_reg_t *regs);
+void _smull(uint32_t Rm, uint32_t Rn, uint32_t RdLo, uint32_t RdHi, bool_t setflags, arm_reg_t *regs);
+void _umull(uint32_t Rm, uint32_t Rn, uint32_t RdLo, uint32_t RdHi, bool_t setflags, arm_reg_t *regs);
+void _smlal(uint32_t Rm, uint32_t Rn, uint32_t RdLo, uint32_t RdHi, bool_t setflags, arm_reg_t *regs);
+void _sdiv(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
+void _udiv(uint32_t Rm, uint32_t Rn, uint32_t Rd, arm_reg_t *regs);
 void _bic_reg(uint32_t Rm, uint32_t Rn, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs);
 void _bic_imm(uint32_t imm32, uint32_t Rn, uint32_t Rd, bool_t setflags, int carry, arm_reg_t *regs);
 void _mvn_reg(uint32_t Rm, uint32_t Rd, SRType shift_t, uint32_t shift_n, uint32_t setflags, arm_reg_t* regs);
