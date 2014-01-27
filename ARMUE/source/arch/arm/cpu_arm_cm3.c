@@ -29,14 +29,31 @@ int armcm3_startup(cpu_t* cpu)
     // set register initial value
     // TODO: Following statements need to be pack in another function which should be in armv7m module
     // reset behaviour refering to B1-642
-    regs->sp_in_use = BANK_INDEX_MSP;
-    SET_REG_VAL_BANKED(regs, SP_INDEX, BANK_INDEX_MSP, get_vector_value(cpu->cm_NVIC, 0));
+    // Currently set to a specific value for test
     regs->PC = align_address(get_vector_value(cpu->cm_NVIC, 1));
-    regs->xPSR = 0x0;
-    SET_EPSR_T(regs, get_vector_value(cpu->cm_NVIC, 1) & BIT_0);
+    regs->R0 = 0x0;
+    regs->R1 = 0x000000D9;
+    regs->R2 = 0;
+    regs->R3 = 0;
+    regs->R4 = 0x3456abcd;
+    regs->R5 = 0x3456abcd;
+    regs->R6 = 0x12345678;
+    regs->R7 = 0;
+    regs->R8 = 0x0;
+    regs->R9 = 0x0;
+    regs->R10 = 0x0;
+    regs->R11 = 0x0;
+    regs->R12 = 0x0;
+    SET_REG_VAL_BANKED(regs, SP_INDEX, BANK_INDEX_MSP, get_vector_value(cpu->cm_NVIC, 0));
+    SET_REG_VAL_BANKED(regs, SP_INDEX, BANK_INDEX_PSP, 0x10000200);
+    regs->xPSR = 0x61000000;
+    //SET_EPSR_T(regs, get_vector_value(cpu->cm_NVIC, 1) & BIT_0);
     /* if ESPR T is not zero, refer to B1-625 */
 
-    regs->LR = 0xFFFFFFFF;
+    //regs->LR = 0xFFFFFFFF;
+    regs->LR = 0x1FFF0D5F;
+    regs->sp_in_use = BANK_INDEX_MSP;
+
     thumb_state* arm_state = (thumb_state*)cpu->run_info.cpu_spec_info;
     arm_state->mode = MODE_THREAD;
 

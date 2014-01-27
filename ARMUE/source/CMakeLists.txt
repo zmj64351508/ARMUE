@@ -23,7 +23,7 @@ aux_source_directory(./core CORE_FILE)
 aux_source_directory(./utils UTILS_FILE)
 aux_source_directory(./arch/arm ARCH_ARM_FILE)
 
-SET(CMAKE_C_FLAGS "$ENV{CFLAGS} -O0 -Wall -Wl,-Map,debug.map -g -finline-functions")
+SET(CMAKE_C_FLAGS "$ENV{CFLAGS} -O0 -Wall -Wl,-Map,debug.map -g -ggdb3 -finline-functions")
 ADD_DEFINITIONS(-D_DEBUG)
 
 #executable and library name

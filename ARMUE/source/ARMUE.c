@@ -10,27 +10,6 @@ int main(int argc, char **argv)
 {
     // register all exsisted modules
     register_all_modules();
-
-    memory_map_t *memory_map = create_memory_map();
-    // ROM
-    rom_t* rom = alloc_rom();
-    set_rom_size(rom, 0x1000);
-    if(SUCCESS != open_rom("E:\\GitHub\\ARMUE\\test.rom", rom)){
-        return -1;
-    }
-    fill_rom_with_bin(rom, "E:\\GitHub\\ARMUE\\cortex_m3_test\\test.bin");
-    int result = setup_memory_map_rom(memory_map, rom, 0x00);
-    if(result < 0){
-        LOG(LOG_ERROR, "Faild to setup ROM\n");
-    }
-
-    /* RAM */
-    ram_t* ram = create_ram(0x1000);
-    result = setup_memory_map_ram(memory_map, ram, 0x01000000);
-    if(result < 0){
-        LOG(LOG_ERROR, "Failed to setup RAM\n");
-    }
-
     /*
     module_t* uart_module = find_module(_T("uart"));
     peripheral_t* uart = uart_module->create_peripheral();
@@ -40,6 +19,7 @@ int main(int argc, char **argv)
     uart->set_operation(0x10, "out,send_message,[31:0]");
     set_memory_map_peripheral(memory_map, uart);
     */
+    memory_map_t *memory_map = create_memory_map();
 
     soc_conf_t soc_conf;
     soc_conf.cpu_num = 1;
@@ -51,6 +31,25 @@ int main(int argc, char **argv)
     soc_conf.memories[0] = memory_map;
     soc_conf.exclusive_high_address = 0xFFFFFFFF;
     soc_conf.exclusive_low_address = 0;
+
+    // ROM
+    rom_t* rom = alloc_rom();
+    set_rom_size(rom, 0x80000);
+    if(SUCCESS != open_rom("E:\\GitHub\\ARMUE\\test.rom", rom)){
+        return -1;
+    }
+    fill_rom_with_bin(rom, "E:\\GitHub\\ARMUE\\cortex_m3_test\\test.bin");
+    int result = setup_memory_map_rom(memory_map, rom, 0x00);
+    if(result < 0){
+        LOG(LOG_ERROR, "Faild to setup ROM\n");
+    }
+
+    /* RAM */
+    ram_t* ram = create_ram(0x8000);
+    result = setup_memory_map_ram(memory_map, ram, 0x10000000);
+    if(result < 0){
+        LOG(LOG_ERROR, "Failed to setup RAM\n");
+    }
 
     // soc
     uint32_t opcode;
