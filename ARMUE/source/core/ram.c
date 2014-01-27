@@ -1,4 +1,5 @@
 #include "ram.h"
+#include <string.h>
 #include <stdlib.h>
 
 ram_t* create_ram(size_t size)

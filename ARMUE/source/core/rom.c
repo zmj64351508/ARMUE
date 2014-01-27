@@ -144,7 +144,7 @@ static error_code_t parse_rom_file_head(_IO rom_t *rom)
 
     if(read_size == READ_ROM_SIZE){
         rom->size = read_size;
-    }else if(read_size != rom->size){
+    }else if(read_size > rom->size){
         return ERROR_ROM_PARAM_DISMATCH;
     }
 

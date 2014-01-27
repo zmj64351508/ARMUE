@@ -133,6 +133,7 @@ int init_armcm3_cpu(cpu_t *cpu, soc_conf_t* config)
     cpu->decode = decode_armcm3_cpu;
     cpu->excute = excute_armcm3_cpu;
     set_cpu_module(cpu, this_module);
+    cpu->type = CPU_ARM_CM3;
 
     // add cpu to cpu list
     add_cpu_to_tail(this_module->cpu_list, cpu);
