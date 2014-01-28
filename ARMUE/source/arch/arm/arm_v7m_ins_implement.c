@@ -207,7 +207,7 @@ uint8_t ConditionPassed(uint8_t branch_cond, arm_reg_t* regs)
     case 3:
         result = GET_APSR_V(regs) == 1; break;
     case 4:
-        result = (GET_APSR_C(regs) == 1) && (GET_APSR_Z(regs) == 1); break;
+        result = (GET_APSR_C(regs) == 1) && (GET_APSR_Z(regs) == 0); break;
     case 5:
         result = GET_APSR_N(regs) == GET_APSR_V(regs); break;
     case 6:

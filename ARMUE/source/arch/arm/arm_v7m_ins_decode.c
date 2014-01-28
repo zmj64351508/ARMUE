@@ -2375,9 +2375,10 @@ void _adr_after_32(uint32_t ins_code, cpu_t *cpu)
     uint32_t imm32 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
     bool_t add = TRUE;
 
-    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15), _adr_after_32);
-    _adr(imm32, Rd, add, cpu->regs);
     LOG_INSTRUCTION("_adr_after_32, R%d, #%d\n", Rd, imm32);
+    // in the real board, Rd can be 13 to 15
+    //CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15), _adr_after_32);
+    _adr(imm32, Rd, add, cpu->regs);
 }
 
 thumb_translate32_t add_adr_imm_32(uint32_t ins_code, cpu_t *cpu)
@@ -2422,9 +2423,10 @@ void _adr_before_32(uint32_t ins_code, cpu_t *cpu)
     uint32_t imm32 = DATA_PROCESS32_I_IMM3_IMM8(ins_code);
     bool_t add = FALSE;
 
-    CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15), _adr_after_32);
-    _adr(imm32, Rd, add, cpu->regs);
     LOG_INSTRUCTION("_adr_before_32, R%d, #%d\n", Rd, imm32);
+    // in the real board, Rd can be 13 to 15;
+    //CHECK_UNPREDICTABLE(IN_RANGE(Rd, 13, 15), _adr_before_32);
+    _adr(imm32, Rd, add, cpu->regs);
 }
 
 thumb_translate32_t sub_adr_imm_32(uint32_t ins_code, cpu_t *cpu)
