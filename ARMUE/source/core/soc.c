@@ -34,8 +34,8 @@ uint32_t run_soc(soc_t* soc)
         cpu->exceptions->handle_exception(vector_num, cpu);
     }
     add_cycle(cpu);
-    LOG_REG(cpu);
-    getchar();
+    //LOG_REG(cpu);
+    //getchar();
     return opcode;
 }
 

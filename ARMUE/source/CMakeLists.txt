@@ -18,6 +18,9 @@ aux_source_directory(./ MAIN_APP)
 #tests
 set(SPEED_TEST ./test/speed_test.c)
 
+#armv7m instruction test
+set(ARM_INS_TEST ./test/armv7m_instruction_test.c)
+
 #source files
 aux_source_directory(./core CORE_FILE)
 aux_source_directory(./utils UTILS_FILE)
@@ -40,4 +43,13 @@ ${CORE_FILE}
 ${UTILS_FILE}
 ${ARCH_ARM_FILE}
 )
+
+add_executable(arm_instruction_test
+${ARM_INS_TEST}
+${CORE_FILE}
+${UTILS_FILE}
+${ARCH_ARM_FILE}
+)
+
 #add_library(ADL_LIB STATIC ${SOURCES})
+
