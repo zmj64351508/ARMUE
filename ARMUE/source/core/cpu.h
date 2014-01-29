@@ -38,6 +38,7 @@ typedef struct run_info_t
     void *cpu_spec_info;
     void *global_info;
     int ins_type;
+    bool_t halting;
 }run_info_t;
 
 typedef struct cpu_t

@@ -3,6 +3,7 @@
 #include "memory_map.h"
 #include "cpu.h"
 #include "cm_NVIC.h"
+#include "cm_system_control_space.h"
 #include <assert.h>
 #include <stdlib.h>
 
@@ -441,6 +442,24 @@ int MemA(uint32_t address, int size, _IO uint8_t* buffer, int type, cpu_t* cpu)
     thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
     return MemA_with_priv(address, size, buffer, FindPriv(regs, state), type, cpu);
 }
+
+/* refer to <<ARMv7-M Architecture Referenece Maunal>> page 823 */
+void _bkpt(cpu_t *cpu)
+{
+    arm_reg_t *regs = ARMv7m_GET_REGS(cpu);
+    if(!ConditionPassed(0, regs)){
+        return;
+    }
+
+    // generate halting event
+    cm_scs_t *scs = (cm_scs_t *)cpu->system_info;
+    uint32_t DHCSR = scs->regs.DHCSR;
+    if(LOW_BIT32(DHCSR, 1) == 1){   // C_DEBUGEN
+        cpu->run_info.halting = TRUE;
+        scs->regs.DHCSR |= (1ul << 17);   // set S_HALT
+    }
+}
+
 
 /***********************************
 <<ARMv7-M Architecture Reference Manual A7-334>>

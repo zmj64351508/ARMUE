@@ -282,6 +282,8 @@ int cm_scs_init(cpu_t *cpu) //,soc_conf_t* config)
     /* some configs */
     scs->config.endianess = LITTLE_ENDIAN;
     scs->config.prigroup  = 1;
+    /* enable Debug Halting and disable Debug Exception default, refering to page 830 */
+    scs->regs.DHCSR = 0x00000001;
 
     return SUCCESS;
 

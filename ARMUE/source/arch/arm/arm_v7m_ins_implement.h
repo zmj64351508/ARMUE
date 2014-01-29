@@ -326,6 +326,7 @@ void armv7m_branch(uint32_t addr, cpu_t* cpu);
 void armv7m_push(uint32_t val, cpu_t* cpu);
 
 /* implementation of instructions */
+void _bkpt(cpu_t *cpu);
 void _lsl_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, arm_reg_t* regs);
 void _lsr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, arm_reg_t* regs);
 void _asr_imm(uint32_t imm, uint32_t Rm, uint32_t Rd, uint32_t setflags, arm_reg_t* regs);

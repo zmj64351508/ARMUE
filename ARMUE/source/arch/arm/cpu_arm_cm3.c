@@ -93,8 +93,10 @@ ins_t decode_armcm3_cpu(cpu_t* cpu, void* opcode)
         ins_info.length = 16;
         cpu->run_info.ins_type = ARM_INS_THUMB16;
     }else{
-        /* exchange low and high 16bit */
-        ins_info.opcode = ((opcode32 >> 16) & 0x0000FFFF) | ((opcode32 << 16) & 0xFFFF0000);
+        if(((cm_scs_t *)cpu->system_info)->config.endianess == LITTLE_ENDIAN){
+            /* exchange low and high 16bit */
+            ins_info.opcode = ((opcode32 >> 16) & 0x0000FFFF) | ((opcode32 << 16) & 0xFFFF0000);
+        }
         LOG(LOG_DEBUG, "decode_armcm3_cpu: 32 bit opcode 0x%0x\n", (uint32_t)ins_info.opcode);
         ins_info.excute = thumb_parse_opcode32((uint32_t)ins_info.opcode, cpu);
         ins_info.length = 32;

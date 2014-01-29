@@ -975,7 +975,7 @@ void _pop_16(uint16_t ins_code, cpu_t* cpu)
 void _bkpt_16(uint16_t ins_code, cpu_t* cpu)
 {
     uint32_t imm32 = LOW_BIT16(ins_code, 8);
-
+    _bkpt(cpu);
     LOG_INSTRUCTION("_bkpt_16 #%d\n", imm32);
 }
 

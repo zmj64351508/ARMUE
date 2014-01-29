@@ -23,9 +23,18 @@ int startup_soc(soc_t* soc)
 uint32_t run_soc(soc_t* soc)
 {
     cpu_t *cpu = soc->cpu[0];
-    uint32_t opcode = cpu->fetch32(cpu);
-    ins_t ins_info = cpu->decode(cpu, &opcode);
-    cpu->excute(cpu, ins_info);
+
+    /* basic steps to run a single operation code */
+    uint32_t opcode   = cpu->fetch32(cpu);
+    ins_t    ins_info = cpu->decode(cpu, &opcode);
+                        cpu->excute(cpu, ins_info);
+
+    /* cpu halting for debug */
+    while(cpu->run_info.halting){
+        // rsp_handle;
+    }
+
+    /* exception and interrupt checker/handler */
     if(cpu->GIC){
 
     }

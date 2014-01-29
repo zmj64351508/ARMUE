@@ -19,8 +19,13 @@ typedef struct cm_config_t{
     int prigroup;
 }cm_config_t;
 
+typedef struct cm_scs_reg_t{
+    uint32_t DHCSR;
+}cm_scs_reg_t;
+
 typedef struct cm_scs_t{
     cm_config_t config;
+    cm_scs_reg_t regs;
     void* user_defined_data;
     vector_exception_t *NVIC;
     //cm_systick_t *systick;
