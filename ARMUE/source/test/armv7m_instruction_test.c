@@ -242,12 +242,13 @@ int main(int argc, char **argv)
     register_all_modules();
     memory_map_t *memory_map = create_memory_map();
 
+    // the SOC configuration
     soc_conf_t soc_conf;
     soc_conf.cpu_num = 1;
     soc_conf.cpu_name = "arm_cm3";
     soc_conf.exception_num = 255;
     soc_conf.nested_level = 10;
-    soc_conf.has_GIC = 0;
+    soc_conf.has_GIC = FALSE;
     soc_conf.memory_map_num = 1;
     soc_conf.memories[0] = memory_map;
     soc_conf.exclusive_high_address = 0xFFFFFFFF;

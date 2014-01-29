@@ -4542,6 +4542,7 @@ error_code_t destory_arm_regs(arm_reg_t** regs)
 
 thumb_state* create_thumb_state()
 {
+    // the head of the fifo indicates the exception happened currently
     fifo_t *cur_exception = create_fifo(NVIC_MAX_EXCEPTION, sizeof(int));
     if(cur_exception == NULL){
         goto cur_exception_error;
@@ -4612,18 +4613,21 @@ void desotry_instruction_table(thumb_instruct_table_t **table)
 /* create and initialize the instruction as well as the cpu state */
 int ins_thumb_init(_IO cpu_t* cpu, soc_conf_t *config)
 {
+    // initialize state info
     thumb_state* state = create_thumb_state();
     if(state == NULL){
         goto state_error;
     }
     set_cpu_spec_info(cpu, state);
 
+    // initialize global info
     thumb_global_state *global_state = create_thumb_global_state(config);
     if(global_state == NULL){
         goto global_state_error;
     }
     cpu->run_info.global_info = global_state;
 
+    // create registers
     cpu->regs = create_arm_regs();
     if(cpu->regs == NULL){
         goto regs_error;

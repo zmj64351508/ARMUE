@@ -12,6 +12,7 @@ int startup_soc(soc_t* soc)
 
     cpu_t *cpu = soc->cpu[0];
 
+    /* start the cpu */
     if(cpu->startup != NULL){
         retval = cpu->startup(cpu);
     }
@@ -56,21 +57,23 @@ static soc_t* create_single_cpu_soc(cpu_t* cpu, memory_map_t *memory_space, memo
     }
 
     /* cpu id starts from 0 */
+    soc->cpu_num = 1;
     cpu->cid = 0;
     soc->cpu[0] = cpu;
-    soc->cpu_num = 1;
     soc->cpu[0]->memory_space = memory_space;
     soc->cpu[0]->io_space = io_space;
 
     return soc;
 }
 
+/* create the soc and initialize the content */
 soc_t* create_soc(soc_conf_t* config)
 {
     soc_t* soc = NULL;
     if(config->cpu_num != 1)
         return NULL;
 
+    /* find the cpu module and allocate the cpu */
     module_t* cpu_module = find_module(config->cpu_name);
     if(cpu_module == NULL){
         goto find_cpu_module_fail;
@@ -95,17 +98,22 @@ soc_t* create_soc(soc_conf_t* config)
         cpu->GIC = NULL;
     }
 
+    /* create the soc */
     LOG(LOG_DEBUG, "create_soc: created cpu %s\n", cpu_module->name);
     soc = create_single_cpu_soc(cpu, config->memories[0], config->memories[0]);
     if(soc == NULL){
         goto create_soc_fail;
     }
 
-    /* Before init_cpu, it must ensure exceptions and memory map are setuped. */
+    /* Initialize the cpu. It is the cpu specific action.
+       CPU need to know the memory map and exceptions, so before init_cpu,
+       it must ensure exceptions and memory map are setuped. */
     int retval = cpu_module->init_cpu(cpu, config);
     if(retval < 0){
         goto init_cpu_fail;
     }
+
+    /* validate the cpu */
     if(!validate_cpu(cpu)){
         LOG(LOG_ERROR, "create_soc: invalid cpu %s\n", cpu_module->name);
         goto invalid_cpu;
