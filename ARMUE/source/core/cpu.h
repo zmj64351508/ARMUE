@@ -24,6 +24,8 @@ typedef uint32_t (*cpu_fetch32_func_t)(struct cpu_t* cpu);
 typedef ins_t (*cpu_decode_func_t)(struct cpu_t* cpu, void* opcode);
 typedef void (*cpu_exec_func_t)(struct cpu_t* cpu, ins_t opcode);
 typedef int (*cpu_startup_func_t)(struct cpu_t* cpu);
+typedef uint32_t (*cpu_get_pc_func_t)(struct cpu_t *cpu);
+typedef void (*cpu_set_pc_func_t)(uint32_t val, struct cpu_t *cpu);
 
 typedef struct cpu_list_t
 {
@@ -77,6 +79,8 @@ typedef struct cpu_t
     cpu_fetch32_func_t fetch32;
     cpu_decode_func_t decode;
     cpu_exec_func_t excute;
+    cpu_get_pc_func_t get_raw_pc;
+    cpu_set_pc_func_t set_raw_pc;
 
     // cpu list
     struct cpu_t* next_cpu;

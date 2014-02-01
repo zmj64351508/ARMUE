@@ -7,6 +7,7 @@
 #include "memory_map.h"
 #include "soc.h"
 #include "arm_v7m_ins_decode.h"
+#include "arm_gdb_stub.h"
 
 enum state_t{
     STATE_START = 1,
@@ -285,9 +286,13 @@ int main(int argc, char **argv)
 
     // soc
     soc_t* soc = create_soc(&soc_conf);
-
+    soc->stub = create_stub();
+    if(soc->stub == NULL){
+        return -1;
+    }
     if(soc != NULL){
         startup_soc(soc);
+        init_stub(soc->stub);
 
         /* copy the initial state to simulated registers */
         sim_regs = ARMv7m_GET_REGS(soc->cpu[0]);

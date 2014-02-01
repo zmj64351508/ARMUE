@@ -90,6 +90,7 @@ error_code_t fill_rom_with_bin(rom_t *rom, char* bin_path)
         return ERROR_INVALID_PATH;
     }
 
+    fclose(bin_file);
 }
 
 
@@ -127,7 +128,7 @@ static error_code_t validate_rom_param(rom_t* rom)
     return SUCCESS;
 }
 
-static error_code_t parse_rom_file_head(_IO rom_t *rom)
+static error_code_t parse_rom_file_head(IOput rom_t *rom)
 {
     if(rom == NULL){
         return ERROR_NULL_POINTER;
@@ -160,7 +161,7 @@ static error_code_t parse_rom_file_head(_IO rom_t *rom)
  *                      when the file exsists.
  * @return:        SUCCESS, ERROR_INVALID_PARAM, ERROR_INVALID_ROM_FILE, ERROR_CREATE
  */
-error_code_t open_rom(_I char* path, _IO rom_t* rom)
+error_code_t open_rom(Input char* path, IOput rom_t* rom)
 {
     LOG(LOG_DEBUG, "open_rom: %s\n", path);
     if(rom == NULL || path == NULL){

@@ -1,13 +1,13 @@
 #ifndef _ARM_V7M_INS_IMPLEMENT_H_
 #define _ARM_V7M_INS_IMPLEMENT_H_
 
-#include "_types.h"
 #include "cpu.h"
 #include "soc.h"
 #include "memory_map.h"
 #include "list.h"
 #include <stdint.h>
 #include <assert.h>
+#include "_types.h"
 
 typedef enum{
     SRType_LSL,
@@ -37,25 +37,25 @@ typedef enum{
 typedef struct{
     // general registers
     union{
-        uint32_t R[16];            // 0x00~0x0D * sizeof(uint32_t)
+        uint32_t R[32];            // 0x00~0x0D * sizeof(uint32_t)
         struct {
             uint32_t R0, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12;
-            union{
-                uint32_t SP;
-                uint32_t MSP;
-                uint32_t PSP;
-            };
+            uint32_t SP;
             uint32_t LR;
             uint32_t PC;
+            uint32_t F[8];
+            uint32_t FPS;
+            // control registers
+            union{
+                uint32_t xPSR;
+                uint32_t CPSR;
+            };
+            uint32_t PRIMASK;
+            uint32_t FAULTMASK;
+            uint32_t BASEPRI;
+            uint32_t CONTROL;
         };
     };
-
-    // control registers
-    uint32_t xPSR;            // 0x11
-    uint32_t PRIMASK;        // 0x12
-    uint32_t FAULTMASK;        // 0x13
-    uint32_t BASEPRI;        // 0x14
-    uint32_t CONTROL;        // 0x15
 
     // banked registers
     uint32_t SP_bank[2];        // backup for MSP/PSP
@@ -197,7 +197,7 @@ do{\
     regs->xPSR |= ((value_8bit) & 0x3) << 25; \
 }while(0)
 
-void DecodeImmShift(uint32_t type, uint32_t imm5, _O uint32_t *shift_t, _O uint32_t *shift_n);
+void DecodeImmShift(uint32_t type, uint32_t imm5, Output uint32_t *shift_t, Output uint32_t *shift_n);
 int ThumbExpandImm_C(uint32_t imm12, uint32_t carry_in, uint32_t *imm32, int*carry_out);
 
 /* TODO: the real FP extension */
@@ -321,9 +321,11 @@ static inline uint32_t _ASR32(uint32_t val, int amount)
 /* directly operate registers */
 void sync_banked_register(arm_reg_t *regs, int reg_index);
 void restore_banked_register(arm_reg_t *regs, int reg_index);
-int MemA(uint32_t address, int size, _IO uint8_t* buffer, int type, cpu_t* cpu);
+int MemA(uint32_t address, int size, IOput uint8_t* buffer, int type, cpu_t* cpu);
 void armv7m_branch(uint32_t addr, cpu_t* cpu);
 void armv7m_push(uint32_t val, cpu_t* cpu);
+int armv7m_get_memory_direct(uint32_t address, int size, Output uint8_t* buffer, cpu_t *cpu);
+int armv7m_set_memory_direct(uint32_t address, int size, Output uint8_t* buffer, cpu_t *cpu);
 
 /* implementation of instructions */
 void _bkpt(cpu_t *cpu);

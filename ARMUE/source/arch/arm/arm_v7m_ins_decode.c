@@ -44,7 +44,7 @@ void armv7m_print_state(cpu_t *cpu)
         printf("R%-3d=0x%08x\n", i, regs->R[i]);
     }
 
-    printf("SP  =0x%08x\n", regs->MSP);
+    printf("SP  =0x%08x\n", regs->SP);
     printf("LR  =0x%08x\n", regs->LR);
     printf("PC  =0x%08x\n", regs->PC);
     printf("xPSR=0x%08x\n", regs->xPSR);
@@ -586,7 +586,7 @@ void _ldr_literal_16(uint16_t ins_code, cpu_t* cpu)
     LOG_INSTRUCTION("_ldr_literal_16 R%d,[PC,#%d]\n", Rt, imm8);
 }
 
-inline void decode_ldr_str_reg_16(uint16_t ins_code, _O uint32_t* Rm, _O uint32_t* Rt, _O uint32_t* Rn)
+inline void decode_ldr_str_reg_16(uint16_t ins_code, Output uint32_t* Rm, Output uint32_t* Rt, Output uint32_t* Rn)
 {
     *Rt = LOW_BIT16(ins_code, 3);
     *Rn = LOW_BIT16(ins_code>>3, 3);
@@ -756,7 +756,7 @@ void _ldrh_imm_16(uint16_t ins_code, cpu_t* cpu)
     LOG_INSTRUCTION("_ldrh_imm_16 R%d,[R%d,#0x%d]\n", Rt, Rn, imm5);
 }
 
-inline void decode_ldr_str_sp_imm_16(uint16_t ins_code, _O uint32_t* imm, _O uint32_t* Rt)
+inline void decode_ldr_str_sp_imm_16(uint16_t ins_code, Output uint32_t* imm, Output uint32_t* Rt)
 {
     *imm = LOW_BIT16(ins_code, 8);
     *Rt = LOW_BIT16(ins_code>>8, 3);
@@ -1551,7 +1551,7 @@ thumb_translate32_t tbb_h_ldrexb_h_32(uint32_t ins_code, cpu_t *cpu)
 #define DATA_PROCESS32_REG_OP2(ins_code) LOW_BIT32((ins_code) >> 4, 4)
 #define DATA_PROCESS32_ROTATE(ins_code) LOW_BIT32((ins_code) >> 4, 2)
 
-inline void get_shift_imm5_32(uint32_t ins_code, _O uint32_t *type, _O uint32_t *imm5)
+inline void get_shift_imm5_32(uint32_t ins_code, Output uint32_t *type, Output uint32_t *imm5)
 {
     *type = DATA_PROCESS32_TYPE(ins_code);
     uint32_t imm2 = DATA_PROCESS32_IMM2(ins_code);
@@ -4507,19 +4507,12 @@ void armv7m_next_PC_32(arm_reg_t* regs)
 void armv7m_next_PC(cpu_t* cpu, int ins_length)
 {
     arm_reg_t* regs = (arm_reg_t*)cpu->regs;
+
     if(ins_length == 16){
         armv7m_next_PC_16(regs);
     }else if(ins_length == 32){
         armv7m_next_PC_32(regs);
     }
-    /* store pc to indicate whether pc is changed by the opcode*/
-    cpu->run_info.last_pc = regs->PC;
-}
-
-int armv7m_PC_modified(cpu_t* cpu)
-{
-    arm_reg_t* regs = (arm_reg_t*)cpu->regs;
-    return (uint32_t)cpu->run_info.last_pc != regs->PC;
 }
 
 arm_reg_t* create_arm_regs()
@@ -4611,7 +4604,7 @@ void desotry_instruction_table(thumb_instruct_table_t **table)
 }
 
 /* create and initialize the instruction as well as the cpu state */
-int ins_thumb_init(_IO cpu_t* cpu, soc_conf_t *config)
+int ins_thumb_init(IOput cpu_t* cpu, soc_conf_t *config)
 {
     // initialize state info
     thumb_state* state = create_thumb_state();

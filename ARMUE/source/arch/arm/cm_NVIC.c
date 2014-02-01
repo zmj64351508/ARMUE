@@ -403,7 +403,7 @@ void destory_cm_NVIC_info(cm_NVIC_t **info)
     info = NULL;
 }
 
-int setup_cm_NVIC_info(vector_exception_t* controller, _I cpu_t *cpu)
+int setup_cm_NVIC_info(vector_exception_t* controller, Input cpu_t *cpu)
 {
     cm_NVIC_t* info = (cm_NVIC_t*)controller->controller_info;
 

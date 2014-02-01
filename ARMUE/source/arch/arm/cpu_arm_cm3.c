@@ -63,11 +63,6 @@ int armcm3_startup(cpu_t* cpu)
 /****** fetch the instruction. It will set to cpu->fetch32 ******/
 uint32_t fetch_armcm3_cpu(cpu_t* cpu)
 {
-    /* needn't fetch from memory */
-    //if(cpu->run_info.next_ins != 0){
-    //    return (uint32_t)cpu->run_info.next_ins;
-    //}
-
     /* always fetch opcode according to PC */
     memory_map_t* memory_map = cpu->memory_map;
     uint32_t addr = ((arm_reg_t*)cpu->regs)->PC;
@@ -82,10 +77,8 @@ ins_t decode_armcm3_cpu(cpu_t* cpu, void* opcode)
     ins_t ins_info = {0, NULL, 0};
     uint32_t opcode32 = *(uint32_t*)opcode;
 
-
-    /* decode the opcode. If opcode is 16bit coded, next_ins will store the next 16bit of this 32bit opcode
-       so that we don't need to read memory again to fetch opcode. When next_ins = 0, it indicates that no
-       more opcode is available and need to fetch code from memory */
+    /* The format of the operation code int the memory is uint16_t little endian. So if it is a 32-bit coded
+       operation code, low 16 bit and high 16 bit should be exchaged to fit to uint32_t little endian format */
     if(is_16bit_code(opcode32) == TRUE){
         LOG(LOG_DEBUG, "decode_armcm3_cpu: 16 bit opcode 0x%0x\n", (uint16_t)opcode32);
         ins_info.opcode = opcode32;
@@ -111,9 +104,8 @@ void excute_armcm3_cpu(cpu_t* cpu, ins_t ins_info){
     arm_reg_t *regs = (arm_reg_t *)cpu->regs;
     thumb_state *state = (thumb_state*)cpu->run_info.cpu_spec_info;
 
-    /******                            IMPROTANT                                    */
     /****** PC always points to the address of next instruction.                */
-    /****** when 16bit coded, PC += 2. when 32bit coded, PC += 4.                */
+    /****** when 16bit coded, PC += 2. when 32bit coded, PC += 4.               */
     /****** But if instruction visits PC, it always returns PC+4                */
     armv7m_next_PC(cpu, ins_info.length);
     if(ins_info.length == 16){
@@ -126,7 +118,18 @@ void excute_armcm3_cpu(cpu_t* cpu, ins_t ins_info){
     if(!check_and_reset_excuting_IT(state) && InITBlock(regs)){
         ITAdvance(regs);
     }
+}
 
+static uint32_t armcm3_get_raw_pc(cpu_t *cpu)
+{
+    arm_reg_t *regs = (arm_reg_t *)cpu->regs;
+    return regs->PC;
+}
+
+static void armcm3_set_raw_pc(uint32_t val, cpu_t *cpu)
+{
+    arm_reg_t *regs = (arm_reg_t *)cpu->regs;
+    SET_REG_VAL(regs, PC_INDEX, val);
 }
 
 /****** Initialize an instance of the cpu. It will set to module->init_cpu ******/
@@ -151,6 +154,8 @@ int init_armcm3_cpu(cpu_t *cpu, soc_conf_t* config)
     cpu->fetch32 = fetch_armcm3_cpu;
     cpu->decode = decode_armcm3_cpu;
     cpu->excute = excute_armcm3_cpu;
+    cpu->get_raw_pc = armcm3_get_raw_pc;
+    cpu->set_raw_pc = armcm3_set_raw_pc;
     set_cpu_module(cpu, this_module);
     cpu->type = CPU_ARM_CM3;
 

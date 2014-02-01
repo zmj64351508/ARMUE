@@ -29,7 +29,6 @@ module_t* create_module()
 error_code_t add_module_to_tail(module_list_t* list, module_t* module)
 {
     module_t* last_module = list->last_module;
-    module_t* first_module = list->first_module;
 
     if(list->last_module == NULL){
         list->first_module = module;

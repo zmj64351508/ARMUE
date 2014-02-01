@@ -7,13 +7,15 @@ extern "C"{
 #include "cpu.h"
 #include "memory_map.h"
 #include "error_code.h"
-#include "soc.h"
+//#include "soc.h"
+#include "arm_gdb_stub.h"
 
 #define MAX_CPU_NUM 2
 #define MEMORY_NUM_MAX 2
 
 typedef struct {
     int cpu_num;
+    gdb_stub_t *stub;
     cpu_t *cpu[MAX_CPU_NUM];
     void *global_info;
 }soc_t;

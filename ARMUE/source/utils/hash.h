@@ -6,6 +6,7 @@ extern "C"{
 
 typedef union hash_data_t{
     int idata;
+    unsigned int uidata;
     void *pdata;
 }hash_data_t;
 

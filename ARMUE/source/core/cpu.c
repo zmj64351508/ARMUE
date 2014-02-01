@@ -69,7 +69,6 @@ cpu_t* get_next_cpu(cpu_t *cpu)
 error_code_t add_cpu_to_tail(cpu_list_t* list, cpu_t* cpu)
 {
     cpu_t* last_cpu = list->last_cpu;
-    cpu_t* first_cpu = list->first_cpu;
 
     if(list->last_cpu == NULL){
         list->first_cpu = cpu;

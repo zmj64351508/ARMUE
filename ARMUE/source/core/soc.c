@@ -1,7 +1,9 @@
 #include "module_helper.h"
 #include "soc.h"
+//#include "arm_gdb_stub.h"
 #include <stdlib.h>
-
+#include <unistd.h>
+#include <windows.h>
 
 int startup_soc(soc_t* soc)
 {
@@ -11,6 +13,12 @@ int startup_soc(soc_t* soc)
     int retval = -ERROR_SOC_STARTUP;
 
     cpu_t *cpu = soc->cpu[0];
+
+    // halt the cpu at startup
+    //if(gdb_enable){
+        cpu->run_info.halting = TRUE;
+    //}
+    cpu->run_info.last_pc = 0;
 
     /* start the cpu */
     if(cpu->startup != NULL){
@@ -25,15 +33,37 @@ uint32_t run_soc(soc_t* soc)
 {
     cpu_t *cpu = soc->cpu[0];
 
+    LOG(LOG_DEBUG, "last pc is %x\n", cpu->run_info.last_pc);
+    if(cpu->run_info.halting == MAYBE){
+        /* The break operation code is set by debugger. So the last operation code executed
+           should be a break trap set by the debugger. That means we should re-execute the
+           operation code in that address. Restore last PC value to the PC can do such thing.*/
+        if(is_sw_breakpoint(soc->stub, cpu->run_info.last_pc)){
+            cpu->run_info.halting = TRUE;
+            cpu->set_raw_pc(cpu->run_info.last_pc, cpu);
+        }
+        // The break operation code is directly wrote in the program
+        else{
+            cpu->run_info.halting = FALSE;
+        }
+    }
+
+    if(soc->stub->status == RSP_STEP){
+        cpu->run_info.halting = TRUE;
+    }
+
+    /* cpu halting for debug */
+    while(cpu->run_info.halting){
+        handle_rsp(soc->stub, cpu);
+    }
+
+    /* store last pc */
+    cpu->run_info.last_pc = cpu->get_raw_pc(cpu);
+
     /* basic steps to run a single operation code */
     uint32_t opcode   = cpu->fetch32(cpu);
     ins_t    ins_info = cpu->decode(cpu, &opcode);
                         cpu->excute(cpu, ins_info);
-
-    /* cpu halting for debug */
-    while(cpu->run_info.halting){
-        // rsp_handle;
-    }
 
     /* exception and interrupt checker/handler */
     if(cpu->GIC){
@@ -44,7 +74,7 @@ uint32_t run_soc(soc_t* soc)
         cpu->exceptions->handle_exception(vector_num, cpu);
     }
     add_cycle(cpu);
-    //LOG_REG(cpu);
+    LOG_REG(cpu);
     //getchar();
     return opcode;
 }

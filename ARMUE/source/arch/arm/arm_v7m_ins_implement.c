@@ -28,7 +28,7 @@ void restore_banked_register(arm_reg_t *regs, int reg_index)
     }
 }
 
-void DecodeImmShift(uint32_t type, uint32_t imm5, _O uint32_t *shift_t, _O uint32_t *shift_n)
+void DecodeImmShift(uint32_t type, uint32_t imm5, Output uint32_t *shift_t, Output uint32_t *shift_n)
 {
     switch(type){
     case 0:
@@ -54,7 +54,7 @@ void DecodeImmShift(uint32_t type, uint32_t imm5, _O uint32_t *shift_t, _O uint3
     }
 }
 
-void LSL_C(uint32_t val, int shift, _O uint32_t* result, _O int *carry_out)
+void LSL_C(uint32_t val, int shift, Output uint32_t* result, Output int *carry_out)
 {
     *carry_out = 0;
     if(shift > 0){
@@ -64,7 +64,7 @@ void LSL_C(uint32_t val, int shift, _O uint32_t* result, _O int *carry_out)
     *result = val << shift;
 }
 
-void LSR_C(uint32_t val, int shift, _O uint32_t* result, _O int *carry_out)
+void LSR_C(uint32_t val, int shift, Output uint32_t* result, Output int *carry_out)
 {
     *carry_out = 0;
     if(shift > 0){
@@ -76,7 +76,7 @@ void LSR_C(uint32_t val, int shift, _O uint32_t* result, _O int *carry_out)
 
 
 
-void ASR_C(uint32_t val, int shift, _O uint32_t* result, _O int *carry_out)
+void ASR_C(uint32_t val, int shift, Output uint32_t* result, Output int *carry_out)
 {
     *carry_out = 0;
     if(shift > 0){
@@ -91,20 +91,20 @@ inline uint32_t _ROR32(uint32_t val, int amount)
     return val >> amount | shift_out;
 }
 
-void ROR_C(uint32_t val, int shift, _O uint32_t* result, _O int *carry_out)
+void ROR_C(uint32_t val, int shift, Output uint32_t* result, Output int *carry_out)
 {
     assert(shift != 0);
     *carry_out = val >> (shift - 1) & BIT_0;
     *result = _ROR32(val, shift);
 }
 
-void RRX_C(uint32_t val, uint32_t carry_in, _O uint32_t *result, _O int *carry_out)
+void RRX_C(uint32_t val, uint32_t carry_in, Output uint32_t *result, Output int *carry_out)
 {
     *result = carry_in << 31 | val >> 1;
     *carry_out = val & BIT_0;
 }
 
-void Shift_C(uint32_t val, SRType type, int amount, int carry_in, _O uint32_t* result, _O int *carry_out)
+void Shift_C(uint32_t val, SRType type, int amount, int carry_in, Output uint32_t* result, Output int *carry_out)
 {
     if(amount == 0){
         *result = val;
@@ -133,7 +133,7 @@ void Shift_C(uint32_t val, SRType type, int amount, int carry_in, _O uint32_t* r
     }
 }
 
-inline void Shift(uint32_t val, SRType type, int amount, int carry_in, _O uint32_t* result)
+inline void Shift(uint32_t val, SRType type, int amount, int carry_in, Output uint32_t* result)
 {
     int carry_out;
     Shift_C(val, type, amount, carry_in, result, &carry_out);
@@ -373,8 +373,9 @@ bool_t FindPriv(arm_reg_t* regs, thumb_state* state)
     return ispriv;
 }
 
+
 /* <<ARMv7-M Architecture Reference Manual B2-696>> */
-int MemU_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv, int type, cpu_t* cpu)
+int MemU_with_priv(uint32_t address, int size, IOput uint8_t* buffer, bool_t priv, int type, cpu_t* cpu)
 {
     memory_map_t* memory = cpu->memory_map;
     int retval = 0;
@@ -398,21 +399,21 @@ int MemU_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv,
     return retval;
 }
 
-inline int MemU_unpriv(uint32_t address, int size, _IO uint8_t *buffer, int type, cpu_t *cpu)
+inline int MemU_unpriv(uint32_t address, int size, IOput uint8_t *buffer, int type, cpu_t *cpu)
 {
     return MemU_with_priv(address, size, buffer, FALSE, type, cpu);
 }
 
 /* TODO: Memory access is not complete for checking some flags like ALIGN and ENDIANs */
 /* <<ARMv7-M Architecture Reference Manual B2-696>> */
-int MemU(uint32_t address, int size, _IO uint8_t* buffer, int type, cpu_t* cpu)
+int MemU(uint32_t address, int size, IOput uint8_t* buffer, int type, cpu_t* cpu)
 {
     arm_reg_t* regs = (arm_reg_t*)cpu->regs;
     thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
     return MemU_with_priv(address, size, buffer, FindPriv(regs, state), type, cpu);
 }
 
-int MemA_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv, int type, cpu_t* cpu)
+int MemA_with_priv(uint32_t address, int size, IOput uint8_t* buffer, bool_t priv, int type, cpu_t* cpu)
 {
     memory_map_t* memory = cpu->memory_map;
     int retval = -1;
@@ -436,11 +437,21 @@ int MemA_with_priv(uint32_t address, int size, _IO uint8_t* buffer, bool_t priv,
     return retval;
 }
 
-int MemA(uint32_t address, int size, _IO uint8_t* buffer, int type, cpu_t* cpu)
+int MemA(uint32_t address, int size, IOput uint8_t* buffer, int type, cpu_t* cpu)
 {
     arm_reg_t* regs = (arm_reg_t*)cpu->regs;
     thumb_state* state = (thumb_state*)cpu->run_info.cpu_spec_info;
     return MemA_with_priv(address, size, buffer, FindPriv(regs, state), type, cpu);
+}
+
+int armv7m_get_memory_direct(uint32_t address, int size, Output uint8_t* buffer, cpu_t *cpu)
+{
+    return MemU_with_priv(address, size, buffer, TRUE, MEM_READ, cpu);
+}
+
+int armv7m_set_memory_direct(uint32_t address, int size, Output uint8_t* buffer, cpu_t *cpu)
+{
+    return MemU_with_priv(address, size, buffer, TRUE, MEM_WRITE, cpu);
 }
 
 /* refer to <<ARMv7-M Architecture Referenece Maunal>> page 823 */
@@ -455,7 +466,10 @@ void _bkpt(cpu_t *cpu)
     cm_scs_t *scs = (cm_scs_t *)cpu->system_info;
     uint32_t DHCSR = scs->regs.DHCSR;
     if(LOW_BIT32(DHCSR, 1) == 1){   // C_DEBUGEN
-        cpu->run_info.halting = TRUE;
+        /* We don't know whether the instruction is set by debugger
+           or wrote in the program directory. So leave the the judegement
+           to other part of the routine. */
+        cpu->run_info.halting = MAYBE;
         scs->regs.DHCSR |= (1ul << 17);   // set S_HALT
     }
 }

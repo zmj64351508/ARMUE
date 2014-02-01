@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "module_helper.h"
+#include "arm_gdb_stub.h"
 
 #include "memory_map.h"
 #include "soc.h"
@@ -38,7 +39,9 @@ int main(int argc, char **argv)
     if(SUCCESS != open_rom("E:\\GitHub\\ARMUE\\test.rom", rom)){
         return -1;
     }
-    fill_rom_with_bin(rom, "E:\\GitHub\\ARMUE\\cortex_m3_test\\test.bin");
+    fill_rom_with_zero(rom);
+//    fill_rom_with_bin(rom, "E:\\GitHub\\ARMUE\\cortex_m3_test\\test.bin");
+    fill_rom_with_bin(rom, "E:\\GitHub\\ARMUE\\svc_fsm_m3_test\\test.bin");
     int result = setup_memory_map_rom(memory_map, rom, 0x00);
     if(result < 0){
         LOG(LOG_ERROR, "Faild to setup ROM\n");
@@ -54,10 +57,16 @@ int main(int argc, char **argv)
     // soc
     uint32_t opcode;
     soc_t* soc = create_soc(&soc_conf);
+    soc->stub = create_stub();
+    if(soc->stub == NULL){
+        return -1;
+    }
     if(soc != NULL){
         startup_soc(soc);
+        init_stub(soc->stub);
         while(1){
             opcode = run_soc(soc);
+            //getchar();
             if(opcode == 0)
                 break;
         }
@@ -65,4 +74,5 @@ int main(int argc, char **argv)
     }
 
     unregister_all_modules();
+    return 0;
 }

@@ -20,14 +20,14 @@ typedef struct rom_s_t
     bool_t allocated;            // the flag whether the rom is allocated to specific rom file
     int content_start;            // where the rom data start.
     int last_offset;            // last read or write offset of the rom file
-    FILE* rom_file;                
+    FILE* rom_file;
     uint32_t size;                // the size of the rom in byte
     int rw_flag;
 }rom_t;
 
 rom_t* alloc_rom();
 error_code_t destory_rom(rom_t** rom);
-error_code_t open_rom(_I _TCHAR* path, _IO rom_t* rom);
+error_code_t open_rom(Input _TCHAR* path, IOput rom_t* rom);
 error_code_t fill_rom_with_bin(rom_t *rom, _TCHAR* bin_path);
 
 error_code_t set_rom_size(rom_t *rom, uint32_t size);
