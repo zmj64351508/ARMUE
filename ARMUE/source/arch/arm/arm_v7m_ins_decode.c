@@ -677,11 +677,11 @@ void _ldrsh_reg_16(uint16_t ins_code, cpu_t* cpu)
     LOG_INSTRUCTION("_ldrb_reg_16 R%d,[R%d,R%d]\n", Rt, Rn, Rm);
 }
 
-inline void decode_ldr_str_imm_16(uint16_t ins_code, _O uint32_t* imm, _O uint32_t* Rt, _O uint32_t* Rn)
+inline void decode_ldr_str_imm_16(uint16_t ins_code, Output uint32_t* imm, Output uint32_t* Rt, Output uint32_t* Rn)
 {
     *Rt = LOW_BIT16(ins_code, 3);
     *Rn = LOW_BIT16(ins_code>>3, 3);
-    *imm = LOW_BIT16(ins_code>>6, 5);
+    *imm = LOW_BIT16(ins_code>>6, 5) << 2;
 }
 
 void _str_imm_16(uint16_t ins_code, cpu_t* cpu)
@@ -2078,7 +2078,7 @@ void _tst_imm_32(uint32_t ins_code, cpu_t *cpu)
 
     ThumbExpandImm_C(i_imm3_imm8, GET_APSR_C((arm_reg_t*)cpu->regs), &imm32, &carry);
 
-    CHECK_UNPREDICTABLE(IN_RANGE(Rn, 13, 15), _tst_imm32);
+    //CHECK_UNPREDICTABLE(IN_RANGE(Rn, 13, 15), _tst_imm32);
     _tst_imm(imm32, Rn, carry, cpu->regs);
 
     LOG_INSTRUCTION("_tst_imm_32, R%d, #%d\n", Rn, imm32);

@@ -142,7 +142,7 @@ inline void Shift(uint32_t val, SRType type, int amount, int carry_in, Output ui
 int ThumbExpandImm_C(uint32_t imm12, uint32_t carry_in, uint32_t *imm32, int*carry_out)
 {
     uint32_t imm12_8 = LOW_BIT32(imm12, 8);
-    if((imm12 >> 10 & 0x3) == 0){
+    if(((imm12 >> 10) & 0x3) == 0){
         switch((imm12 >> 8) & 0x3){
         case 0x0:
             *imm32 = imm12_8;

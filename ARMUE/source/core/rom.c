@@ -230,7 +230,7 @@ error_code_t set_rom_size(rom_t *rom, uint32_t size)
 static inline void switch_rom_rw(rom_t* rom, int rw_flag)
 {
     if(rom->rw_flag != rw_flag){
-        fseek(rom->rom_file, rom->last_offset, SEEK_SET);
+        fseek(rom->rom_file, rom->last_offset + 1, SEEK_SET);
         rom->rw_flag = rw_flag;
     }
 }
