@@ -36,6 +36,19 @@ err_out:
     return NULL;
 }
 
+int wait_for_rsp_client(gdb_stub_t *stub)
+{
+    struct sockaddr_in client_addr;
+    memset(&client_addr, 0, sizeof(client_addr));
+    int addrlen = sizeof(client_addr);
+    // accept
+    if((stub->client = accept(stub->server, (struct sockaddr*)&client_addr, &addrlen)) == INVALID_SOCKET){
+        LOG(LOG_ERROR, "fail to accept socket\n");
+        return -1;
+    }
+    LOG(LOG_DEBUG, "Accept connection from %s\n", inet_ntoa(client_addr.sin_addr));
+    return 0;
+}
 
 int init_stub(gdb_stub_t *stub)
 {
@@ -70,19 +83,12 @@ int init_stub(gdb_stub_t *stub)
     }
     LOG(LOG_DEBUG, "Server %d is listening......\n", stub->port);
 
-    struct sockaddr_in client_addr;
-    memset(&client_addr, 0, sizeof(client_addr));
-    int addrlen = sizeof(client_addr);
-    // accept
-    if((stub->client = accept(stub->server, (struct sockaddr*)&client_addr, &addrlen)) == INVALID_SOCKET){
-        LOG(LOG_ERROR, "fail to accept socket\n");
-        goto accept_fail;
+    if(wait_for_rsp_client(stub) < 0){
+        goto wait_fail;
     }
-    LOG(LOG_DEBUG, "Accept connection from %s\n", inet_ntoa(client_addr.sin_addr));
-
     return 0;
 
-accept_fail:
+wait_fail:
 listen_fail:
 bind_fail:
     WSACleanup();
@@ -214,6 +220,7 @@ static void make_packet_tail(gdb_stub_t *stub)
     for(i = 0; i < 2; i++){
         stub->send_buf[stub->send_len++] = char_checksum[i];
     }
+    stub->send_buf[stub->send_len] = '\0';
 }
 
 /* append param to the send buffer */
@@ -251,39 +258,33 @@ static void get_registers(gdb_stub_t *stub, int start, int end, cpu_t *cpu)
     }
 }
 
-/* parse parameters return the parameter amount parsed */
-static int get_param(char **buf, int param_num, uint32_t *param)
+static int set_registers(char *buf, int start, int end, cpu_t *cpu)
 {
-    assert(param > 0);
-    char *num_start;
-
-    /* check if the packet is empty */
-    if(**buf == '#'){
-        return 0;
-    }
-
-    int i;
-    for(i = 0; i < param_num - 1; i++){
-        num_start = *buf;
-        while(**buf != ','){
-            (*buf)++;
+    int i, k;
+    // check the content length
+    for(i = 0; ;i++){
+        if(buf[i] == '#'){
+            break;
         }
-
-        // replace ',' with '\0' to use general string functions, then restore ','
-        **buf = '\0';
-        param[i] = strtohex_u32(num_start);
-        *(*buf)++ = ',';
+    }
+    if(i % 8 != 0){
+        return -1;
     }
 
-    num_start = *buf;
-    while(**buf != '#'){
-        (*buf)++;
+    arm_reg_t *regs = ARMv7m_GET_REGS(cpu);
+    char hex[9] = {0};
+    for(i = start; i <= end; i++){
+        for(k = 0; k < 4; k++){
+            hex[7 - k * 2 - 1] = *buf++;
+            hex[7 - k * 2] = *buf++;
+        }
+        regs->R[i] = strtohex_u32(hex);
+        if(*buf == '#'){
+            break;
+        }
     }
-    **buf = '\0';
-    param[param_num - 1] = strtohex_u32(num_start);
-    **buf = '#';
 
-    return param_num;
+    return 0;
 }
 
 /* division describe how to treat the paramter and how to stop division
@@ -362,7 +363,7 @@ static int read_mem(gdb_stub_t *stub, uint32_t addr, uint32_t size, cpu_t *cpu)
     int retval = armv7m_get_memory_direct(addr, size, buf, cpu);
     int i;
     if(retval > 0){
-        for(i = size - 1; i >= 0; i--){
+        for(i = 0; i < size; i++){
             stub->send_buf[stub->send_len++] = hex_to_char(buf[i] / 0x10);
             stub->send_buf[stub->send_len++] = hex_to_char(buf[i] % 0x10);
         }
@@ -497,7 +498,7 @@ bool_t is_sw_breakpoint(gdb_stub_t *stub, uint32_t addr)
 /* the main handler for RSP */
 int handle_rsp(gdb_stub_t *stub, cpu_t *cpu)
 {
-    // send reply to 'c' command, halting because of 'c' command
+    // send reply to 'c' and 's' command
     if(stub->status == RSP_CONTINUE || stub->status == RSP_STEP){
         stub->status = RSP_HALTING;
         make_packet_head(stub, CHECKSUM_OK);
@@ -527,6 +528,8 @@ int handle_rsp(gdb_stub_t *stub, cpu_t *cpu)
 
     // start packet translate
     buf++;
+
+    // check whether receive successfully
     int check_status = validate_checksum(buf);
     make_check_packet(stub, check_status);
     put_packet(stub);
@@ -605,8 +608,25 @@ int handle_rsp(gdb_stub_t *stub, cpu_t *cpu)
         next_division(&buf, "x#", params);
         get_registers(stub, params[0], params[0], cpu);
         break;
+    case 'P':
+        next_division(&buf, "x=", params);
+        retval = set_registers(buf, params[0], params[0], cpu);
+        if(retval < 0){
+            make_packet(stub, "E3");
+        }else{
+            make_packet(stub, "OK");
+        }
+        break;
     case 'g':
         get_registers(stub, 0, MAX_ARM_REG_NUM - 1, cpu);
+        break;
+    case 'G':
+        retval = set_registers(buf, 0, MAX_ARM_REG_NUM - 1, cpu);
+        if(retval < 0){
+            make_packet(stub, "E3");
+        }else{
+            make_packet(stub, "OK");
+        }
         break;
     case '?':
         make_packet(stub, "S05"); // SIGTRAP refering to /include/gdb/signal.def in gdb sources
@@ -616,16 +636,15 @@ int handle_rsp(gdb_stub_t *stub, cpu_t *cpu)
             make_packet(stub, "PacketSize=%X", MAX_PACKET_SIZE);
         }
         break;
+    case 'k':
+        LOG(LOG_WARN, "Client disconnected, wait for connection...\n");
+        wait_for_rsp_client(stub);
+        goto direct_out;
     }
 
 rest_send:
     make_packet_tail(stub);
-    LOG(LOG_DEBUG, "");
-    int i;
-    for(i = 0; i < stub->send_len; i++){
-        putchar(stub->send_buf[i]);
-    }
-    putchar('\n');
+    LOG(LOG_DEBUG, "%s\n", stub->send_buf);
 
     put_packet(stub);
 
