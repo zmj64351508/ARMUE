@@ -7,6 +7,7 @@
 
 #include "memory_map.h"
 #include "soc.h"
+#include "config.h"
 int main(int argc, char **argv)
 {
     // register all exsisted modules
@@ -32,6 +33,8 @@ int main(int argc, char **argv)
     soc_conf.memories[0] = memory_map;
     soc_conf.exclusive_high_address = 0xFFFFFFFF;
     soc_conf.exclusive_low_address = 0;
+
+    config.gdb_debug = TRUE;
 
     // ROM
     rom_t* rom = alloc_rom();
@@ -63,7 +66,9 @@ int main(int argc, char **argv)
     }
     if(soc != NULL){
         startup_soc(soc);
-        init_stub(soc->stub);
+        if(config.gdb_debug){
+            init_stub(soc->stub);
+        }
         while(1){
             opcode = run_soc(soc);
             //getchar();

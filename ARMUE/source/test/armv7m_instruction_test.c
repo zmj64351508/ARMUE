@@ -8,7 +8,7 @@
 #include "soc.h"
 #include "arm_v7m_ins_decode.h"
 #include "arm_gdb_stub.h"
-
+#include "config.h"
 enum state_t{
     STATE_START = 1,
     STATE_REG,
@@ -154,11 +154,11 @@ int end_parse(int event, reg_pair_t *reg_pair, arm_reg_t *regs)
     }else if(strcmp("XPSR", reg_pair->name) == 0){
         regs->xPSR = reg_pair->value;
     }else if(strcmp("CONTROL", reg_pair->name) == 0){
-        regs->CONTROL = reg_pair->value;
+        regs->CONTROL = reg_pair->value >> 24;
     }else if(strcmp("BASEPRI", reg_pair->name) == 0){
-        regs->BASEPRI = reg_pair->value;
+        regs->BASEPRI = reg_pair->value >> 8;
     }else if(strcmp("FAULTMASK", reg_pair->name) == 0){
-        regs->FAULTMASK = reg_pair->value;
+        regs->FAULTMASK = reg_pair->value >> 16;
     }else if(strcmp("PRIMASK", reg_pair->name) == 0){
         regs->PRIMASK = reg_pair->value;
         return STATE_ONCE_END;
@@ -243,6 +243,8 @@ int main(int argc, char **argv)
     register_all_modules();
     memory_map_t *memory_map = create_memory_map();
 
+    config.gdb_debug = FALSE;
+
     // the SOC configuration
     soc_conf_t soc_conf;
     soc_conf.cpu_num = 1;
@@ -292,7 +294,9 @@ int main(int argc, char **argv)
     }
     if(soc != NULL){
         startup_soc(soc);
-        init_stub(soc->stub);
+        if(config.gdb_debug){
+            init_stub(soc->stub);
+        }
 
         /* copy the initial state to simulated registers */
         sim_regs = ARMv7m_GET_REGS(soc->cpu[0]);

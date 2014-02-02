@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <windows.h>
+#include "config.h"
 
 int startup_soc(soc_t* soc)
 {
@@ -15,9 +16,9 @@ int startup_soc(soc_t* soc)
     cpu_t *cpu = soc->cpu[0];
 
     // halt the cpu at startup
-    //if(gdb_enable){
+    if(config.gdb_debug){
         cpu->run_info.halting = TRUE;
-    //}
+    }
     cpu->run_info.last_pc = 0;
 
     /* start the cpu */
@@ -33,28 +34,30 @@ uint32_t run_soc(soc_t* soc)
 {
     cpu_t *cpu = soc->cpu[0];
 
-    LOG(LOG_DEBUG, "last pc is %x\n", cpu->run_info.last_pc);
-    if(cpu->run_info.halting == MAYBE){
-        /* The break operation code is set by debugger. So the last operation code executed
-           should be a break trap set by the debugger. That means we should re-execute the
-           operation code in that address. Restore last PC value to the PC can do such thing.*/
-        if(is_sw_breakpoint(soc->stub, cpu->run_info.last_pc)){
+    if(config.gdb_debug){
+        LOG(LOG_DEBUG, "last pc is %x\n", cpu->run_info.last_pc);
+        if(cpu->run_info.halting == MAYBE){
+            /* The break operation code is set by debugger. So the last operation code executed
+               should be a break trap set by the debugger. That means we should re-execute the
+               operation code in that address. Restore last PC value to the PC can do such thing.*/
+            if(is_sw_breakpoint(soc->stub, cpu->run_info.last_pc)){
+                cpu->run_info.halting = TRUE;
+                cpu->set_raw_pc(cpu->run_info.last_pc, cpu);
+            }
+            // The break operation code is directly wrote in the program
+            else{
+                cpu->run_info.halting = FALSE;
+            }
+        }
+
+        if(soc->stub->status == RSP_STEP){
             cpu->run_info.halting = TRUE;
-            cpu->set_raw_pc(cpu->run_info.last_pc, cpu);
         }
-        // The break operation code is directly wrote in the program
-        else{
-            cpu->run_info.halting = FALSE;
+
+        /* cpu halting for debug */
+        while(cpu->run_info.halting){
+            handle_rsp(soc->stub, cpu);
         }
-    }
-
-    if(soc->stub->status == RSP_STEP){
-        cpu->run_info.halting = TRUE;
-    }
-
-    /* cpu halting for debug */
-    while(cpu->run_info.halting){
-        handle_rsp(soc->stub, cpu);
     }
 
     /* store last pc */
