@@ -26,5 +26,6 @@
 #define MAYBE (-1)
 typedef int8_t bool_t;
 
+typedef unsigned long long cycle_t;
 
 #endif

@@ -18,6 +18,7 @@ typedef struct {
     gdb_stub_t *stub;
     cpu_t *cpu[MAX_CPU_NUM];
     void *global_info;
+    list_t *timer_list;
 }soc_t;
 
 typedef struct soc_conf_t{

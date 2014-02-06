@@ -7,6 +7,7 @@ extern "C"{
 #include "error_code.h"
 #include "memory_map.h"
 #include "exception_interrupt.h"
+#include "list.h"
 
 typedef enum{
     CPU_INVALID,
@@ -43,6 +44,7 @@ typedef struct run_info_t
     bool_t halting;
 }run_info_t;
 
+
 typedef struct cpu_t
 {
     cpu_type_t type;    // cpu type
@@ -52,7 +54,8 @@ typedef struct cpu_t
     void *regs;
     void *system_info;
     void *instruction_data;
-    uint32_t cycle;
+    list_t *timer_list;
+    cycle_t cycle;
 
     /* For cortex-m profile, NVIC is internal with function of exception controller and
        general interrupt controller, while other profile like A, R and classical ARM cpu

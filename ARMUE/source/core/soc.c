@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <windows.h>
 #include "config.h"
+#include "timer.h"
 
 int startup_soc(soc_t* soc)
 {
@@ -68,6 +69,9 @@ uint32_t run_soc(soc_t* soc)
     ins_t    ins_info = cpu->decode(cpu, &opcode);
                         cpu->excute(cpu, ins_info);
 
+    add_cycle(cpu);
+    check_timer(cpu);
+
     /* exception and interrupt checker/handler */
     if(cpu->GIC){
 
@@ -76,7 +80,6 @@ uint32_t run_soc(soc_t* soc)
     if(vector_num != 0){
         cpu->exceptions->handle_exception(vector_num, cpu);
     }
-    add_cycle(cpu);
     LOG_REG(cpu);
     //getchar();
     return opcode;
@@ -130,6 +133,9 @@ soc_t* create_soc(soc_conf_t* config)
     }else{
         cpu->GIC = NULL;
     }
+
+    /* create timer_list */
+    cpu->timer_list = list_create_empty();
 
     /* create the soc */
     LOG(LOG_DEBUG, "create_soc: created cpu %s\n", cpu_module->name);

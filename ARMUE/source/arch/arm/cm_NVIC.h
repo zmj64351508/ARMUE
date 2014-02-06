@@ -11,6 +11,19 @@ extern "C"{
 
 #define NVIC_MAX_EXCEPTION 496
 
+enum cm_NVIC_vector{
+    CM_NVIC_VEC_RESET        =    1,
+    CM_NVIC_VEC_NMI          =    2,
+    CM_NVIC_VEC_HARDFAULT    =    3,
+    CM_NVIC_VEC_MEMMANFAULT  =    4,
+    CM_NVIC_VEC_BUSFAULT     =    5,
+    CM_NVIC_VEC_USAGEFAULT   =    6,
+    CM_NVIC_VEC_SVCALL       =    11,
+    CM_NVIC_VEC_DEBUG        =    12,
+    CM_NVIC_VEC_PENDSV       =    14,
+    CM_NVIC_VEC_SYSTICK      =    15,
+};
+
 typedef bheap_t pending_list_t;
 
 typedef struct cm_NVIC_t

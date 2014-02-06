@@ -44,7 +44,8 @@ int main(int argc, char **argv)
     }
     fill_rom_with_zero(rom);
 //    fill_rom_with_bin(rom, "E:\\GitHub\\ARMUE\\cortex_m3_test\\test.bin");
-    fill_rom_with_bin(rom, "E:\\GitHub\\ARMUE\\svc_fsm_m3_test\\test.bin");
+    //fill_rom_with_bin(rom, "E:\\GitHub\\ARMUE\\svc_fsm_m3_test\\test.bin");
+    fill_rom_with_bin(rom, "E:\\LPC11U3X_demo_board\\software\\_OK_systick\\test.bin");
     int result = setup_memory_map_rom(memory_map, rom, 0x00);
     if(result < 0){
         LOG(LOG_ERROR, "Faild to setup ROM\n");
