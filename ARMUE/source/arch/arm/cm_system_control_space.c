@@ -278,6 +278,9 @@ int cm_scs_init(cpu_t *cpu) //,soc_conf_t* config)
     scs->config.prigroup  = 1;
     /* enable Debug Halting and disable Debug Exception default, refering to page 830 */
     scs->regs.DHCSR = 0x00000001;
+
+    /* systick regiters */
+    scs->systick_regs.SYST_CSR = 0x00000002; // TICKINT
     scs->cpu = cpu;
 
     return SUCCESS;

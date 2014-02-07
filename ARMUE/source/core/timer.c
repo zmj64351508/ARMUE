@@ -15,13 +15,11 @@ list_t *create_timer_list()
 /* create timer and add to the list */
 timer_t *create_timer(int exception_num)
 {
-    timer_t *timer = (timer_t *)malloc(sizeof(timer_t));
+    timer_t *timer = (timer_t *)calloc(1, sizeof(timer_t));
     if(timer == NULL){
         goto timer_error;
     }
     timer->exception_num = exception_num;
-    timer->reload = 0;
-    timer->match = 0;
     return timer;
 
 timer_error:
@@ -75,8 +73,6 @@ int add_timer(timer_t *timer, list_t *timer_list, bool_t ignore_duplicate)
         goto error;
     }
     list_append(timer_list, new_node);
-    LOG(LOG_DEBUG, "add_timer: added match = %ld, reload = %ld, excep_num = %ld\n",
-        timer->match, timer->reload, timer->exception_num);
     return 0;
 
 error:
@@ -96,11 +92,28 @@ int delete_timer(int exception_num, list_t *timer_list)
     return 0;
 }
 
-void check_single_timer(timer_t *timer, cycle_t cycle)
+void start_timer(timer_t *timer, cpu_t *cpu, cycle_t reload, int (*do_match)(timer_t *timer, cpu_t *cpu))
 {
-    if(timer->match <= cycle){
-        //timer->do_match();
-    }
+    timer->reload = reload;
+    timer->do_match = do_match;
+    timer->match = calc_timer_match(cpu, reload);
+    timer->start = cpu->cycle;
+}
+
+void restart_timer(timer_t *timer, cpu_t *cpu)
+{
+    timer->match = calc_timer_match(cpu, timer->reload);
+    timer->start = cpu->cycle;
+}
+
+cycle_t positive_timer_count(timer_t *timer, cpu_t *cpu)
+{
+    return cpu->cycle - timer->start;
+}
+
+cycle_t negative_timer_count(timer_t *timer, cpu_t *cpu)
+{
+    return timer->match - cpu->cycle;
 }
 
 void check_timer(cpu_t *cpu)
@@ -108,13 +121,14 @@ void check_timer(cpu_t *cpu)
     list_t *timer_list = cpu->timer_list;
     cycle_t cur_cycle = cpu->cycle;
 
-    list_t *cur_node;
+    int retval;
+    list_t *cur_node, *next_node;
     timer_t *timer;
-    for_each_list_node(cur_node, timer_list){
+    for_each_list_node_safe(cur_node, next_node, timer_list){
         timer = (timer_t *)cur_node->data.pdata;
         if(timer->match <= cur_cycle){
-            timer->match = calc_timer_match(cpu, timer->reload);
-            timer->do_match(cpu);
+            retval = timer->do_match(timer, cpu);
+            restart_timer(timer, cpu);
         }
     }
 }

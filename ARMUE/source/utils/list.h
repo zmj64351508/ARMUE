@@ -20,6 +20,9 @@ typedef struct list_t{
 #define for_each_list_node(cur, list) \
 for((cur) = (list)->next; (cur)->data.pdata != NULL; (cur) = (cur)->next)
 
+#define for_each_list_node_safe(cur, n, list) \
+for((cur) = (list)->next, (n) = (cur)->next; (cur)->data.pdata != NULL; (cur) = (n), (n) = (cur)->next)
+
 #define list_create_node_int(data)\
 list_create_node( (list_data_t)(long long)data )
 
