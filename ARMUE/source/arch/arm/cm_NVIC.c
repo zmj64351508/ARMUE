@@ -19,6 +19,7 @@ inline void DeActivate(int exc_num, cpu_t *cpu)
     arm_reg_t *regs = ARMv7m_GET_REGS(cpu);
     NVIC_info->exception_active[exc_num] = 0;
     NVIC_info->nested_exception--;
+
     if(GET_IPSR(regs) != 0x2ul){
         regs->FAULTMASK &= ~1ul;
     }
@@ -129,6 +130,7 @@ void ExceptionTaken(int excep_num, cpu_t *cpu)
     }
     */
     SET_CONTROL_SPSEL(regs, 0);
+
     NVIC_info->exception_active[excep_num] = 1;
     NVIC_info->nested_exception++;
 

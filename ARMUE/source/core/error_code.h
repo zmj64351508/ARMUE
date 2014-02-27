@@ -22,11 +22,12 @@ typedef enum
     ERROR_SOC_STARTUP,
 }error_code_t;
 
-#define LOG_NONE            4
+#define LOG_NONE             4
+#define LOG_INFO             3
 #define LOG_ERROR            3
-#define LOG_WARN            2
+#define LOG_WARN             2
 #define LOG_DEBUG            1
-#define LOG_ALL                0
+#define LOG_ALL              0
 #define LOG_CURRENT_LEVEL    LOG_ALL
 
 #include <stdio.h>

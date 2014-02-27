@@ -4,23 +4,81 @@
 #include <string.h>
 #include "module_helper.h"
 #include "arm_gdb_stub.h"
+#include "getopt.h"
 
 #include "memory_map.h"
 #include "soc.h"
 #include "config.h"
+
+#include "windows.h"
+#include "core_connect.h"
+
+// connect to peripheral monitor
+core_connect_t *g_peri_connect;
+
+const char short_options[] = "hgc:";
+const struct option long_options[] = {
+    {"help",    no_argument,        NULL,   'h'},
+    {"gdb",     no_argument,        NULL,   'g'},
+    {"client",  required_argument,  NULL,   'c'},
+    {0, 0, 0, 0},
+};
+
+int i2c_test(uint8_t *data, unsigned int len, void *user_data)
+{
+    LOG(LOG_DEBUG, "i2c recved:\n");
+    int i;
+    for(i = 0; i < len; i++){
+        putchar(data[i]);
+    }
+    putchar('\n');
+    return 0;
+}
+int a = 2;
+peripheral_t i2c = {
+    .user_data = &a,
+    .data_process = i2c_test,
+};
+
 int main(int argc, char **argv)
 {
+    char c;
+    int option_index;
+    while(1){
+        c = getopt_long(argc, argv, short_options, long_options, &option_index);
+        if(c == -1){
+            break;
+        }
+        switch(c){
+        case 'h':
+            printf("help\n");
+            return 0;
+        case 'g':
+            config.gdb_debug = TRUE;
+            break;
+        case 'c':
+            config.client = TRUE;
+            config.pipe_name = (char *)malloc(strlen(optarg));
+            strcpy(config.pipe_name, optarg);
+            break;
+        default:
+            printf("Try --help");
+            return 0;
+        }
+    };
+
+    int retval;
+    if(config.client){
+        g_peri_connect = create_core_connect(1024, config.pipe_name);
+        retval = connect_monitor(g_peri_connect);
+        if(retval != SUCCESS){
+            return -1;
+        }
+    }
+
     // register all exsisted modules
     register_all_modules();
-    /*
-    module_t* uart_module = find_module(_T("uart"));
-    peripheral_t* uart = uart_module->create_peripheral();
-    uart->reg_num;
-    uart->regs;
-    uart->mem_base;
-    uart->set_operation(0x10, "out,send_message,[31:0]");
-    set_memory_map_peripheral(memory_map, uart);
-    */
+
     memory_map_t *memory_map = create_memory_map();
 
     soc_conf_t soc_conf;
@@ -33,8 +91,6 @@ int main(int argc, char **argv)
     soc_conf.memories[0] = memory_map;
     soc_conf.exclusive_high_address = 0xFFFFFFFF;
     soc_conf.exclusive_low_address = 0;
-
-    config.gdb_debug = TRUE;
 
     // ROM
     rom_t* rom = alloc_rom();
@@ -58,26 +114,46 @@ int main(int argc, char **argv)
         LOG(LOG_ERROR, "Failed to setup RAM\n");
     }
 
+    /* test for peripheral monitor */
+    request_peripheral(PERI_I2C, 2);
+    register_peripheral(PERI_I2C, 0, &i2c);
+    // connected
+    while(config.client){
+        bool_t has_input = check_monitor_input(g_peri_connect);
+        if(has_input){
+            parse_monitor_input(g_peri_connect, g_peri_table);
+            g_peri_connect->recv_buf[g_peri_connect->recv_len] = '\0';
+            printf("%s\n", g_peri_connect->recv_buf);
+        }
+//            send_peripheral_output_direct(g_peri_connect, "hello", 6);
+//            Sleep(1);
+    }
+
     // soc
     uint32_t opcode;
     soc_t* soc = create_soc(&soc_conf);
-    soc->stub = create_stub();
-    if(soc->stub == NULL){
+    if(soc == NULL){
         return -1;
     }
-    if(soc != NULL){
-        startup_soc(soc);
-        if(config.gdb_debug){
-            init_stub(soc->stub);
+    if(config.gdb_debug){
+        soc->stub = create_stub();
+        if(soc->stub == NULL){
+            return -1;
         }
-        while(1){
-            opcode = run_soc(soc);
-            //getchar();
-            if(opcode == 0)
-                break;
-        }
-        destory_soc(&soc);
     }
+
+    // main loop for emulation
+    startup_soc(soc);
+    if(config.gdb_debug){
+        init_stub(soc->stub);
+    }
+    while(1){
+        opcode = run_soc(soc);
+        //getchar();
+        if(opcode == 0)
+            break;
+    }
+    destory_soc(&soc);
 
     unregister_all_modules();
     return 0;

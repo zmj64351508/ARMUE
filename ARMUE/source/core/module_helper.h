@@ -41,8 +41,7 @@ typedef struct module_t
     char name[MODULE_NAME_LENGTH];                // name of the module
     _TCHAR path[MODULE_PATH_LENGTH];            // where the module file stores, not use yet
     union{
-        cpu_list_t* cpu_list;                    
-        peripheral_list_t* peripheral_list;
+        cpu_list_t* cpu_list;
         void* content_list;
     };
     int content_count;                            // not use yet

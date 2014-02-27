@@ -79,12 +79,6 @@ int SYST_CSR(uint8_t* data, int rw_flag, cm_scs_t *scs)
     return 0;
 }
 
-void set_reload_by_RVR(cpu_t *cpu)
-{
-    cm_scs_t *scs = (cm_scs_t *)cpu->system_info;
-    scs->systick->reload = SYST_REGS(scs).SYST_RVR;
-}
-
 int SYST_RVR(uint8_t *data, int rw_flag, cm_scs_t *scs)
 {
     if(rw_flag == MEM_READ){

@@ -9,6 +9,8 @@ extern "C"{
 
 typedef struct config_t{
     bool_t gdb_debug;
+    bool_t client;
+    char *pipe_name;
 }config_t;
 
 
