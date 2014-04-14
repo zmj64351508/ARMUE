@@ -40,9 +40,10 @@ error_code_t clear_rom(rom_t* rom)
 }
 
 
-void copy_whole_file(FILE* src, FILE* dst)
+void copy_whole_file(FILE* src, uint32_t start_addr, FILE* dst)
 {
     char src_c;
+    fseek(src, start_addr, SEEK_SET);
 
     src_c = fgetc(src);
     while(!feof(src)){
@@ -69,7 +70,7 @@ error_code_t fill_rom_with_zero(rom_t *rom)
     return SUCCESS;
 }
 
-error_code_t fill_rom_with_bin(rom_t *rom, char* bin_path)
+error_code_t fill_rom_with_bin(rom_t *rom, uint32_t start_addr, char* bin_path)
 {
     if(rom == NULL || bin_path == NULL){
         return ERROR_NULL_POINTER;
@@ -79,7 +80,7 @@ error_code_t fill_rom_with_bin(rom_t *rom, char* bin_path)
 
     if(bin_file != NULL){
         fseek(rom->rom_file, rom->content_start, SEEK_SET);
-        copy_whole_file(bin_file, rom->rom_file);
+        copy_whole_file(bin_file, start_addr, rom->rom_file);
         rom->last_offset = ftell(rom->rom_file) - 1;
 
         fclose(bin_file);

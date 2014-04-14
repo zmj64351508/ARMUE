@@ -13,6 +13,7 @@ typedef struct{
 }ram_t;
 
 ram_t* create_ram(size_t size);
+int fill_ram_with_bin(ram_t *ram, uint32_t start_addr, char *path);
 
 #ifdef __cplusplus
 }

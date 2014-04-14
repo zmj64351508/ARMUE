@@ -106,7 +106,7 @@ int connect_monitor(core_connect_t *monitor_connect)
 }
 
 /* check whether there has data sent from peripherals and receive it if it's true */
-bool_t check_monitor_input(core_connect_t *monitor_connect)
+bool_t pmp_check_input(core_connect_t *monitor_connect)
 {
     long int recv_len = pipe_recv(monitor_connect->recv_buf, monitor_connect->recv_buf_len, monitor_connect->in_pipe, FALSE);
     bool_t retval;
@@ -125,127 +125,237 @@ int send_to_monitor_direct(core_connect_t *monitor_connect, char *data, unsigned
     return pipe_send(data, len, monitor_connect->out_pipe);
 }
 
-/* packet format like [peri_kind 8 bit] [peri_index 16 bit] [data_len 32 bit] [data] */
-#define MONITOR_HEAD_LEN 5
-#define MONITOR_DATA_HEAD_KIND_LEN 1
-#define MONITOR_DATA_HEAD_INDEX_LEN 2
-#define MONITOR_DATA_HEAD_LEN (MONITOR_DATA_HEAD_KIND_LEN + MONITOR_DATA_HEAD_INDEX_LEN)
-
-/* packet format like [peri_kind 8 bit] [peri_index 16 bit] [data] */
-static int64_t parse_monitor_data(uint8_t *buffer, unsigned int len, peripheral_table_t *peri_table)
-{
-    if(len < MONITOR_DATA_HEAD_LEN + 1){
-        LOG(LOG_ERROR, "Wrong data length, maybe coursed by an uncomplete receiving\n");
-        return -1;
-    }
-    uint8_t peri_kind = buffer[0];
-    uint16_t peri_index = *(uint16_t *)&buffer[MONITOR_DATA_HEAD_KIND_LEN];
-
-    if(peri_kind >= PERI_MAX_KIND || peri_index >= peri_table[peri_kind].num){
-        LOG(LOG_ERROR, "Peripheral with kind: %d, index: %d\n doesn't exsit\n", peri_kind, peri_index);
-        return -3;
-    }
-
-    // call the data process function which should be implement with the peripheral
-    int retval;
-    peripheral_t *cur_peri = &peri_table[peri_kind].real_peri[peri_index];
-    void *user_data = cur_peri->user_data;
-    if(cur_peri->data_process != NULL){
-        retval = cur_peri->data_process(&buffer[MONITOR_DATA_HEAD_LEN], len - MONITOR_DATA_HEAD_LEN, user_data);
-        if(retval < 0){
-            return retval;
-        }
-        return len;
-    }else{
-        LOG(LOG_ERROR, "data process for the peripheral %d:%d is NULL\n", peri_kind, peri_index);
-        return -4;
-    }
-}
-
 void restart_send_packet(core_connect_t *connect)
 {
     connect->send_len = 0;
 }
 
+/* sumup / 256 */
+static uint8_t pmp_checksum(uint8_t *buf, int len)
+{
+    int i;
+    uint8_t sum = 0;
+    for(i = 0; i < len - 1; i++){
+        sum += buf[i];
+    }
+
+    return sum;
+}
+
+static uint8_t pmp_get_checksum(uint8_t *packet, uint32_t len)
+{
+    return packet[len - 1];
+}
+
 void make_monitor_data_packet(core_connect_t *connect, uint8_t peri_kind, uint16_t peri_index, uint8_t *data, uint32_t data_len)
 {
-    uint8_t *buffer = (uint8_t *)connect->send_buf + connect->send_len;
-    buffer[0] = MONITOR_DATA;
-    *(uint32_t *)&buffer[1] = data_len + MONITOR_DATA_HEAD_LEN + MONITOR_HEAD_LEN;
-    buffer[MONITOR_HEAD_LEN] = peri_kind;
-    *(uint16_t *)&buffer[MONITOR_HEAD_LEN + MONITOR_DATA_HEAD_KIND_LEN] = peri_index;
-    memcpy(&buffer[MONITOR_HEAD_LEN + MONITOR_DATA_HEAD_LEN], data, data_len);
-    connect->send_len += MONITOR_HEAD_LEN + MONITOR_DATA_HEAD_LEN + data_len;
+    uint32_t packet_len = PMP_SIZE_CHECKSUM +
+                          data_len +
+                          PMP_SIZE_DATA_KIND +
+                          PMP_SIZE_PERI_INDEX +
+                          PMP_SIZE_PERI_KIND +
+                          PMP_SIZE_PKT_KIND +
+                          PMP_SIZE_PKT_LEN;
+
+    if(connect->send_buf_len - connect->send_len < packet_len){
+        return;
+    }
+
+    uint8_t *buf_start = &connect->send_buf[connect->send_len];
+    uint8_t *buf_iter = buf_start;
+
+    *(uint32_t *)buf_iter= packet_len;
+    buf_iter += PMP_SIZE_PKT_LEN;
+
+    *buf_iter= PMP_DATA;
+    buf_iter += PMP_SIZE_PKT_KIND;
+
+    *buf_iter = peri_kind;
+    buf_iter += PMP_SIZE_PERI_KIND;
+
+    *(uint16_t *)buf_iter = peri_index;
+    buf_iter += PMP_SIZE_PERI_INDEX;
+
+    *buf_iter = PMP_DATA_KIND_DENERIC;
+    buf_iter += PMP_SIZE_DATA_KIND;
+
+    memcpy(buf_iter, data, data_len);
+    buf_iter += data_len;
+
+    *buf_iter = pmp_checksum(buf_start, packet_len);
+    connect->send_len += packet_len;
+}
+
+/* dispatch the peripheral event by parsed packet */
+int dispatch_peri_event(pmp_parsed_pkt_t *pkt, peripheral_table_t *peri_table)
+{
+    int peri_kind = pkt->peri_kind;
+    int peri_index = pkt->peri_index;
+    int data_kind = pkt->data_kind;
+    uint8_t *data = pkt->data;
+    int data_len = pkt->data_len;
+
+    // check peri_kind and peri_index
+    if(peri_kind >= PERI_MAX_KIND || peri_index >= peri_table[peri_kind].num){
+        LOG(LOG_ERROR, "Peripheral with kind: %d, index: %d\n doesn't exsit\n", peri_kind, peri_index);
+        return -1;
+    }
+
+    int retval;
+    // find correspinding peripheral and do the data_process
+    peripheral_t *cur_peri = &peri_table[peri_kind].real_peri[peri_index];
+    if(cur_peri->data_process == NULL){
+        LOG(LOG_ERROR, "data process for the peripheral %d:%d is NULL\n", peri_kind, peri_index);
+        return -2;
+    }
+    retval = cur_peri->data_process(data_kind, data, data_len, cur_peri->user_data);
+    if(retval < 0){
+        return retval;
+    }
+    return 0;
+}
+
+/* parse data packet */
+static int pmp_data_packet(uint8_t *buf, uint32_t len, pmp_parsed_pkt_t *pkt)
+{
+    uint8_t *buffer = buf;
+
+    // 1. peri kind
+    uint8_t peri_kind = *buffer;
+    buffer += PMP_SIZE_PERI_KIND;
+
+    // 2. peri index
+    uint16_t peri_index = *(uint16_t *)buffer;
+    buffer += PMP_SIZE_PERI_INDEX;
+
+    // 3. data kind
+    uint8_t data_kind = *buffer;
+    buffer += PMP_SIZE_DATA_KIND;
+
+    uint32_t data_len = len - (buffer - buf) - PMP_SIZE_CHECKSUM;
+
+    pkt->peri_kind = peri_kind;
+    pkt->peri_index = peri_index;
+    pkt->data_kind = data_kind;
+    pkt->data_len = data_len;
+    pkt->data = buffer;
+
+    // Success
+    return 0;
 }
 
 /* return the length of the data parsed this time */
-static int64_t parse_packet_once(uint8_t *buffer, unsigned int recv_len, peripheral_table_t *peri_table)
+static int parse_packet_once(uint8_t *buf, unsigned int recv_len, pmp_parsed_pkt_t *pkt)
 {
     if(recv_len <= 0){
         return 0;
     }
-    int64_t parsed_len;
-    uint8_t packet_kind = buffer[0];
-    uint32_t packet_len = *(uint32_t *)&buffer[1];
-    uint32_t rest_len = packet_len - MONITOR_HEAD_LEN;
-    // check the packet length and received length
+
+    // check the first part of the packet
+    if(recv_len < PMP_SIZE_PKT_LEN){
+        LOG(LOG_DEBUG, "parse_packet_once: received packet uncomplete\n");
+        return -1;
+    }
+
+    // do not change the input parameter
+    uint8_t *buffer = buf;
+
+    // 1. recv length
+    uint32_t packet_len = *(uint32_t *)buffer;
+    buffer += PMP_SIZE_PKT_LEN;
     if(recv_len < packet_len){
         LOG(LOG_DEBUG, "parse_packet_once: received packet uncomplete\n");
         return -1;
     }
-    uint8_t *rest_data = buffer + MONITOR_HEAD_LEN;
-    switch(packet_kind){
-    case MONITOR_DATA:
-        parsed_len = parse_monitor_data(rest_data, rest_len , peri_table);
-        break;
-    // unknow packet, ignoring it
-    default:
-        parsed_len = rest_len;
-        return 0;
+
+    // 2. packet kind
+    uint8_t packet_kind = *buffer;
+    buffer += PMP_SIZE_PKT_KIND;
+
+    // checksum
+    if(pmp_checksum(buf, packet_len) != pmp_get_checksum(buf, packet_len)){
+        LOG(LOG_DEBUG, "PMP: recv checksum fail\n");
+        pkt->valid = FALSE;
+        return -2;
     }
-    if(parsed_len < 0){
-        return parsed_len;
+
+    pkt->valid = TRUE;
+    pkt->pkt_kind = packet_kind;
+
+    int result;
+    int rest_len = packet_len - (buffer - buf);
+    switch(packet_kind){
+    case PMP_DATA:
+        result = pmp_data_packet(buffer, rest_len, pkt);
+        break;
+    default:
+        break;
+    }
+
+    if(result == 0){
+        return packet_len;
     }else{
-        return parsed_len + MONITOR_HEAD_LEN;
+        return -3;
     }
 }
 
-/* Parse the monitor connect protocol.
+/* Parse the peripheral monitor protocol(PMP).
    Return the rest of unparsed data in the buffer.
-
-   The packet has the format like:
-        [packet kind] [packet length] [packet specific data]
-   in which packet kind is an 8-bit value which can be MONITOR_CONTROL, MONITOR_DATA
-
-   For MONITOR_DATA, the rest of packet should be:
-        [MONITOR_DATA] [peripheral kind] [peripheral index] [data]
-   in which peripheral kind is an 8-bit value
-            peripheral index is an 16-bit value
-            length of reset data is an 32-bit value
-            data stands for the real data to transmit
    */
-int64_t parse_monitor_input(core_connect_t *monitor_connect, peripheral_table_t *peri_table)
+//int pmp_parse_input(core_connect_t *monitor_connect, pmp_parsed_pkt_t *pkt, int last_result)
+//{
+//    uint8_t *recv_buf = (uint8_t *)monitor_connect->recv_buf;
+//    int64_t recv_len = monitor_connect->recv_len;
+//    if(recv_len <= 0){
+//        return -1;
+//    }
+//    int64_t parsed_len;
+//
+//    while(1){
+//        memset(pkt, 0, sizeof(pmp_parsed_pkt_t));
+//        parsed_len = parse_packet_once(recv_buf, recv_len, pkt);
+//        if(parsed_len >= 0){
+//            recv_len -= parsed_len;
+//            recv_buf += parsed_len;
+//        }else{
+//            return recv_len;
+//        }
+//        if(recv_len <= 0){
+//            break;
+//        }
+//    }
+//    return 0;
+//}
+
+int pmp_parse_input(core_connect_t *monitor_connect, pmp_parsed_pkt_t *pkt)
 {
     uint8_t *recv_buf = (uint8_t *)monitor_connect->recv_buf;
-    int64_t recv_len = monitor_connect->recv_len;
+    int recv_len = monitor_connect->recv_len;
+    int parsed = monitor_connect->recv_parsed;
     if(recv_len <= 0){
         return -1;
     }
-    int64_t parsed_len;
+    int cur_result;
 
-    while(1){
-        parsed_len = parse_packet_once(recv_buf, recv_len, peri_table);
-        if(parsed_len >= 0){
-            recv_len -= parsed_len;
-            recv_buf += parsed_len;
-        }else{
-            return recv_len;
-        }
-        if(recv_len <= 0){
-            break;
-        }
+    memset(pkt, 0, sizeof(pmp_parsed_pkt_t));
+    cur_result = parse_packet_once(recv_buf + parsed, recv_len - parsed, pkt);
+    if(cur_result >= 0){
+        monitor_connect->recv_parsed += cur_result;
+        return parsed;
+    }else{
+        return cur_result;
     }
-    return 0;
+}
+
+bool_t is_pmp_parse_finish(core_connect_t *monitor_connect)
+{
+    int recv_len = monitor_connect->recv_len;
+    return monitor_connect->recv_parsed >= recv_len;
+}
+
+void pmp_start_parse_input(core_connect_t *monitor_connect)
+{
+    monitor_connect->recv_parsed = 0;
 }
 
 /* monitor side */

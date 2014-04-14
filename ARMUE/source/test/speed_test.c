@@ -4,6 +4,7 @@
 #include <string.h>
 #include <time.h>
 #include "module_helper.h"
+#include "config.h"
 
 #include "memory_map.h"
 #include "soc.h"
@@ -16,22 +17,26 @@ int main(int argc, char **argv)
     memory_map_t *memory_map = create_memory_map();
     // ROM
     rom_t* rom = alloc_rom();
-    set_rom_size(rom, 0x1000);
+    set_rom_size(rom, 0x8000);
     if(SUCCESS != open_rom("E:\\GitHub\\ARMUE\\test.rom", rom)){
         return -1;
     }
-    fill_rom_with_bin(rom, "E:\\GitHub\\ARMUE\\cortex_m3_test\\test.bin");
+    //fill_rom_with_bin(rom, 0, "E:\\GitHub\\ARMUE\\cortex_m3_test\\test.bin");
+    fill_rom_with_bin(rom, 0, "C:\\Users\\MyPC\Desktop\\1100119_LPC1100-FFT-Example\\LPC1100-FFT-Example\\Keil\\Example\\fft_example.bin");
     int result = setup_memory_map_rom(memory_map, rom, 0x00);
     if(result < 0){
         LOG(LOG_ERROR, "Faild to setup ROM\n");
     }
 
     /* RAM */
-    ram_t* ram = create_ram(0x1000);
-    result = setup_memory_map_ram(memory_map, ram, 0x01000000);
+    ram_t* ram = create_ram(0x9000);
+    result = setup_memory_map_ram(memory_map, ram, 0x10000000);
     if(result < 0){
         LOG(LOG_ERROR, "Failed to setup RAM\n");
     }
+    // run in ram
+//    fill_ram_with_bin(ram, 0, "E:\\GitHub\\ARMUE\\cortex_m3_test\\test.bin");
+    fill_ram_with_bin(rom, 0, "C:\\Users\\MyPC\Desktop\\1100119_LPC1100-FFT-Example\\LPC1100-FFT-Example\\Keil\\Example\\fft_example.bin");
 
     soc_conf_t soc_conf;
     soc_conf.cpu_num = 1;
@@ -41,6 +46,8 @@ int main(int argc, char **argv)
     soc_conf.has_GIC = 0;
     soc_conf.memory_map_num = 1;
     soc_conf.memories[0] = memory_map;
+    soc_conf.exclusive_high_address = 0xFFFFFFFF;
+    soc_conf.exclusive_low_address = 0;
 
     // soc
     uint32_t opcode;
@@ -48,13 +55,18 @@ int main(int argc, char **argv)
     if(soc != NULL){
         startup_soc(soc);
 
+        /* enable debug*/
+        config.gdb_debug = TRUE;
+        soc->stub = create_stub();
+        init_stub(soc->stub);
+
         /* timer start */
         clock_t run_begin, run_end;
         run_begin = clock();
 
         while(1){
             opcode = run_soc(soc);
-            if(opcode == 0 || soc->cpu[0]->cycle == 5000000)
+            if(opcode == 0)//|| soc->cpu[0]->cycle == 500000)
                 break;
         }
 

@@ -28,7 +28,7 @@ typedef struct rom_s_t
 rom_t* alloc_rom();
 error_code_t destory_rom(rom_t** rom);
 error_code_t open_rom(Input _TCHAR* path, IOput rom_t* rom);
-error_code_t fill_rom_with_bin(rom_t *rom, _TCHAR* bin_path);
+error_code_t fill_rom_with_bin(rom_t *rom, uint32_t start_addr, char* bin_path);
 
 error_code_t set_rom_size(rom_t *rom, uint32_t size);
 error_code_t set_rom_base_addr(rom_t* rom, uint32_t base_addr);

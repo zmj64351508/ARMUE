@@ -17,7 +17,7 @@ enum peripheral_kind_t{
 
 typedef struct peripheral_t{
     void *user_data;
-    int (*data_process)(uint8_t *data, unsigned int len, void *user_data);
+    int (*data_process)(int packet_kind, uint8_t *data, unsigned int len, void *user_data);
 }peripheral_t;
 
 typedef struct peripheral_table_t{

@@ -24,7 +24,8 @@ const struct option long_options[] = {
     {0, 0, 0, 0},
 };
 
-int i2c_test(uint8_t *data, unsigned int len, void *user_data)
+/* i2c_test will be called when some I2C data received */
+int i2c_test(int data_kind, uint8_t *data, unsigned int len, void *user_data)
 {
     LOG(LOG_DEBUG, "i2c recved:\n");
     int i;
@@ -34,6 +35,8 @@ int i2c_test(uint8_t *data, unsigned int len, void *user_data)
     putchar('\n');
     return 0;
 }
+
+/* peripheral_t is the structure for peripheral register */
 int a = 2;
 peripheral_t i2c = {
     .user_data = &a,
@@ -99,9 +102,9 @@ int main(int argc, char **argv)
         return -1;
     }
     fill_rom_with_zero(rom);
-//    fill_rom_with_bin(rom, "E:\\GitHub\\ARMUE\\cortex_m3_test\\test.bin");
-    //fill_rom_with_bin(rom, "E:\\GitHub\\ARMUE\\svc_fsm_m3_test\\test.bin");
-    fill_rom_with_bin(rom, "E:\\LPC11U3X_demo_board\\software\\_OK_systick\\test.bin");
+    fill_rom_with_bin(rom, 0, "E:\\GitHub\\ARMUE\\cortex_m3_test\\test.bin");
+//    fill_rom_with_bin(rom, 0, "E:\\GitHub\\ARMUE\\svc_fsm_m3_test\\test.bin");
+    //fill_rom_with_bin(rom, "E:\\LPC11U3X_demo_board\\software\\_OK_systick\\test.bin");
     int result = setup_memory_map_rom(memory_map, rom, 0x00);
     if(result < 0){
         LOG(LOG_ERROR, "Faild to setup ROM\n");
@@ -117,11 +120,22 @@ int main(int argc, char **argv)
     /* test for peripheral monitor */
     request_peripheral(PERI_I2C, 2);
     register_peripheral(PERI_I2C, 0, &i2c);
+
     // connected
+    pmp_parsed_pkt_t pmp_pkt = {0};
     while(config.client){
-        bool_t has_input = check_monitor_input(g_peri_connect);
+        bool_t has_input = pmp_check_input(g_peri_connect);
         if(has_input){
-            parse_monitor_input(g_peri_connect, g_peri_table);
+            // start input parsing loop
+            pmp_parse_loop(g_peri_connect){
+                result = pmp_parse_input(g_peri_connect, &pmp_pkt);
+                if(result < 0 && pmp_pkt.valid == FALSE){
+                    LOG(LOG_WARN, "clear invalid packet\n");
+                    g_peri_connect->recv_len = 0;
+                    continue;
+                }
+                dispatch_peri_event(&pmp_pkt, g_peri_table);
+            }
             g_peri_connect->recv_buf[g_peri_connect->recv_len] = '\0';
             printf("%s\n", g_peri_connect->recv_buf);
         }

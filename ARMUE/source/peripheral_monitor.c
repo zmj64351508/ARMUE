@@ -61,6 +61,7 @@ int main(int argc, char **argv)
     restart_send_packet(core_connect);
     make_monitor_data_packet(core_connect, PERI_I2C, 0, "abc", 3);
     make_monitor_data_packet(core_connect, PERI_I2C, 0, "ddd", 3);
+    core_connect->send_buf[core_connect->send_len - 1] = 10;
     send_to_core(core_connect);
     while(1);
 #if 0
