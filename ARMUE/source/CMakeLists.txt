@@ -8,6 +8,7 @@ set(SOURCE_DIRS
 ./utils
 ./arch/arm
 ./peripheral
+./soc/arm
 )
 
 #include directory
@@ -30,6 +31,7 @@ aux_source_directory(./core CORE_FILE)
 aux_source_directory(./utils UTILS_FILE)
 aux_source_directory(./arch/arm ARCH_ARM_FILE)
 aux_source_directory(./peripheral PERIPHERAL_FILE)
+aux_source_directory(./soc/arm SOC_ARM_FILE)
 
 SET(CMAKE_C_FLAGS "$ENV{CFLAGS} -O0 -Wall -Wl,-Map,debug.map -g -ggdb3 -finline-functions")
 link_libraries(wsock32)
@@ -46,6 +48,7 @@ ${MAIN_APP}
 ${CORE_FILE}
 ${UTILS_FILE}
 ${ARCH_ARM_FILE}
+${SOC_ARM_FILE}
 ${PERIPHERAL_FILE}
 )
 

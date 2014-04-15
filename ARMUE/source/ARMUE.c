@@ -13,8 +13,10 @@
 #include "windows.h"
 #include "core_connect.h"
 
+#include "lpc1768_uart.h"
+
 // connect to peripheral monitor
-core_connect_t *g_peri_connect;
+static core_connect_t *g_peri_connect;
 
 const char short_options[] = "hgc:";
 const struct option long_options[] = {
@@ -42,6 +44,12 @@ peripheral_t i2c = {
     .user_data = &a,
     .data_process = i2c_test,
 };
+
+/* for other part of the program that want to know the connect to the peripheral */
+core_connect_t *armue_get_peri_connect()
+{
+    return g_peri_connect;
+}
 
 int main(int argc, char **argv)
 {
@@ -102,8 +110,8 @@ int main(int argc, char **argv)
         return -1;
     }
     fill_rom_with_zero(rom);
-    fill_rom_with_bin(rom, 0, "E:\\GitHub\\ARMUE\\cortex_m3_test\\test.bin");
-//    fill_rom_with_bin(rom, 0, "E:\\GitHub\\ARMUE\\svc_fsm_m3_test\\test.bin");
+    //fill_rom_with_bin(rom, 0, "E:\\GitHub\\ARMUE\\cortex_m3_test\\test.bin");
+    fill_rom_with_bin(rom, 0, "E:\\GitHub\\ARMUE\\svc_fsm_m3_test\\test.bin");
     //fill_rom_with_bin(rom, "E:\\LPC11U3X_demo_board\\software\\_OK_systick\\test.bin");
     int result = setup_memory_map_rom(memory_map, rom, 0x00);
     if(result < 0){
@@ -122,26 +130,21 @@ int main(int argc, char **argv)
     register_peripheral(PERI_I2C, 0, &i2c);
 
     // connected
-    pmp_parsed_pkt_t pmp_pkt = {0};
-    while(config.client){
-        bool_t has_input = pmp_check_input(g_peri_connect);
-        if(has_input){
-            // start input parsing loop
-            pmp_parse_loop(g_peri_connect){
-                result = pmp_parse_input(g_peri_connect, &pmp_pkt);
-                if(result < 0 && pmp_pkt.valid == FALSE){
-                    LOG(LOG_WARN, "clear invalid packet\n");
-                    g_peri_connect->recv_len = 0;
-                    continue;
-                }
-                dispatch_peri_event(&pmp_pkt, g_peri_table);
-            }
-            g_peri_connect->recv_buf[g_peri_connect->recv_len] = '\0';
-            printf("%s\n", g_peri_connect->recv_buf);
-        }
-//            send_peripheral_output_direct(g_peri_connect, "hello", 6);
-//            Sleep(1);
-    }
+//    pmp_parsed_pkt_t pmp_pkt = {0};
+//    while(config.client){
+//        bool_t has_input = pmp_check_input(g_peri_connect);
+//        if(has_input){
+//            // start input parsing loop
+//            pmp_parse_loop(g_peri_connect){
+//                result = pmp_parse_input(g_peri_connect, &pmp_pkt);
+//                if(result >= 0){
+//                    dispatch_peri_event(&pmp_pkt, g_peri_table);
+//                }
+//            }
+//            g_peri_connect->recv_buf[g_peri_connect->recv_len] = '\0';
+//            printf("%s\n", g_peri_connect->recv_buf);
+//        }
+//    }
 
     // soc
     uint32_t opcode;
@@ -155,6 +158,8 @@ int main(int argc, char **argv)
             return -1;
         }
     }
+
+    lpc1768_uart_init(soc->cpu[0]);
 
     // main loop for emulation
     startup_soc(soc);

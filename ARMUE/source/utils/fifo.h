@@ -4,6 +4,8 @@
 extern "C"{
 #endif
 
+#include <stddef.h>
+
 typedef struct fifo_t{
     void *data;
     size_t data_size;

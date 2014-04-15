@@ -9,10 +9,19 @@ extern "C"{
 #include "_types.h"
 #include "peripheral.h"
 
+#define PMP_MAX_RETRY 10
+
 enum PMP_PKT_KIND{
     PMP_DATA,
     PMP_CHECKSUM_OK,
     PMP_CHECKSUM_FAIL,
+    PMP_INFO_REQUEST,
+    PMP_INFO_ACK,
+};
+
+enum PMP_ACK{
+    PMP_OK,
+    PMP_FAIL,
 };
 
 enum PMP_DATA_KIND{
@@ -21,12 +30,19 @@ enum PMP_DATA_KIND{
     PMP_DATA_KIND_CONTROL,
 };
 
+enum PMP_ERR{
+    PMP_ERR_CHECKSUM_FAIL = 1,
+    PMP_ERR_CHECKSUM_REPLY_OK,
+    PMP_ERR_CHECKSUM_REPLY_FAIL,
+    PMP_ERR_DATA_LEN,
+    PMP_ERR_DATA_SEND,
+};
+
 #define PMP_SIZE_PKT_LEN    4 // 32 bit
 #define PMP_SIZE_PKT_KIND   1 // 8 bit
 #define PMP_SIZE_PERI_KIND  1 // 8 bit
 #define PMP_SIZE_PERI_INDEX 2 // 16 bit
 #define PMP_SIZE_DATA_KIND  1 // 8 bit
-#define PMP_SIZE_CHECKSUM   1 // 8bit
 
 typedef HANDLE pipe_t;
 typedef struct core_connect_t{
@@ -40,6 +56,7 @@ typedef struct core_connect_t{
     int send_len;
     char *recv_buf;
     char *send_buf;
+    int retry;
 }core_connect_t;
 
 typedef struct pmp_parsed_pkt_t{
@@ -55,7 +72,8 @@ typedef struct pmp_parsed_pkt_t{
 core_connect_t *create_core_connect(unsigned int buf_len, const char *pipe_name);
 void destory_core_connect(core_connect_t **connect);
 void restart_send_packet(core_connect_t *connect);
-void make_monitor_data_packet(core_connect_t *connect, uint8_t peri_kind, uint16_t peri_index, uint8_t *data, uint32_t data_len);
+void pmp_clear_recv_buffer(core_connect_t *connect);
+int make_pmp_data_packet(core_connect_t *connect, uint8_t peri_kind, uint16_t peri_index, uint8_t data_kind, uint8_t *data, uint32_t data_len);
 int pmp_parse_input(core_connect_t *monitor_connect, pmp_parsed_pkt_t *pkt);
 void pmp_start_parse_input(core_connect_t *monitor_connect);
 bool_t is_pmp_parse_finish(core_connect_t *monitor_connect);
@@ -65,7 +83,6 @@ bool_t is_pmp_parse_finish(core_connect_t *monitor_connect);
 bool_t pmp_check_input(core_connect_t *peri_connect);
 
 
-
 /* functions used on core side */
 int connect_monitor(core_connect_t *peri_connect);
 int dispatch_peri_event(pmp_parsed_pkt_t *pkt, peripheral_table_t *peri_table);
@@ -73,8 +90,8 @@ int send_to_monitor_direct(core_connect_t *peri_connect, char *data, unsigned in
 
 /* functions used on monitor side */
 int connect_armue_core(core_connect_t *connect);
-int recv_from_core(core_connect_t *connect, bool_t block);
-int send_to_core(core_connect_t *connect);
+int pmp_recv(core_connect_t *connect, bool_t block);
+int pmp_send(core_connect_t *connect);
 
 #ifdef __cplusplus
 }

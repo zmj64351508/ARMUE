@@ -20,8 +20,6 @@ typedef enum{
 #define MODE_THREAD     1
 #define MODE_HANDLER    2
 
-#define MEM_READ    1
-#define MEM_WRITE   2
 
 /* used in GET_REG_VAL to get register value while PC_INDEX will get current address of instruction +4
    which is the fact we see when read PC in program and PC_RAW_INDEX will get the address of next

@@ -14,21 +14,24 @@ typedef enum{
     MEMORY_REGION_ROM,
     MEMORY_REGION_RAM,
     MEMORY_REGION_SYS,
-    MEMORY_REGION_DEV,
+    MEMORY_REGION_PERI,
 }memory_region_type_t;
 
 #define MEM_MAP_CACHE_SIZE 4000
 #define ROM_MAX 4
 #define RAM_MAX 4
 
+#define MEM_READ    1
+#define MEM_WRITE   2
+
 #include "bstree.h"
 typedef struct{
     uint32_t size_total;
-    bstree_node_t *map;    
+    bstree_node_t *map;
 }memory_map_t;
 
 typedef struct memory_region_t{
-    uint32_t base_addr;    
+    uint32_t base_addr;
     uint32_t size;
     memory_region_type_t type;
     void *region_data;

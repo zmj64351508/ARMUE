@@ -2,6 +2,7 @@
 #include "_types.h"
 #include "error_code.h"
 #include "core_connect.h"
+#include <string.h>
 
 typedef HANDLE process_id_t;
 
@@ -14,7 +15,7 @@ process_id_t create_process()
     ZeroMemory( &pi, sizeof(pi) );
 
     if( !CreateProcess( NULL,   // No module name (use command line)
-       "./ARMUE.exe -g -c",      // Command line
+       "./ARMUE.exe -g -c \\\\.\\Pipe\\armue",      // Command line
        NULL,           // Process handle not inheritable
        NULL,           // Thread handle not inheritable
        FALSE,          // Set handle inheritance to FALSE
@@ -57,13 +58,38 @@ int main(int argc, char **argv)
     if(retval != SUCCESS){
         return -1;
     }
+
+    printf("Connected\n");
+
     // connected
-    restart_send_packet(core_connect);
-    make_monitor_data_packet(core_connect, PERI_I2C, 0, "abc", 3);
-    make_monitor_data_packet(core_connect, PERI_I2C, 0, "ddd", 3);
-    core_connect->send_buf[core_connect->send_len - 1] = 10;
-    send_to_core(core_connect);
-    while(1);
+    pmp_parsed_pkt_t pmp_pkt = {0};
+    int result;
+    char str[1024];
+    while(1){
+        bool_t has_input = pmp_check_input(core_connect);
+        if(has_input){
+            // start input parsing loop
+            pmp_parse_loop(core_connect){
+                result = pmp_parse_input(core_connect, &pmp_pkt);
+                if(result < 0){
+                    pmp_clear_recv_buffer(core_connect);
+                    break;
+                }
+
+                //monitor_filter(&pmp_pkt);
+                printf("%d:%d ", pmp_pkt.peri_kind, pmp_pkt.peri_index);
+                int i;
+                for(i = 0; i < pmp_pkt.data_len; i++){
+                    putchar(pmp_pkt.data[i]);
+                }
+                putchar('\n');
+            }
+        }
+
+        //scanf("%s", str);
+        //make_pmp_data_packet(core_connect, PERI_I2C, 0, PMP_DATA_KIND_DENERIC, str, strlen(str));
+        //pmp_send(core_connect);
+    }
 #if 0
     while(1){
         long int recv_len = recv_from_core(core_connect, FALSE);
