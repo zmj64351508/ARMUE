@@ -139,67 +139,30 @@ int make_pmp_data_packet(core_connect_t *connect, uint8_t peri_kind, uint16_t pe
     }
 
     uint32_t packet_len = data_len +
-                          PMP_SIZE_DATA_KIND +
-                          PMP_SIZE_PERI_INDEX +
-                          PMP_SIZE_PERI_KIND +
-                          PMP_SIZE_PKT_KIND +
-                          PMP_SIZE_PKT_LEN;
+                          sizeof(struct pmp_pkt_head_t) +
+                          sizeof(struct data_pkt_head_t);
 
     if(connect->send_buf_len - connect->send_len < packet_len){
         return -2;
     }
 
-    uint8_t *buf_start = &connect->send_buf[connect->send_len];
-    uint8_t *buf_iter = buf_start;
+    /* make pmp head */
+    uint8_t *buf_start = (uint8_t *)&connect->send_buf[connect->send_len];
+    struct pmp_pkt_head_t *pmp_head = (struct pmp_pkt_head_t *)buf_start;
+    pmp_head->packet_kind = PMP_DATA;
+    pmp_head->packet_len = packet_len;
 
-    *buf_iter = PMP_DATA;
-    buf_iter += PMP_SIZE_PKT_KIND;
+    /* make data packet head */
+    buf_start += sizeof(struct pmp_pkt_head_t);
+    struct data_pkt_head_t *data_head = (struct data_pkt_head_t *)buf_start;
+    data_head->data_kind = data_kind;
+    data_head->peri_kind = peri_kind;
+    data_head->peri_index = peri_index;
 
-    *(uint32_t *)buf_iter= packet_len;
-    buf_iter += PMP_SIZE_PKT_LEN;
-
-    *buf_iter = peri_kind;
-    buf_iter += PMP_SIZE_PERI_KIND;
-
-    *(uint16_t *)buf_iter = peri_index;
-    buf_iter += PMP_SIZE_PERI_INDEX;
-
-    *buf_iter = data_kind;
-    buf_iter += PMP_SIZE_DATA_KIND;
-
-    memcpy(buf_iter, data, data_len);
+    buf_start += sizeof(struct data_pkt_head_t);
+    memcpy(buf_start, data, data_len);
 
     connect->send_len += packet_len;
-    return 0;
-}
-
-
-/* dispatch the peripheral event by parsed packet */
-int dispatch_peri_event(pmp_parsed_pkt_t *pkt, peripheral_table_t *peri_table)
-{
-    int peri_kind = pkt->peri_kind;
-    int peri_index = pkt->peri_index;
-    int data_kind = pkt->data_kind;
-    uint8_t *data = pkt->data;
-    int data_len = pkt->data_len;
-
-    // check peri_kind and peri_index
-    if(peri_kind >= PERI_MAX_KIND || peri_index >= peri_table[peri_kind].num){
-        LOG(LOG_ERROR, "Peripheral with kind: %d, index: %d\n doesn't exsit\n", peri_kind, peri_index);
-        return -1;
-    }
-
-    int retval;
-    // find correspinding peripheral and do the data_process
-    peripheral_t *cur_peri = &peri_table[peri_kind].real_peri[peri_index];
-    if(cur_peri->data_process == NULL){
-        LOG(LOG_ERROR, "data process for the peripheral %d:%d is NULL\n", peri_kind, peri_index);
-        return -2;
-    }
-    retval = cur_peri->data_process(data_kind, data, data_len, cur_peri->user_data);
-    if(retval < 0){
-        return retval;
-    }
     return 0;
 }
 
@@ -208,23 +171,14 @@ static int pmp_data_packet(uint8_t *buf, uint32_t len, pmp_parsed_pkt_t *pkt)
 {
     uint8_t *buffer = buf;
 
-    // 1. peri kind
-    uint8_t peri_kind = *buffer;
-    buffer += PMP_SIZE_PERI_KIND;
+    struct data_pkt_head_t *data_head = (struct data_pkt_head_t *)buffer;
+    buffer += sizeof(struct data_pkt_head_t);
 
-    // 2. peri index
-    uint16_t peri_index = *(uint16_t *)buffer;
-    buffer += PMP_SIZE_PERI_INDEX;
+    uint32_t data_len = len - sizeof(struct data_pkt_head_t);
 
-    // 3. data kind
-    uint8_t data_kind = *buffer;
-    buffer += PMP_SIZE_DATA_KIND;
-
-    uint32_t data_len = len - (buffer - buf);
-
-    pkt->peri_kind = peri_kind;
-    pkt->peri_index = peri_index;
-    pkt->data_kind = data_kind;
+    pkt->peri_kind = data_head->peri_kind;
+    pkt->peri_index = data_head->peri_index;
+    pkt->data_kind = data_head->data_kind;
     pkt->data_len = data_len;
     pkt->data = buffer;
 
@@ -235,28 +189,25 @@ static int pmp_data_packet(uint8_t *buf, uint32_t len, pmp_parsed_pkt_t *pkt)
 /* return the length of the data parsed this time */
 static int parse_packet_once(uint8_t *buf, unsigned int recv_len, pmp_parsed_pkt_t *pkt)
 {
-    if(recv_len < PMP_SIZE_PKT_KIND + PMP_SIZE_PKT_LEN){
+    if(recv_len < sizeof(struct pmp_pkt_head_t)){
         LOG(LOG_DEBUG, "parse_packet_once: received packet uncomplete\n");
         return -PMP_ERR_DATA_LEN;
     }
     // do not change the input parameter
     uint8_t *buffer = buf;
+    struct pmp_pkt_head_t *pmp_head = (struct pmp_pkt_head_t *)buffer;
+    buffer += sizeof(struct pmp_pkt_head_t);
 
-    uint8_t packet_kind = *buffer;
-    buffer += PMP_SIZE_PKT_KIND;
-
-    uint32_t packet_len = *(uint32_t *)buffer;
-    buffer += PMP_SIZE_PKT_LEN;
-    if(recv_len < packet_len){
+    if(recv_len < pmp_head->packet_len){
         LOG(LOG_DEBUG, "parse_packet_once: received packet uncomplete\n");
         return -PMP_ERR_DATA_LEN;
     }
 
-    pkt->pkt_kind = packet_kind;
+    pkt->pkt_kind = pmp_head->packet_kind;
 
     int result;
-    int rest_len = packet_len - (buffer - buf);
-    switch(packet_kind){
+    int rest_len = pmp_head->packet_len - sizeof(struct pmp_pkt_head_t);
+    switch(pmp_head->packet_kind){
     case PMP_DATA:
         result = pmp_data_packet(buffer, rest_len, pkt);
         break;
@@ -265,7 +216,7 @@ static int parse_packet_once(uint8_t *buf, unsigned int recv_len, pmp_parsed_pkt
     }
 
     if(result == 0){
-        return packet_len;
+        return pmp_head->packet_len;
     }else{
         return -PMP_ERR_DATA_SEND;
     }

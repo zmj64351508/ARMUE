@@ -6,6 +6,7 @@
 #include <windows.h>
 #include "config.h"
 #include "timer.h"
+#include "armue.h"
 
 int startup_soc(soc_t* soc)
 {
@@ -69,8 +70,29 @@ uint32_t run_soc(soc_t* soc)
     ins_t    ins_info = cpu->decode(cpu, &opcode);
                         cpu->excute(cpu, ins_info);
 
+
     add_cycle(cpu);
     check_timer(cpu);
+
+    /* check peripheral input every 100 */
+    pmp_parsed_pkt_t pmp_pkt;
+    int result;
+    if(config.client && reach_check_point(cpu)){
+        core_connect_t *peri_connect = armue_get_peri_connect(cpu);
+        bool_t has_input = pmp_check_input(peri_connect);
+        if(has_input){
+            // start input parsing loop
+            pmp_parse_loop(peri_connect){
+                result = pmp_parse_input(peri_connect, &pmp_pkt);
+                if(result >= 0){
+                    dispatch_peri_event(&pmp_pkt);
+                }
+            }
+            peri_connect->recv_buf[peri_connect->recv_len] = '\0';
+            LOG(LOG_INFO, "Peripheral packet type[%d] received: %s\n", pmp_pkt.pkt_kind, peri_connect->recv_buf);
+        }
+        updata_check_point(cpu, 10);
+    }
 
     /* exception and interrupt checker/handler */
     if(cpu->GIC){

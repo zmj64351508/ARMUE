@@ -7,7 +7,6 @@ extern "C"{
 
 #include <windows.h>
 #include "_types.h"
-#include "peripheral.h"
 
 #define PMP_MAX_RETRY 10
 
@@ -38,11 +37,19 @@ enum PMP_ERR{
     PMP_ERR_DATA_SEND,
 };
 
-#define PMP_SIZE_PKT_LEN    4 // 32 bit
-#define PMP_SIZE_PKT_KIND   1 // 8 bit
-#define PMP_SIZE_PERI_KIND  1 // 8 bit
-#define PMP_SIZE_PERI_INDEX 2 // 16 bit
-#define PMP_SIZE_DATA_KIND  1 // 8 bit
+/* PMP headers */
+#pragma pack(1)
+struct pmp_pkt_head_t{
+    uint8_t packet_kind;
+    uint32_t packet_len;
+};
+
+struct data_pkt_head_t{
+    uint8_t peri_kind;
+    uint16_t peri_index;
+    uint8_t data_kind;
+};
+#pragma pack()
 
 typedef HANDLE pipe_t;
 typedef struct core_connect_t{
@@ -59,7 +66,7 @@ typedef struct core_connect_t{
     int retry;
 }core_connect_t;
 
-typedef struct pmp_parsed_pkt_t{
+struct pmp_parsed_pkt_t{
     int pkt_kind;
     int data_kind;
     int peri_index;
@@ -67,8 +74,10 @@ typedef struct pmp_parsed_pkt_t{
     uint8_t *data;
     uint32_t data_len;
     bool_t valid;
-}pmp_parsed_pkt_t;
+};
+typedef struct pmp_parsed_pkt_t pmp_parsed_pkt_t;
 
+#include "peripheral.h"
 core_connect_t *create_core_connect(unsigned int buf_len, const char *pipe_name);
 void destory_core_connect(core_connect_t **connect);
 void restart_send_packet(core_connect_t *connect);
@@ -85,7 +94,6 @@ bool_t pmp_check_input(core_connect_t *peri_connect);
 
 /* functions used on core side */
 int connect_monitor(core_connect_t *peri_connect);
-int dispatch_peri_event(pmp_parsed_pkt_t *pkt, peripheral_table_t *peri_table);
 int send_to_monitor_direct(core_connect_t *peri_connect, char *data, unsigned int len);
 
 /* functions used on monitor side */

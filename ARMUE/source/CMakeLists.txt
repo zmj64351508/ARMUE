@@ -41,6 +41,7 @@ ADD_DEFINITIONS(-D_DEBUG)
 add_executable(peripheral_monitor
 ${PERIPHERAL_FILE}
 ${PERI_MONITOR}
+${UTILS_FILE}
 )
 
 add_executable(ARMUE

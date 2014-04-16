@@ -26,24 +26,6 @@ const struct option long_options[] = {
     {0, 0, 0, 0},
 };
 
-/* i2c_test will be called when some I2C data received */
-int i2c_test(int data_kind, uint8_t *data, unsigned int len, void *user_data)
-{
-    LOG(LOG_DEBUG, "i2c recved:\n");
-    int i;
-    for(i = 0; i < len; i++){
-        putchar(data[i]);
-    }
-    putchar('\n');
-    return 0;
-}
-
-/* peripheral_t is the structure for peripheral register */
-int a = 2;
-peripheral_t i2c = {
-    .user_data = &a,
-    .data_process = i2c_test,
-};
 
 /* for other part of the program that want to know the connect to the peripheral */
 core_connect_t *armue_get_peri_connect()
@@ -124,27 +106,6 @@ int main(int argc, char **argv)
     if(result < 0){
         LOG(LOG_ERROR, "Failed to setup RAM\n");
     }
-
-    /* test for peripheral monitor */
-    request_peripheral(PERI_I2C, 2);
-    register_peripheral(PERI_I2C, 0, &i2c);
-
-    // connected
-//    pmp_parsed_pkt_t pmp_pkt = {0};
-//    while(config.client){
-//        bool_t has_input = pmp_check_input(g_peri_connect);
-//        if(has_input){
-//            // start input parsing loop
-//            pmp_parse_loop(g_peri_connect){
-//                result = pmp_parse_input(g_peri_connect, &pmp_pkt);
-//                if(result >= 0){
-//                    dispatch_peri_event(&pmp_pkt, g_peri_table);
-//                }
-//            }
-//            g_peri_connect->recv_buf[g_peri_connect->recv_len] = '\0';
-//            printf("%s\n", g_peri_connect->recv_buf);
-//        }
-//    }
 
     // soc
     uint32_t opcode;

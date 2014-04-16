@@ -17,14 +17,27 @@ extern "C"{
 
 typedef struct uart_t
 {
+    uint8_t stop_bit;
+    uint8_t valid_type;
+    uint8_t data_len;
     int baud;
     fifo_t *in_buffer;
 }uart_t;
 
+#pragma pack(1)
+struct uart_config_pkt_t{
+    uint32_t baud;
+    uint8_t stop_bit;
+    uint8_t valid_type;
+    uint8_t data_len;
+};
+#pragma pack()
+
 int uart_init(uart_t *uart, int buf_len);
-int uart_pack_data(uint8_t *output, void *input, int data_len, uint8_t stop_bit, uint8_t valid_type, int baud);
-void uart_send_data(core_connect_t *connect, int index, void *data, int data_len, int stop_bit, int valid_type, int baud);
-void uart_read_data(uart_t *uart, void *buffer);
+int uart_store_in_buffer(uart_t *uart, uint8_t *data, int len);
+void uart_send_data(core_connect_t *connect, int index, void *data, int len);
+void uart_send_byte(core_connect_t *connect, int index, void *data);
+int uart_read_data(uart_t *uart, void *buffer);
 
 #ifdef __cplusplus
 }

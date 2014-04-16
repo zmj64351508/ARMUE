@@ -56,3 +56,37 @@ int register_peripheral(int peri_kind, int peri_index, peripheral_t *peri_data)
 {
     return _register_peripheral(g_peri_table, peri_kind, peri_index, peri_data);
 }
+
+/* dispatch the peripheral event by parsed packet */
+int _dispatch_peri_event(pmp_parsed_pkt_t *pkt, peripheral_table_t *peri_table)
+{
+    int peri_kind = pkt->peri_kind;
+    int peri_index = pkt->peri_index;
+    int data_kind = pkt->data_kind;
+    uint8_t *data = pkt->data;
+    int data_len = pkt->data_len;
+
+    // check peri_kind and peri_index
+    if(peri_kind >= PERI_MAX_KIND || peri_index >= peri_table[peri_kind].num){
+        LOG(LOG_ERROR, "Peripheral with kind: %d, index: %d\n doesn't exsit\n", peri_kind, peri_index);
+        return -1;
+    }
+
+    int retval;
+    // find correspinding peripheral and do the data_process
+    peripheral_t *cur_peri = &peri_table[peri_kind].real_peri[peri_index];
+    if(cur_peri->data_process == NULL){
+        LOG(LOG_ERROR, "data process for the peripheral %d:%d is NULL\n", peri_kind, peri_index);
+        return -2;
+    }
+    retval = cur_peri->data_process(data_kind, data, data_len, cur_peri->user_data);
+    if(retval < 0){
+        return retval;
+    }
+    return 0;
+}
+
+int dispatch_peri_event(pmp_parsed_pkt_t *pkt)
+{
+    _dispatch_peri_event(pkt, g_peri_table);
+}

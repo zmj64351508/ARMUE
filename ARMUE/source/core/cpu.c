@@ -235,4 +235,14 @@ void add_cycle(cpu_t *cpu)
     cpu->cycle++;
 }
 
+bool_t reach_check_point(cpu_t *cpu)
+{
+    cpu->cycle >= cpu->next_check_point;
+}
+
+void updata_check_point(cpu_t *cpu, cycle_t interval)
+{
+    cpu->next_check_point += interval;
+}
+
 

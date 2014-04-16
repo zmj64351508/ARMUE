@@ -65,6 +65,11 @@ int main(int argc, char **argv)
     pmp_parsed_pkt_t pmp_pkt = {0};
     int result;
     char str[1024];
+
+    scanf("%s", str);
+    make_pmp_data_packet(core_connect, PERI_UART, 0, PMP_DATA_KIND_DENERIC, str, strlen(str));
+    pmp_send(core_connect);
+
     while(1){
         bool_t has_input = pmp_check_input(core_connect);
         if(has_input){
@@ -85,10 +90,6 @@ int main(int argc, char **argv)
                 putchar('\n');
             }
         }
-
-        //scanf("%s", str);
-        //make_pmp_data_packet(core_connect, PERI_I2C, 0, PMP_DATA_KIND_DENERIC, str, strlen(str));
-        //pmp_send(core_connect);
     }
 #if 0
     while(1){

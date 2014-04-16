@@ -18,12 +18,36 @@ lpc1768_uart_t lpc1768_uart0;
 //lpc1768_uart_t lpc1768_uart2;
 //lpc1768_uart_t lpc1768_uart3;
 
+/* this will be called when some UART data is received */
+int lpc1768_uart_data_process(int data_kind, uint8_t *data, unsigned int len, void *user_data)
+{
+    LOG(LOG_DEBUG, "UART recved:\n");
+    lpc1768_uart_t *uart = (lpc1768_uart_t *)user_data;
+    switch(data_kind){
+    case PMP_DATA_KIND_DENERIC:
+        uart_store_in_buffer(&uart->generic_uart, data, len);
+    default:
+        break;
+    }
+    return 0;
+}
+
+/* peripheral_t is the structure for peripheral register */
+peripheral_t peri_lpc1768_uart0 = {
+    .user_data = &lpc1768_uart0,
+    .data_process = lpc1768_uart_data_process,
+};
+
 /* All the register read and write function */
 void URBR(uint8_t *buffer, int rw_flag, lpc1768_uart_t *uart)
 {
+    int result;
     if(rw_flag == MEM_READ){
         // TODO: some other operation to corresponding PE FE and BI bits
-        uart_read_data(&uart->generic_uart, buffer);
+        result = uart_read_data(&uart->generic_uart, buffer);
+        if(result < 0){
+            *buffer = 0;
+        }
     }else{
         // read only
     }
@@ -34,7 +58,7 @@ void UTHR(uint8_t *buffer, int rw_flag, lpc1768_uart_t *uart)
     if(rw_flag == MEM_READ){
         // write only
     }else{
-        uart_send_data(armue_get_peri_connect(), uart->index, buffer, 0, 0, 0, 0);
+        uart_send_byte(armue_get_peri_connect(), uart->index, buffer);
     }
 }
 
@@ -101,6 +125,10 @@ int lpc1768_uart_init(cpu_t *cpu)
     region_uart0->read = lpc1768_uart_read;
     region_uart0->write = lpc1768_uart_write;
     region_uart0->type = MEMORY_REGION_PERI;
+
+    /* request for listening to the input */
+    request_peripheral(PERI_UART, 3);
+    register_peripheral(PERI_UART, 0, &peri_lpc1768_uart0);
     return 0;
 
 get_region_fail:

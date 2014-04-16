@@ -56,6 +56,7 @@ typedef struct cpu_t
     void *instruction_data;
     list_t *timer_list;
     cycle_t cycle;
+    cycle_t next_check_point;
 
     /* For cortex-m profile, NVIC is internal with function of exception controller and
        general interrupt controller, while other profile like A, R and classical ARM cpu
@@ -108,6 +109,8 @@ void*    get_cpu_module(cpu_t* cpu);
 int validate_cpu(cpu_t* cpu);
 
 void add_cycle(cpu_t *cpu);
+bool_t reach_check_point(cpu_t *cpu);
+void updata_check_point(cpu_t *cpu, cycle_t interval);
 
 #ifdef __cplusplus
 }

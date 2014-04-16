@@ -25,10 +25,10 @@ typedef struct peripheral_table_t{
     peripheral_t *real_peri;
 }peripheral_table_t;
 
+#include "core_connect.h"
 int request_peripheral(int peri_kind, int peri_amount);
 int register_peripheral(int peri_kind, int peri_index, peripheral_t *peri_data);
-
-extern peripheral_table_t g_peri_table[];
+int dispatch_peri_event(struct pmp_parsed_pkt_t *pkt);
 
 #ifdef __cplusplus
 }
